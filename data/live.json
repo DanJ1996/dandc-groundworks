@@ -1,0 +1,70 @@
+{
+  "projects": [
+    {
+      "title": "Lyndhurst Park Hotel — Blocks B & C Substructure Works",
+      "location": "Lyndhurst, New Forest",
+      "type": "Commercial Substructure Works",
+      "status": "On Going",
+      "summary": "Follow our team week by week as we deliver the substructure works for Blocks B & C at Lyndhurst Park Hotel — from first dig through to a build-ready base. Updated as the job progresses.",
+      "updates": [
+        { "week": "Week 1", "caption": "Machinery arrives on site", "image": "assets/live/lyndhurst/w1-1.jpg" },
+        { "week": "Week 1", "caption": "Muck-away and site clearance", "image": "assets/live/lyndhurst/w1-2.jpg" },
+        { "week": "Week 1", "caption": "Bulk excavation underway", "image": "assets/live/lyndhurst/w1-3.jpg" },
+        { "week": "Week 1", "caption": "Setting levels across the dig", "image": "assets/live/lyndhurst/w1-4.jpg" },
+        { "week": "Week 1", "caption": "Aerial flythrough — first week on site", "video": "assets/live/lyndhurst/w1v.mp4", "poster": "assets/live/lyndhurst/w1v-poster.jpg" },
+        { "week": "Week 2", "caption": "Preparing the piling mat", "image": "assets/live/lyndhurst/w2-1.jpg" },
+        { "week": "Week 2", "caption": "Building up the piling platform", "image": "assets/live/lyndhurst/w2-2.jpg" },
+        { "week": "Week 2", "caption": "Compacting the piling mat", "image": "assets/live/lyndhurst/w2-3.jpg" },
+        { "week": "Week 2", "caption": "Aerial flythrough — piling mat", "video": "assets/live/lyndhurst/w2v.mp4", "poster": "assets/live/lyndhurst/w2v-poster.jpg" },
+        { "week": "Week 3 & 4", "caption": "Attending the piling rig", "image": "assets/live/lyndhurst/w4-1.jpg" },
+        { "week": "Week 3 & 4", "caption": "Mucking away arisings from the piling", "image": "assets/live/lyndhurst/w4-2.jpg" },
+        { "week": "Week 3 & 4", "caption": "Pile attendance across the plot", "image": "assets/live/lyndhurst/w4-3.jpg" },
+        { "week": "Week 3 & 4", "caption": "Aerial flythrough — piling works", "video": "assets/live/lyndhurst/w4v.mp4", "poster": "assets/live/lyndhurst/w4v-poster.jpg" },
+        { "week": "Week 5", "caption": "Aerial view — excavating between the piles", "image": "assets/live/lyndhurst/w5-1.jpg" },
+        { "week": "Week 5", "caption": "Foundation excavation progressing", "image": "assets/live/lyndhurst/w5-2.jpg" },
+        { "week": "Week 5", "caption": "Breaking piles down to cut-off level", "image": "assets/live/lyndhurst/w5-3.jpg" },
+        { "week": "Week 5", "caption": "Our excavator working the plot", "image": "assets/live/lyndhurst/w5-4.jpg" },
+        { "week": "Week 5", "caption": "Exposed pile heads ready for trimming", "image": "assets/live/lyndhurst/w5-5.jpg" },
+        { "week": "Week 5", "caption": "Digging out ground beams to the piles", "image": "assets/live/lyndhurst/w5-6.jpg" },
+        { "week": "Week 6", "caption": "Fixing ground beam reinforcement cages", "image": "assets/live/lyndhurst/w6-1.jpg" },
+        { "week": "Week 6", "caption": "Foundation trench formed to the piles", "image": "assets/live/lyndhurst/w6-2.jpg" },
+        { "week": "Week 6", "caption": "Excavating the substructure across the plot", "image": "assets/live/lyndhurst/w6-3.jpg" },
+        { "week": "Week 6", "caption": "Aerial view of the reinforcement to pile caps and ground beams", "image": "assets/live/lyndhurst/w6-4.jpg" },
+        { "week": "Week 6", "caption": "Aerial view of the foundation layout taking shape", "image": "assets/live/lyndhurst/w6-5.jpg" },
+        { "week": "Week 6", "caption": "Steel-fixed pile cap ready for concrete", "image": "assets/live/lyndhurst/w6-6.jpg" },
+        { "week": "Week 7", "caption": "Foundation formwork laid out", "image": "assets/live/lyndhurst/w7-1.jpg" },
+        { "week": "Week 7", "caption": "Concrete pour underway", "image": "assets/live/lyndhurst/w7-2.jpg" },
+        { "week": "Week 7", "caption": "Foundations poured — bird's-eye view", "image": "assets/live/lyndhurst/w7-3.jpg" },
+        { "week": "Week 7", "caption": "Substructure grid taking shape", "image": "assets/live/lyndhurst/w7-4.jpg" },
+        { "week": "Week 8", "caption": "Excavating the pile caps", "image": "assets/live/lyndhurst/w8-1.jpg" },
+        { "week": "Week 8", "caption": "Substructure walls rising", "image": "assets/live/lyndhurst/w8-2.jpg" },
+        { "week": "Week 8", "caption": "Breaking out rock on site", "image": "assets/live/lyndhurst/w8-3.jpg" },
+        { "week": "Week 8", "caption": "Column starter bars in place", "image": "assets/live/lyndhurst/w8-5.jpg" },
+        { "week": "Week 8", "caption": "Blockwork foundations underway", "image": "assets/live/lyndhurst/w8-6.jpg" }
+      ]
+    },
+    {
+      "title": "Corfe Mullen — Groundworks",
+      "location": "Corfe Mullen, Dorset",
+      "type": "Groundworks",
+      "status": "On Going",
+      "summary": "Our second live site running in parallel — a new-build foundation package from breaking out the old slab through to a build-ready base. Updated week by week.",
+      "updates": [
+        { "week": "Week 1", "caption": "Aerial view — plot cleared and ready", "image": "assets/live/corfe-mullen/cm-w1-1.jpg" },
+        { "week": "Week 1", "caption": "Breaking out the old concrete slab", "image": "assets/live/corfe-mullen/cm-w1-2.jpg" },
+        { "week": "Week 1", "caption": "Clearing the existing hardstanding", "image": "assets/live/corfe-mullen/cm-w1-3.jpg" },
+        { "week": "Week 1", "caption": "Excavator breaking out concrete", "image": "assets/live/corfe-mullen/cm-w1-4.jpg" },
+        { "week": "Week 2", "caption": "Aerial view — digging out to formation", "image": "assets/live/corfe-mullen/cm-w2-1.jpg" },
+        { "week": "Week 2", "caption": "Excavating the plot", "image": "assets/live/corfe-mullen/cm-w2-2.jpg" },
+        { "week": "Week 2", "caption": "Foundation trenches taking shape", "image": "assets/live/corfe-mullen/cm-w2-3.jpg" },
+        { "week": "Week 2", "caption": "Aerial view — foundation grid excavated", "image": "assets/live/corfe-mullen/cm-w2-4.jpg" },
+        { "week": "Week 2", "caption": "Foundation trenches dug", "image": "assets/live/corfe-mullen/cm-w2-5.jpg" },
+        { "week": "Week 2", "caption": "Ground-level view of the foundation dig", "image": "assets/live/corfe-mullen/cm-w2-6.jpg" },
+        { "week": "Week 2", "caption": "From paper to ground — foundation layout to dig", "image": "assets/live/corfe-mullen/cm-w2-7.jpg" },
+        { "week": "Week 2", "caption": "Aerial flythrough — foundation dig complete", "video": "assets/live/corfe-mullen/cm-w2v.mp4", "poster": "assets/live/corfe-mullen/cm-w2v-poster.jpg" },
+        { "week": "Week 3", "caption": "Installing Claymaster to the foundations", "image": "assets/live/corfe-mullen/cm-w3-1.jpg" },
+        { "week": "Week 3", "caption": "Claymaster formwork in place", "image": "assets/live/corfe-mullen/cm-w3-2.jpg" }
+      ]
+    }
+  ]
+}

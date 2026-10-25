@@ -1,0 +1,15 @@
+{
+  "name": "D&C Variation & Day Works Sheet",
+  "short_name": "Day Works",
+  "description": "On-site Variation & Day Works sheet for D&C Groundworks & Civils Ltd.",
+  "start_url": "dayworks.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B2C3E",
+  "theme_color": "#273E57",
+  "icons": [
+    { "src": "assets/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

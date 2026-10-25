@@ -1,0 +1,14 @@
+# macOS / system
+.DS_Store
+
+# Tooling / local state (not part of the site)
+.netlify/
+.claude/
+node_modules/
+
+# Deploy artifacts
+*.zip
+
+# Raw photo intake + original drone files — storage, NOT the live site
+assets/_DROP PHOTOS HERE/
+photos & footage /

@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D&C Groundworks — Variation &amp; Day Works Sheet</title>
+  <meta name="description" content="D&C Groundworks & Civils Ltd — on-site Variation & Day Works sheet. Fill out, sign, save and export to PDF from any phone.">
+  <meta name="theme-color" content="#273E57">
+  <link rel="canonical" href="https://dandcgroundworks.com/dayworks.html">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+  <link rel="manifest" href="dayworks.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Day Works">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --navy:#273E57; --navy-dark:#1B2C3E; --navy-light:#3E5975;
+      --beige:#EDE7DF; --beige-dark:#D8CFC2; --offwhite:#F7F4EF;
+      --field:#eef2f7; --line:#c7d1dd; --ink:#222831;
+      --font-head:'Oswald','Montserrat',sans-serif;
+      --dot:#57d38a; --amber:#E08A2B;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{-webkit-text-size-adjust:100%}
+    body{
+      font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      color:var(--ink); background:var(--offwhite); line-height:1.4;
+      padding-bottom:88px;
+    }
+    /* ---------- Top brand bar ---------- */
+    .topbar{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-dark) 100%);
+      color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;
+      border-bottom:4px solid var(--amber)}
+    .topbar .logo{width:52px;height:52px;border-radius:50%;background:var(--beige);
+      flex:0 0 52px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .topbar .logo img{width:100%;height:100%;object-fit:contain}
+    .topbar h1{font-family:var(--font-head);font-weight:700;font-size:1.12rem;letter-spacing:.3px;line-height:1.1}
+    .topbar .sub{font-size:.72rem;color:var(--beige-dark);font-weight:500;margin-top:2px}
+    .topbar .doc{margin-left:auto;text-align:right}
+    .topbar .doc b{font-family:var(--font-head);font-size:1rem;letter-spacing:.5px;display:block}
+    .topbar .doc span{font-size:.66rem;color:var(--beige-dark);font-style:italic}
+    @media(max-width:560px){.topbar .doc{display:none}}
+
+    .wrap{max-width:900px;margin:0 auto;padding:18px 14px 30px}
+
+    /* ---------- Section ---------- */
+    section{background:#fff;border:1px solid var(--line);border-radius:12px;
+      margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(39,62,87,.05)}
+    .sec-head{background:var(--navy);color:#fff;padding:11px 16px;
+      font-family:var(--font-head);font-weight:600;font-size:.95rem;letter-spacing:.8px;text-transform:uppercase}
+    .sec-body{padding:16px}
+
+    label{display:block;font-size:.68rem;font-weight:700;letter-spacing:.6px;
+      text-transform:uppercase;color:var(--navy-light);margin-bottom:5px}
+    input,textarea,select{width:100%;font-family:inherit;font-size:1rem;color:var(--ink);
+      background:var(--field);border:1px solid var(--line);border-radius:8px;
+      padding:11px 12px;outline:none;-webkit-appearance:none;appearance:none}
+    input:focus,textarea:focus,select:focus{border-color:var(--navy-light);
+      box-shadow:0 0 0 3px rgba(62,89,117,.15);background:#fff}
+    select{padding-right:34px;cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233E5975'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 9px center;background-size:20px}
+    textarea{resize:none;overflow:hidden;min-height:68px;line-height:1.5}
+    /* Day Works mode = single big description (no "reason"); Variation mode = both */
+    body.mode-dayworks .variation-only{display:none}
+    body.mode-dayworks #f_desc{min-height:140px}
+    .field{margin-bottom:14px}
+    .field:last-child{margin-bottom:0}
+    .grid{display:grid;gap:14px}
+    .g2{grid-template-columns:1fr 1fr}
+    .g3{grid-template-columns:1fr 1fr 1fr}
+    @media(max-width:560px){.g2,.g3{grid-template-columns:1fr}}
+
+    /* ---------- Dynamic line rows ---------- */
+    .rows{display:flex;flex-direction:column;gap:10px}
+    .row{display:grid;gap:8px;align-items:end;
+      background:var(--offwhite);border:1px solid var(--line);border-radius:10px;padding:10px 10px 12px;position:relative}
+    .row .cell label{font-size:.6rem;margin-bottom:3px}
+    .row .total-out{background:#e8f0e8;border-color:#bcd4bc;font-weight:700}
+    .row .del{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;
+      border:none;background:#e6d3d3;color:#9a3b3b;font-size:1.1rem;font-weight:700;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+    .row .del:active{transform:scale(.9)}
+    /* desktop: single line table-like */
+    @media(min-width:700px){
+      .row{align-items:end;padding:8px 42px 8px 10px}
+      .labour-row{grid-template-columns:2fr 1.4fr .7fr .8fr .9fr}
+      .plant-row{grid-template-columns:2.6fr .7fr .8fr .9fr}
+      .mat-row{grid-template-columns:2.4fr .6fr .7fr .8fr .9fr}
+      .row .del{top:50%;transform:translateY(-50%)}
+      .row .del:active{transform:translateY(-50%) scale(.9)}
+    }
+    @media(max-width:699px){
+      .labour-row,.plant-row,.mat-row{grid-template-columns:1fr 1fr}
+      .row .cell.wide{grid-column:1 / -1}
+    }
+    .addbtn{margin-top:12px;display:inline-flex;align-items:center;gap:8px;
+      background:var(--beige);color:var(--navy);border:1px dashed var(--navy-light);
+      border-radius:999px;padding:10px 18px;font-weight:700;font-size:.86rem;cursor:pointer;
+      font-family:var(--font-head);letter-spacing:.5px;text-transform:uppercase}
+    .addbtn:active{transform:scale(.97)}
+    .addbtn .p{font-size:1.1rem;line-height:1}
+
+    /* ---------- Summary ---------- */
+    .summary{display:grid;gap:8px;max-width:360px;margin-left:auto}
+    .sumrow{display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:9px 12px;background:var(--field);border:1px solid var(--line);border-radius:8px}
+    .sumrow span{font-size:.78rem;font-weight:600;color:var(--navy-light);text-transform:uppercase;letter-spacing:.5px}
+    .sumrow b{font-size:1rem;font-weight:700}
+    .sumrow input{width:90px;text-align:right;padding:6px 8px}
+    .sumrow.grand{background:var(--navy);border-color:var(--navy)}
+    .sumrow.grand span{color:var(--beige)}
+    .sumrow.grand b{color:#fff;font-size:1.25rem;font-family:var(--font-head)}
+
+    /* ---------- Photos ---------- */
+    .drop{border:2px dashed var(--navy-light);border-radius:12px;background:var(--field);
+      padding:26px 16px;text-align:center;cursor:pointer;transition:.15s;color:var(--navy-light)}
+    .drop.over{background:#e3ebf3;border-color:var(--navy)}
+    .drop .big{font-family:var(--font-head);font-weight:600;font-size:1rem;letter-spacing:.5px;color:var(--navy)}
+    .drop small{display:block;margin-top:5px;font-size:.78rem}
+    .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:14px}
+    .thumb{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+    .thumb img{width:100%;height:96px;object-fit:cover;display:block}
+    .thumb .file{padding:10px;font-size:.72rem;word-break:break-word;color:var(--navy);display:flex;align-items:center;gap:6px;min-height:96px}
+    .thumb .cap{width:100%;border:none;border-top:1px solid var(--line);border-radius:0;
+      background:#fff;font-size:.74rem;padding:7px 8px;text-align:center}
+    .thumb .x{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;
+      border:none;background:rgba(27,44,62,.85);color:#fff;font-size:1rem;cursor:pointer;line-height:1}
+
+    /* ---------- Signatures ---------- */
+    .sigs{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+    @media(max-width:560px){.sigs{grid-template-columns:1fr}}
+    .sigbox h3{font-family:var(--font-head);font-size:.82rem;letter-spacing:.5px;
+      color:var(--navy);text-transform:uppercase;margin-bottom:10px}
+    .pad-wrap{position:relative}
+    .pad{width:100%;height:150px;background:var(--field);border:1px solid var(--line);
+      border-radius:8px;touch-action:none;display:block}
+    .pad-clear{position:absolute;top:6px;right:6px;background:#fff;border:1px solid var(--line);
+      border-radius:6px;font-size:.68rem;padding:4px 9px;cursor:pointer;color:var(--navy-light);font-weight:600}
+    .sig-meta{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;margin-top:10px}
+    .consent{font-size:.78rem;color:var(--navy-light);margin-top:16px;font-style:italic;line-height:1.5}
+
+    /* ---------- Action bar ---------- */
+    .actionbar{position:fixed;bottom:0;left:0;right:0;z-index:50;
+      background:rgba(27,44,62,.97);backdrop-filter:blur(6px);
+      padding:11px 12px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap;
+      box-shadow:0 -4px 20px rgba(0,0,0,.25)}
+    .abtn{flex:1;min-width:120px;max-width:220px;display:flex;align-items:center;justify-content:center;gap:8px;
+      border:none;border-radius:11px;padding:13px 10px;font-weight:700;font-size:.9rem;cursor:pointer;
+      font-family:var(--font-head);letter-spacing:.5px;text-transform:uppercase;color:#fff;
+      background:var(--navy-light)}
+    .abtn.primary{background:var(--amber)}
+    .abtn.ghost{background:transparent;border:1px solid rgba(255,255,255,.3)}
+    .abtn:active{transform:scale(.97)}
+    .abtn svg{width:18px;height:18px;fill:currentColor}
+
+    .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:.88rem;font-weight:600;
+      box-shadow:0 8px 30px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90vw;text-align:center}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    .hint{font-size:.78rem;color:var(--navy-light);background:#eef2f7;border:1px solid var(--line);
+      border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5}
+    .install{display:none}
+
+    /* ---------- crew role: hide all pricing ---------- */
+    body.role-crew .money{display:none !important}
+    body.role-crew .crew-note{display:block !important}
+    body.role-crew .director-only{display:none !important}
+    @media(min-width:700px){
+      body.role-crew .labour-row{grid-template-columns:2fr 1.4fr .9fr}
+      body.role-crew .plant-row{grid-template-columns:2.6fr .9fr}
+      body.role-crew .mat-row{grid-template-columns:2.4fr .7fr .9fr}
+    }
+
+    /* ---------- Costs export modal (director) ---------- */
+    .cx-overlay{position:fixed;inset:0;background:rgba(27,44,62,.55);display:none;align-items:flex-start;justify-content:center;z-index:70;padding:24px 14px;overflow:auto}
+    .cx-overlay.show{display:flex}
+    .cx-card{background:#fff;border-radius:14px;max-width:720px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden}
+    .cx-head{background:var(--navy);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+    .cx-head h3{margin:0;font-family:var(--font-head);font-weight:600;letter-spacing:.5px;font-size:1.15rem}
+    .cx-x{background:none;border:0;color:#fff;font-size:1.7rem;line-height:1;cursor:pointer;padding:0 4px}
+    .cx-body{padding:18px 20px}
+    .cx-intro{margin:0 0 14px;font-size:.82rem;color:var(--navy-light);line-height:1.55}
+    .cx-summary{font-size:.82rem;font-weight:600;color:var(--navy);margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+    .cx-summary:empty{display:none}
+    .cx-block{margin-bottom:18px}
+    .cx-block h4{margin:0 0 6px;font-family:var(--font-head);font-weight:600;color:var(--navy);font-size:.98rem;display:flex;align-items:center;justify-content:space-between}
+    .cx-copy{font-family:var(--font-body);font-size:.72rem;font-weight:600;background:var(--amber);color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+    .cx-ta{width:100%;min-height:84px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical;background:#fafbfc;color:#222;box-sizing:border-box}
+    .cx-ta:empty,.cx-ta[data-empty="1"]{color:#8a99a8}
+    .cx-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+
+    /* ---------- Print / PDF ---------- */
+    @media print{
+      @page{size:A4;margin:12mm}
+      body{background:#fff;padding:0}
+      .actionbar,.addbtn,.row .del,.pad-clear,.thumb .x,.drop,.topbar .doc span,.hint,.install,.cx-overlay{display:none !important}
+      section{box-shadow:none;border:1px solid #999;break-inside:avoid;margin-bottom:10px}
+      .sec-head{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .topbar,.sumrow.grand,.sec-head{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      input,textarea,select{background:#fff !important;border-color:#bbb}
+      .row,.sumrow,.drop,.pad{background:#fff !important}
+      .thumb img{height:auto;max-height:260px}
+      .thumb .cap{border-top:1px solid #bbb}
+      textarea{overflow:visible}
+      .row.empty-row{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo"><img src="assets/logo.png" alt="D&C Groundworks & Civils Ltd"></div>
+    <div>
+      <h1>D&amp;C Groundworks &amp; Civils Ltd</h1>
+      <div class="sub">Office@dandcgroundworks.co.uk</div>
+    </div>
+    <div class="doc">
+      <b id="docTitle">Day Works Sheet</b>
+      <span>To be completed and signed on site</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="hint install" id="installHint">
+      <b>Tip:</b> Add this to your home screen to use it on site with <b>no signal</b> — open your browser menu and choose “Add to Home Screen”.
+    </div>
+
+    <!-- PROJECT DETAILS -->
+    <section>
+      <div class="sec-head">Project Details</div>
+      <div class="sec-body">
+        <div class="grid g3">
+          <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+          <div class="field"><label>Sheet No.</label><input id="f_sheet" placeholder="e.g. DW-001"></div>
+          <div class="field"><label>Day / Weekday</label><select id="f_day"><option value="">Select day…</option><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></div>
+        </div>
+        <div class="grid g2">
+          <div class="field"><label>Contract / Project</label><input id="f_project"></div>
+          <div class="field"><label>Client</label><input id="f_client"></div>
+        </div>
+        <div class="field"><label>Site / Location of Works</label><input id="f_site"></div>
+        <div class="grid g3">
+          <div class="field"><label>Instructed / Requested By</label><input id="f_by"></div>
+          <div class="field"><label>Role / Company</label><input id="f_byrole"></div>
+          <div class="field"><label>Site Requisition / PO No.</label><input id="f_po"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DESCRIPTION & REASON -->
+    <section>
+      <div class="sec-head" id="descHead">Description of Works</div>
+      <div class="sec-body">
+        <div class="field"><label id="descLabel">Description of Works</label>
+          <textarea id="f_desc" class="grow" placeholder="Describe the works carried out on site…"></textarea></div>
+        <div class="field variation-only"><label>Reason for Variation</label>
+          <textarea id="f_reason" class="grow" placeholder="Why were these works needed? (e.g. unforeseen ground conditions, client instruction…)"></textarea></div>
+      </div>
+    </section>
+
+    <!-- LABOUR -->
+    <section>
+      <div class="sec-head">Labour</div>
+      <div class="sec-body">
+        <div class="rows" id="labourRows"></div>
+        <button class="addbtn" type="button" data-add="labour"><span class="p">+</span> Add operative</button>
+      </div>
+    </section>
+
+    <!-- PLANT -->
+    <section>
+      <div class="sec-head">Plant / Machinery</div>
+      <div class="sec-body">
+        <div class="rows" id="plantRows"></div>
+        <button class="addbtn" type="button" data-add="plant"><span class="p">+</span> Add plant / machine</button>
+      </div>
+    </section>
+
+    <!-- MATERIALS -->
+    <section>
+      <div class="sec-head">Materials</div>
+      <div class="sec-body">
+        <div class="rows" id="matRows"></div>
+        <button class="addbtn" type="button" data-add="mat"><span class="p">+</span> Add material</button>
+      </div>
+    </section>
+
+    <!-- SUMMARY -->
+    <section>
+      <div class="sec-head">Summary of Costs</div>
+      <div class="sec-body">
+        <div class="field"><label>Additional Notes</label>
+          <textarea id="f_notes" class="grow" placeholder="Anything else to record…"></textarea></div>
+        <div class="summary money">
+          <div class="sumrow"><span>Labour Total (£)</span><b id="s_labour">0.00</b></div>
+          <div class="sumrow"><span>Plant Total (£)</span><b id="s_plant">0.00</b></div>
+          <div class="sumrow"><span>Materials Total (£)</span><b id="s_mat">0.00</b></div>
+          <div class="sumrow"><span>Sub-total (£)</span><b id="s_sub">0.00</b></div>
+          <div class="sumrow"><span>Markup / OH&amp;P (%)</span><input id="f_markup" inputmode="decimal" placeholder="0"></div>
+          <div class="sumrow grand"><span>Grand Total (£)</span><b id="s_grand">0.00</b></div>
+        </div>
+        <p class="crew-note money-hide" style="display:none;font-size:.82rem;color:var(--navy-light);font-style:italic">Pricing is added by the office — just record the works, hours, plant and materials above.</p>
+      </div>
+    </section>
+
+    <!-- PHOTOS -->
+    <section>
+      <div class="sec-head">Photos / Attachments</div>
+      <div class="sec-body">
+        <div class="drop" id="drop">
+          <div class="big">Tap to add photos or files</div>
+          <small>Any number — camera, gallery or PDFs. They’re embedded in the exported PDF.</small>
+        </div>
+        <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </section>
+
+    <!-- SIGNATURES -->
+    <section>
+      <div class="sec-head">Authorisation &amp; Signatures</div>
+      <div class="sec-body">
+        <div class="sigs">
+          <div class="sigbox">
+            <h3>For D&amp;C Groundworks &amp; Civils Ltd</h3>
+            <div class="pad-wrap">
+              <canvas class="pad" id="sig1"></canvas>
+              <button class="pad-clear" type="button" data-clear="sig1">Clear</button>
+            </div>
+            <div class="sig-meta">
+              <div><label>Print Name</label><input id="f_sig1name"></div>
+              <div><label>Date</label><input type="date" id="f_sig1date"></div>
+            </div>
+          </div>
+          <div class="sigbox">
+            <h3>For the Client / Main Contractor</h3>
+            <div class="pad-wrap">
+              <canvas class="pad" id="sig2"></canvas>
+              <button class="pad-clear" type="button" data-clear="sig2">Clear</button>
+            </div>
+            <div class="sig-meta">
+              <div><label>Print Name</label><input id="f_sig2name"></div>
+              <div><label>Date</label><input type="date" id="f_sig2date"></div>
+            </div>
+          </div>
+        </div>
+        <p class="consent">By signing above, both parties acknowledge that the works described on this sheet have been instructed and are to be paid in addition to the original contract sum. This document forms part of the contract once signed by both parties.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="actionbar">
+    <button class="abtn primary" id="btnPdf" type="button">
+      <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM8 13h2a2 2 0 0 1 0 4H9v2H8v-6zm1 1v2h1a1 1 0 0 0 0-2H9zm5-1h2a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-2v-4zm1 1v2h1a1 1 0 0 0 0-2h-1z"/></svg>
+      Export PDF
+    </button>
+    <button class="abtn" id="btnSave" type="button">
+      <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81A3 3 0 1 0 6 15c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92z"/></svg>
+      Save link
+    </button>
+    <button class="abtn director-only" id="btnCosts" type="button">
+      <svg viewBox="0 0 24 24"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v3h6V5H5zm8 0v3h6V5h-6zM5 10v3h6v-3H5zm8 0v3h6v-3h-6zM5 15v4h6v-4H5zm8 0v4h6v-4h-6z"/></svg>
+      Costs
+    </button>
+    <button class="abtn ghost" id="btnNew" type="button">
+      <svg viewBox="0 0 24 24"><path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      New
+    </button>
+  </div>
+
+  <div class="cx-overlay" id="costsModal">
+    <div class="cx-card">
+      <div class="cx-head">
+        <h3>Costs export</h3>
+        <button class="cx-x" id="cxClose" type="button" aria-label="Close">&times;</button>
+      </div>
+      <div class="cx-body">
+        <div class="cx-summary" id="cxSummary"></div>
+        <p class="cx-intro">Copy each block and paste it into the matching column of your Dayworks costs template — item name in the left cell, quantity alongside. Your rate-book VLOOKUP + markup then prices every line. Item names must match the rate book exactly. Or download the full sheet as a CSV.</p>
+        <div class="cx-block">
+          <h4>Labour &amp; Plant <button class="cx-copy" data-copy="cxLabourPlant" type="button">Copy</button></h4>
+          <textarea class="cx-ta" id="cxLabourPlant" readonly></textarea>
+        </div>
+        <div class="cx-block">
+          <h4>Materials <button class="cx-copy" data-copy="cxMaterials" type="button">Copy</button></h4>
+          <textarea class="cx-ta" id="cxMaterials" readonly></textarea>
+        </div>
+      </div>
+      <div class="cx-foot">
+        <button class="abtn ghost" id="cxCsv" type="button">Download CSV</button>
+        <button class="abtn primary" id="cxDone" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="dayworks-ratelists.js"></script>
+  <script>
+  (function(){
+    "use strict";
+    var $ = function(s,el){return (el||document).querySelector(s)};
+    var $$ = function(s,el){return Array.prototype.slice.call((el||document).querySelectorAll(s))};
+    var gbp = function(n){return (isFinite(n)?n:0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})};
+    var num = function(v){var n=parseFloat(String(v||'').replace(/[^0-9.\-]/g,''));return isFinite(n)?n:0};
+
+    /* ---- common site lists (free-type still allowed) ---- */
+    var RL = window.DW_RATELISTS || {};
+    var FIRM_CREW = ['Daniel James','Chris James','Matt Wright','Dave Pearce','Brandon Hall','Ryan Seerey','Luca Weeks'];
+    var CREW = FIRM_CREW.concat(RL.labour||[]);
+    var TRADES = ['Groundworker','Machine Operator','Ganger','Foreman','Driver','Labourer','Banksman','Pipelayer'];
+    var PLANT = (RL.plant && RL.plant.length) ? RL.plant : ['1.5T Excavator','3T Excavator','5T Excavator','8T Excavator','13T Excavator','360 Excavator',
+      '1T Dumper','3T Dumper','6T Dumper','9T Dumper','Tracked Dumper','Roller','Whacker Plate','Compactor',
+      'Hydraulic Breaker','Telehandler','Grab Lorry','Muck Away Lorry'];
+    var MATERIALS = (RL.materials && RL.materials.length) ? RL.materials : ['Type 1 MOT','Concrete C20','Concrete C35','Ready-mix Concrete','Sharp Sand','Building Sand',
+      'Ballast','Cement','Rebar / Mesh','110mm Drainage Pipe','160mm Drainage Pipe','Shingle / Gravel',
+      '6F2 / 6F5','Geotextile Membrane','Topsoil','Road Sweepings','Pea Shingle'];
+    var UNITS = ['tonne','m³','m²','m','no.','bag','load','each','hrs','litre'];
+
+    function datalist(id, arr){
+      if(document.getElementById(id)) return;
+      var dl=document.createElement('datalist'); dl.id=id;
+      arr.forEach(function(v){var o=document.createElement('option');o.value=v;dl.appendChild(o)});
+      document.body.appendChild(dl);
+    }
+    datalist('dl_crew',CREW); datalist('dl_trades',TRADES);
+    datalist('dl_plant',PLANT); datalist('dl_mat',MATERIALS); datalist('dl_units',UNITS);
+
+    /* ---------- auto-grow textareas ---------- */
+    function grow(t){t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px';}
+    function bindGrow(t){t.addEventListener('input',function(){grow(t)});}
+    $$('.grow').forEach(bindGrow);
+
+    /* ---------- dynamic rows ---------- */
+    var cfg = {
+      labour:{cont:'labourRows',cls:'labour-row',cols:[
+        {k:'name',ph:'Select crew member…',label:'Operative',sel:true,opts:FIRM_CREW,wide:true},
+        {k:'role',ph:'Role / trade',label:'Role / Trade',list:'dl_trades'},
+        {k:'hours',ph:'0',label:'Hours',num:true},
+        {k:'rate',ph:'0.00',label:'Rate (£)',num:true,money:true},
+        {k:'total',label:'Total (£)',out:true,money:true}
+      ]},
+      plant:{cont:'plantRows',cls:'plant-row',cols:[
+        {k:'desc',ph:'Select plant…',label:'Plant / Machinery',sel:true,opts:PLANT,wide:true},
+        {k:'hours',ph:'0',label:'Hours',num:true},
+        {k:'rate',ph:'0.00',label:'Rate (£)',num:true,money:true},
+        {k:'total',label:'Total (£)',out:true,money:true}
+      ]},
+      mat:{cont:'matRows',cls:'mat-row',cols:[
+        {k:'desc',ph:'Material description',label:'Material',list:'dl_mat',wide:true},
+        {k:'qty',ph:'0',label:'Qty',num:true},
+        {k:'unit',ph:'unit',label:'Unit',list:'dl_units'},
+        {k:'cost',ph:'0.00',label:'Unit Cost (£)',num:true,money:true},
+        {k:'total',label:'Total (£)',out:true,money:true}
+      ]}
+    };
+
+    function makeRow(type, data){
+      data = data||{};
+      var c = cfg[type];
+      var row = document.createElement('div');
+      row.className='row '+c.cls;
+      row.dataset.type=type;
+      c.cols.forEach(function(col){
+        var cell=document.createElement('div');
+        cell.className='cell'+(col.wide?' wide':'')+(col.money?' money':'');
+        var lab=document.createElement('label'); lab.textContent=col.label; cell.appendChild(lab);
+        var inp;
+        if(col.sel){
+          inp=document.createElement('select');
+          inp.dataset.k=col.k;
+          var blank=document.createElement('option'); blank.value=''; blank.textContent=col.ph||'Select…'; inp.appendChild(blank);
+          (col.opts||[]).forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;inp.appendChild(o);});
+          var dv=data[col.k];
+          if(dv!=null&&dv!==''){
+            if(!Array.prototype.some.call(inp.options,function(o){return o.value===dv;})){
+              var ex=document.createElement('option');ex.value=dv;ex.textContent=dv;inp.appendChild(ex);
+            }
+            inp.value=dv;
+          }
+        } else {
+          inp=document.createElement('input');
+          inp.dataset.k=col.k;
+          if(col.ph) inp.placeholder=col.ph;
+          if(col.list) inp.setAttribute('list',col.list);
+          if(col.num){inp.inputMode='decimal';}
+          if(col.out){inp.readOnly=true;inp.className='total-out';inp.tabIndex=-1;}
+          if(data[col.k]!=null) inp.value=data[col.k];
+        }
+        cell.appendChild(inp);
+        row.appendChild(cell);
+      });
+      var del=document.createElement('button');
+      del.type='button';del.className='del';del.textContent='×';del.title='Remove';
+      del.addEventListener('click',function(){row.remove();recalc();markEmptyRows();});
+      row.appendChild(del);
+      row.addEventListener('input',function(){recalcRow(row);recalc();markEmptyRows();});
+      row.addEventListener('change',function(){recalcRow(row);recalc();markEmptyRows();});
+      return row;
+    }
+
+    function recalcRow(row){
+      var type=row.dataset.type;
+      var get=function(k){var i=row.querySelector('[data-k="'+k+'"]');return i?num(i.value):0;};
+      var out=row.querySelector('[data-k="total"]');
+      var t=0;
+      if(type==='labour'||type==='plant') t=get('hours')*get('rate');
+      else if(type==='mat') t=get('qty')*get('cost');
+      if(out) out.value = t? gbp(t) : '';
+    }
+
+    function addRow(type,data){ $('#'+cfg[type].cont).appendChild(makeRow(type,data)); }
+
+    function sectionTotal(type){
+      var sum=0;
+      $$('#'+cfg[type].cont+' .row').forEach(function(r){
+        var o=r.querySelector('[data-k="total"]'); sum+=num(o&&o.value);
+      });
+      return sum;
+    }
+
+    function recalc(){
+      var lab=sectionTotal('labour'), pl=sectionTotal('plant'), mat=sectionTotal('mat');
+      var sub=lab+pl+mat;
+      var mk=num($('#f_markup').value);
+      var grand=sub*(1+mk/100);
+      $('#s_labour').textContent=gbp(lab);
+      $('#s_plant').textContent=gbp(pl);
+      $('#s_mat').textContent=gbp(mat);
+      $('#s_sub').textContent=gbp(sub);
+      $('#s_grand').textContent=gbp(grand);
+    }
+
+    function markEmptyRows(){ // hide fully-empty rows in print
+      $$('.row').forEach(function(r){
+        var filled=$$('input,select',r).some(function(i){return !i.readOnly && i.value.trim()!==''});
+        r.classList.toggle('empty-row',!filled);
+      });
+    }
+
+    $$('[data-add]').forEach(function(b){
+      b.addEventListener('click',function(){ addRow(b.dataset.add); markEmptyRows(); });
+    });
+    $('#f_markup').addEventListener('input',recalc);
+
+    /* ---------- photos / attachments ---------- */
+    var drop=$('#drop'), fileInput=$('#fileInput'), thumbs=$('#thumbs');
+    drop.addEventListener('click',function(){fileInput.click()});
+    ['dragover','dragenter'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over')})});
+    ['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over')})});
+    drop.addEventListener('drop',function(ev){handleFiles(ev.dataTransfer.files)});
+    fileInput.addEventListener('change',function(){handleFiles(fileInput.files);fileInput.value=''});
+
+    function handleFiles(files){
+      Array.prototype.forEach.call(files,function(file){
+        if(file.type.indexOf('image/')===0){ shrinkImage(file,addThumb); return; }
+        if(file.size>6*1024*1024){ toast('“'+file.name+'” is too big to attach (max 6 MB) — email that one instead.'); return; }
+        var r=new FileReader();
+        r.onload=function(){ addFileTile(file.name,r.result,file.type); };
+        r.readAsDataURL(file);
+      });
+    }
+    function shrinkImage(file,cb){
+      var r=new FileReader();
+      r.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var max=1400, w=img.width, h=img.height;
+          if(w>max||h>max){var s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+          var cv=document.createElement('canvas');cv.width=w;cv.height=h;
+          cv.getContext('2d').drawImage(img,0,0,w,h);
+          cb(cv.toDataURL('image/jpeg',0.75));
+        };
+        img.src=r.result;
+      };
+      r.readAsDataURL(file);
+    }
+    function addThumb(dataURL,cap){
+      var d=document.createElement('div');d.className='thumb';
+      d._att={kind:'image',data:dataURL,mime:'image/jpeg'};
+      var im=document.createElement('img');im.src=dataURL;
+      var ci=document.createElement('input');ci.className='cap';ci.placeholder='Caption / reference…';if(cap)ci.value=cap;
+      var x=document.createElement('button');x.className='x';x.textContent='×';x.type='button';
+      x.addEventListener('click',function(){d.remove()});
+      d.appendChild(x);d.appendChild(im);d.appendChild(ci);thumbs.appendChild(d);
+    }
+    function addFileTile(name,dataURL,mime,cap){
+      var d=document.createElement('div');d.className='thumb';
+      d._att={kind:'file',name:name,data:dataURL||'',mime:mime||'application/pdf'};
+      var f=document.createElement(dataURL?'a':'div');f.className='file';
+      if(dataURL){f.href=dataURL;f.target='_blank';f.rel='noopener';f.setAttribute('download',name);}
+      f.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="#273E57"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5z"/></svg>';
+      var nm=document.createElement('span');nm.textContent=name;f.appendChild(nm);
+      var ci=document.createElement('input');ci.className='cap';ci.placeholder='Caption / reference…';if(cap)ci.value=cap;
+      var x=document.createElement('button');x.className='x';x.textContent='×';x.type='button';
+      x.addEventListener('click',function(){d.remove()});
+      d.appendChild(x);d.appendChild(f);d.appendChild(ci);thumbs.appendChild(d);
+    }
+
+    /* ---------- signature pads ---------- */
+    function initPad(id){
+      var cv=$('#'+id); var ctx=cv.getContext('2d'); var drawing=false, dirty=false;
+      function size(){
+        var r=cv.getBoundingClientRect();
+        var dpr=window.devicePixelRatio||1;
+        if(cv.width!==r.width*dpr||cv.height!==r.height*dpr){
+          var data = dirty? cv.toDataURL() : null;
+          cv.width=r.width*dpr; cv.height=r.height*dpr;
+          ctx.setTransform(dpr,0,0,dpr,0,0);
+          ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#1B2C3E';
+          if(data){var i=new Image();i.onload=function(){ctx.drawImage(i,0,0,r.width,r.height)};i.src=data;}
+        }
+      }
+      function pos(e){var r=cv.getBoundingClientRect();var t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
+      function start(e){e.preventDefault();drawing=true;dirty=true;var p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);}
+      function move(e){if(!drawing)return;e.preventDefault();var p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();}
+      function end(){drawing=false;}
+      cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);
+      window.addEventListener('mouseup',end);
+      cv.addEventListener('touchstart',start,{passive:false});
+      cv.addEventListener('touchmove',move,{passive:false});
+      cv.addEventListener('touchend',end);
+      window.addEventListener('resize',size);
+      setTimeout(size,30);
+      cv._clear=function(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);var dpr=window.devicePixelRatio||1;ctx.setTransform(dpr,0,0,dpr,0,0);dirty=false;};
+      cv._isDirty=function(){return dirty;};
+      cv._data=function(){return dirty?cv.toDataURL('image/png'):'';};
+      cv._load=function(url){if(!url)return;var i=new Image();i.onload=function(){var r=cv.getBoundingClientRect();ctx.drawImage(i,0,0,r.width,r.height);dirty=true;};i.src=url;};
+      return cv;
+    }
+    var pad1=initPad('sig1'), pad2=initPad('sig2');
+    $$('[data-clear]').forEach(function(b){
+      b.addEventListener('click',function(){ (b.dataset.clear==='sig1'?pad1:pad2)._clear(); });
+    });
+
+    /* ---------- state (save link) ---------- */
+    var FIELDS=['f_date','f_sheet','f_day','f_project','f_client','f_site','f_by','f_byrole','f_po',
+      'f_desc','f_reason','f_notes','f_markup','f_sig1name','f_sig1date','f_sig2name','f_sig2date'];
+
+    function collect(){
+      var s={v:1,mode:MODE,fields:{},lines:{labour:[],plant:[],mat:[]},attachments:[]};
+      FIELDS.forEach(function(id){s.fields[id]=$('#'+id).value;});
+      ['labour','plant','mat'].forEach(function(type){
+        $$('#'+cfg[type].cont+' .row').forEach(function(r){
+          var o={}; $$('input,select',r).forEach(function(i){ if(!i.readOnly) o[i.dataset.k]=i.value; });
+          if(Object.keys(o).some(function(k){return o[k]&&o[k].trim()})) s.lines[type].push(o);
+        });
+      });
+      Array.prototype.forEach.call(thumbs.children,function(d){
+        if(!d._att||!d._att.data) return;
+        var c=d.querySelector('.cap');
+        s.attachments.push({kind:d._att.kind,name:d._att.name||'',mime:d._att.mime||'',data:d._att.data,cap:c?c.value:''});
+      });
+      return s;
+    }
+    function restore(s){
+      if(!s) return;
+      setMode(s.mode || ((s.fields&&s.fields.f_reason&&s.fields.f_reason.trim())?'variation':'dayworks'));
+      FIELDS.forEach(function(id){ if(s.fields&&s.fields[id]!=null) $('#'+id).value=s.fields[id]; });
+      $$('.grow').forEach(grow);
+      ['labour','plant','mat'].forEach(function(type){
+        $('#'+cfg[type].cont).innerHTML='';
+        var arr=(s.lines&&s.lines[type])||[];
+        if(!arr.length) addRow(type);
+        else arr.forEach(function(d){addRow(type,d)});
+        $$('#'+cfg[type].cont+' .row').forEach(recalcRow);
+      });
+      thumbs.innerHTML='';
+      (s.attachments||[]).forEach(function(a){
+        if(a.kind==='image') addThumb(a.data,a.cap);
+        else addFileTile(a.name,a.data,a.mime,a.cap);
+      });
+      recalc(); markEmptyRows();
+    }
+
+    function b64enc(str){return btoa(unescape(encodeURIComponent(str)));}
+    function b64dec(str){return decodeURIComponent(escape(atob(str)));}
+
+    function saveLink(){
+      var s=collect();
+      var hash='#d='+encodeURIComponent(b64enc(JSON.stringify(s)));
+      var url=location.origin+location.pathname+hash;
+      history.replaceState(null,'',hash);
+      var sigNote=(pad1._isDirty()||pad2._isDirty())?' (signatures & photos stay in the PDF — export that for the signed copy)':'';
+      if(navigator.share){
+        navigator.share({title:'D&C Day Works Sheet',text:'Day works sheet — tap to open & edit',url:url})
+          .then(function(){toast('Link shared'+sigNote)})
+          .catch(function(){copy(url,sigNote)});
+      } else { copy(url,sigNote); }
+    }
+    function copy(url,note){
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(url).then(function(){toast('Link copied — paste into WhatsApp'+(note||''))},function(){prompt('Copy this link:',url)});
+      } else { prompt('Copy this link:',url); }
+    }
+
+    function loadFromHash(){
+      var m=/[#&]d=([^&]+)/.exec(location.hash);
+      if(!m) return false;
+      try{ restore(JSON.parse(b64dec(decodeURIComponent(m[1])))); return true; }
+      catch(e){ return false; }
+    }
+
+    /* ---------- toast ---------- */
+    var toastEl=$('#toast'), toastT;
+    function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('show')},3200);}
+
+    /* ---------- costs export (director) ---------- */
+    function buildCosts(){
+      var s=collect(), f=s.fields;
+      var lp=[], mats=[];
+      s.lines.labour.forEach(function(r){ var n=(r.name||'').trim(); if(n) lp.push(n+'\t'+((r.hours||'').trim())); });
+      s.lines.plant.forEach(function(r){ var d=(r.desc||'').trim(); if(d) lp.push(d+'\t'+((r.hours||'').trim())); });
+      s.lines.mat.forEach(function(r){ var d=(r.desc||'').trim(); if(d) mats.push(d+'\t'+((r.qty||'').trim())); });
+      var lpEl=$('#cxLabourPlant'), mEl=$('#cxMaterials');
+      lpEl.value=lp.join('\n'); lpEl.placeholder='No labour or plant entered'; lpEl.setAttribute('data-empty',lp.length?'0':'1');
+      mEl.value=mats.join('\n'); mEl.placeholder='No materials entered'; mEl.setAttribute('data-empty',mats.length?'0':'1');
+      $('#cxSummary').textContent=[f.f_project,f.f_client,f.f_sheet?('Sheet '+f.f_sheet):'',f.f_date].filter(Boolean).join('   ·   ');
+    }
+    function csvCell(v){v=(v==null?'':String(v));return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+    function downloadCosts(){
+      var s=collect(), f=s.fields, rows=[];
+      rows.push(['Day Works Sheet']);
+      rows.push(['Project',f.f_project||'']);
+      rows.push(['Client',f.f_client||'']);
+      rows.push(['Sheet No',f.f_sheet||'']);
+      rows.push(['Date',f.f_date||'']);
+      rows.push([]);
+      rows.push(['Section','Item','Qty / Hours','Unit']);
+      s.lines.labour.forEach(function(r){ if((r.name||'').trim()) rows.push(['Labour',r.name||'',r.hours||'','hrs']); });
+      s.lines.plant.forEach(function(r){ if((r.desc||'').trim()) rows.push(['Plant',r.desc||'',r.hours||'','hrs']); });
+      s.lines.mat.forEach(function(r){ if((r.desc||'').trim()) rows.push(['Materials',r.desc||'',r.qty||'',r.unit||'']); });
+      var csv=rows.map(function(r){return r.map(csvCell).join(',');}).join('\r\n');
+      var a=document.createElement('a');
+      var name=(f.f_project||'sheet').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
+      a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+      a.download='dayworks-'+name+(f.f_date?'-'+f.f_date:'')+'.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+    }
+    function closeCosts(){ $('#costsModal').classList.remove('show'); }
+    $('#btnCosts').addEventListener('click',function(){ buildCosts(); $('#costsModal').classList.add('show'); });
+    $('#cxClose').addEventListener('click',closeCosts);
+    $('#cxDone').addEventListener('click',closeCosts);
+    $('#cxCsv').addEventListener('click',downloadCosts);
+    $('#costsModal').addEventListener('click',function(e){ if(e.target===this) closeCosts(); });
+    $$('[data-copy]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var ta=$('#'+b.dataset.copy);
+        if(!ta.value){ toast('Nothing to copy in this block'); return; }
+        ta.focus(); ta.select();
+        function ok(){ toast('Copied — paste into your costs sheet'); }
+        if(navigator.clipboard&&navigator.clipboard.writeText){
+          navigator.clipboard.writeText(ta.value).then(ok,function(){document.execCommand('copy');ok();});
+        } else { document.execCommand('copy'); ok(); }
+      });
+    });
+
+    /* ---------- buttons ---------- */
+    $('#btnSave').addEventListener('click',saveLink);
+    $('#btnPdf').addEventListener('click',function(){markEmptyRows();setTimeout(function(){window.print()},60);});
+    $('#btnNew').addEventListener('click',function(){
+      if(!confirm('Start a new blank sheet? Anything not saved or exported will be cleared.')) return;
+      location.href=location.origin+location.pathname;
+    });
+
+    /* ---------- boot ---------- */
+    if(!loadFromHash()){
+      ['labour','plant','mat'].forEach(function(t){addRow(t)});
+      var t=new Date().toISOString().slice(0,10);
+      $('#f_date').value=t;
+      $('#f_day').value=new Date().toLocaleDateString('en-GB',{weekday:'long'});
+      setMode('dayworks');
+    }
+    recalc(); markEmptyRows();
+
+    /* ---------- PWA ---------- */
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',function(){navigator.serviceWorker.register('dayworks-sw.js').catch(function(){})});
+    }
+    // show install hint on iOS Safari / standalone-capable, not already installed
+    var isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+    if(!isStandalone && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
+      $('#installHint').style.display='block';
+    }
+
+    /* ---------- sheet mode: 'dayworks' (single description) vs 'variation' (description + reason) ---------- */
+    /* NB: declared after boot runs — keep any value already set by restore() (var is hoisted) */
+    var MODE = MODE || 'dayworks';
+    function setMode(mode){
+      MODE = (mode==='variation') ? 'variation' : 'dayworks';
+      document.body.classList.toggle('mode-dayworks', MODE==='dayworks');
+      document.body.classList.toggle('mode-variation', MODE==='variation');
+      var dt=$('#docTitle'), dh=$('#descHead'), dl=$('#descLabel'), de=$('#f_desc');
+      if(MODE==='variation'){
+        if(dt) dt.textContent='Variation';
+        if(dh) dh.textContent='Description & Reason';
+        if(dl) dl.textContent='Description of Works / Variation';
+        if(de) de.setAttribute('placeholder','Describe the additional works carried out…');
+      } else {
+        if(dt) dt.textContent='Day Works Sheet';
+        if(dh) dh.textContent='Description of Works';
+        if(dl) dl.textContent='Description of Works';
+        if(de) de.setAttribute('placeholder','Describe the works carried out on site…');
+      }
+    }
+
+    /* ---------- public API for the cloud/login layer (dayworks-cloud.js) ---------- */
+    function blank(){
+      FIELDS.forEach(function(id){$('#'+id).value='';});
+      thumbs.innerHTML='';
+      pad1._clear(); pad2._clear();
+      ['labour','plant','mat'].forEach(function(type){ $('#'+cfg[type].cont).innerHTML=''; addRow(type); });
+      var t=new Date().toISOString().slice(0,10);
+      $('#f_date').value=t;
+      $('#f_day').value=new Date().toLocaleDateString('en-GB',{weekday:'long'});
+      $$('.grow').forEach(grow);
+      recalc(); markEmptyRows();
+      history.replaceState(null,'',location.pathname);
+    }
+    window.DW = {
+      collect: collect,
+      restore: function(s){ restore(s); },
+      blank: blank,
+      toast: toast,
+      meta: function(){
+        return {
+          project: $('#f_project').value.trim(),
+          client: $('#f_client').value.trim(),
+          sheet: $('#f_sheet').value.trim(),
+          date: $('#f_date').value,
+          day: $('#f_day').value.trim(),
+          grand: num($('#s_grand').textContent),
+          mode: MODE
+        };
+      },
+      setMode: setMode,
+      setRole: function(role){
+        document.body.classList.toggle('role-crew', role==='crew');
+      },
+      onSaveClick: function(fn){ // let cloud layer take over the Save button
+        var b=$('#btnSave'); var c=b.cloneNode(true); b.parentNode.replaceChild(c,b);
+        c.addEventListener('click',fn);
+      },
+      hasHashData: function(){ return /[#&]d=/.test(location.hash); }
+    };
+    document.dispatchEvent(new Event('dw-ready'));
+  })();
+  </script>
+  <script src="dayworks-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="dayworks-cloud.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Font Lab | D&amp;C Groundworks — Heading Options</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Oswald:wght@500;600;700&family=Anton&family=Bebas+Neue&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --navy:#273E57; --navy-dark:#1B2C3E; --navy-light:#3E5975;
+      --beige:#EDE7DF; --beige-dark:#D8CFC2; --offwhite:#F7F4EF; --white:#fff;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Montserrat',sans-serif;background:var(--offwhite);color:var(--navy);padding:0 0 80px;}
+    .page-head{background:var(--navy);color:#fff;padding:46px 30px;text-align:center;}
+    .page-head h1{font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:clamp(1.6rem,4vw,2.6rem);}
+    .page-head p{color:var(--beige-dark);max-width:640px;margin:14px auto 0;font-weight:300;line-height:1.5;}
+    .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+    .opt{margin-top:40px;border-radius:14px;overflow:hidden;box-shadow:0 18px 50px rgba(27,44,62,.14);background:var(--white);}
+    .opt__tag{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 26px;background:var(--beige);}
+    .opt__tag b{font-size:.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--navy-light);}
+    .opt__tag .name{font-weight:700;letter-spacing:.5px;}
+    .badge{font-size:.62rem;letter-spacing:2px;text-transform:uppercase;padding:5px 12px;border-radius:40px;background:var(--navy);color:#fff;font-weight:600;}
+    .badge--current{background:#3E7D4F;}
+    /* hero-style preview panel */
+    .hero{position:relative;min-height:360px;display:flex;align-items:center;padding:46px 40px;
+      background:linear-gradient(120deg,rgba(27,44,62,.86),rgba(39,62,87,.62)),url('assets/drone-hero.jpg') center/cover;}
+    .hero__inner{max-width:720px;}
+    .eyebrow{display:inline-block;font-size:.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--beige);font-weight:600;margin-bottom:18px;}
+    .hero__sub{color:#EDE7DF;font-weight:300;margin-top:22px;font-size:1.05rem;max-width:480px;line-height:1.55;}
+    .headline{color:#fff;line-height:1.02;}
+
+    /* --- The five heading treatments --- */
+    /* 1. current */
+    .f-current .headline{font-family:'Montserrat';font-weight:700;text-transform:uppercase;letter-spacing:2px;font-size:clamp(2.4rem,6vw,4.6rem);}
+    /* 2. heavier montserrat */
+    .f-heavy .headline{font-family:'Montserrat';font-weight:900;text-transform:uppercase;letter-spacing:1px;font-size:clamp(2.4rem,6vw,4.6rem);}
+    /* 3. oswald condensed */
+    .f-oswald .headline{font-family:'Oswald';font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:clamp(2.8rem,7.4vw,5.6rem);}
+    /* 4. anton poster */
+    .f-anton .headline{font-family:'Anton';font-weight:400;text-transform:uppercase;letter-spacing:.5px;font-size:clamp(2.9rem,7.6vw,5.8rem);}
+    /* 5. bebas neue */
+    .f-bebas .headline{font-family:'Bebas Neue';font-weight:400;text-transform:uppercase;letter-spacing:2px;font-size:clamp(3rem,8vw,6.2rem);}
+    /* 6. archivo */
+    .f-archivo .headline{font-family:'Archivo';font-weight:900;text-transform:uppercase;letter-spacing:0;font-size:clamp(2.4rem,6vw,4.6rem);}
+
+    .note{padding:16px 26px;font-size:.9rem;color:var(--navy-light);line-height:1.5;background:var(--offwhite);border-top:1px solid var(--beige-dark);}
+    .note b{color:var(--navy);}
+  </style>
+</head>
+<body>
+
+  <div class="page-head">
+    <h1>Heading Font Options</h1>
+    <p>Same page, same brand colours &mdash; only the <b style="color:#fff;">headline font</b> changes. Body text stays Montserrat everywhere for readability. Scroll through and tell me which one feels most &ldquo;D&amp;C&rdquo;.</p>
+  </div>
+
+  <div class="wrap">
+
+    <!-- 1 CURRENT -->
+    <div class="opt f-current">
+      <div class="opt__tag"><span class="name">Option 1 &mdash; Montserrat Bold</span><span class="badge badge--current">Current site</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>What you have now.</b> Clean, professional, safe. Reads well but doesn&rsquo;t shout &mdash; blends in with a lot of trade sites.</div>
+    </div>
+
+    <!-- 2 HEAVY -->
+    <div class="opt f-heavy">
+      <div class="opt__tag"><span class="name">Option 2 &mdash; Montserrat Black</span><span class="badge">Same font, more weight</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>Zero new fonts, more punch.</b> Same Montserrat you already use, just the heaviest weight. More authority with no brand risk &mdash; the safe upgrade.</div>
+    </div>
+
+    <!-- 3 OSWALD -->
+    <div class="opt f-oswald">
+      <div class="opt__tag"><span class="name">Option 3 &mdash; Oswald Condensed</span><span class="badge">Industrial</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>Tall, condensed, construction feel.</b> Pairs naturally with Montserrat body. Fits more words on one line and reads as a serious contractor.</div>
+    </div>
+
+    <!-- 4 ANTON -->
+    <div class="opt f-anton">
+      <div class="opt__tag"><span class="name">Option 4 &mdash; Anton</span><span class="badge">Maximum impact</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>Big, bold, poster-style.</b> Heaviest &ldquo;wow factor&rdquo; over drone footage. Strong for a brand that wants to stand out &mdash; use only on headlines.</div>
+    </div>
+
+    <!-- 5 BEBAS -->
+    <div class="opt f-bebas">
+      <div class="opt__tag"><span class="name">Option 5 &mdash; Bebas Neue</span><span class="badge">Tall &amp; clean</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>Tall, elegant, modern.</b> Slightly more &ldquo;premium developer&rdquo; than heavy industrial. Great over cinematic drone shots.</div>
+    </div>
+
+    <!-- 6 ARCHIVO -->
+    <div class="opt f-archivo">
+      <div class="opt__tag"><span class="name">Option 6 &mdash; Archivo Black</span><span class="badge">Modern &amp; sturdy</span></div>
+      <div class="hero"><div class="hero__inner">
+        <span class="eyebrow">Christchurch &middot; Bournemouth &middot; Poole &middot; Dorset</span>
+        <div class="headline">Groundworks Built to Last</div>
+        <p class="hero__sub">A complete groundworks &amp; civils service across Dorset, delivered by a family-run team.</p>
+      </div></div>
+      <div class="note"><b>Wide, solid, contemporary.</b> Feels engineered and stable &mdash; a nice middle ground between Montserrat Black and full industrial.</div>
+    </div>
+
+  </div>
+</body>
+</html>

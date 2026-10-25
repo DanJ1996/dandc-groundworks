@@ -1,0 +1,34 @@
+{
+  "projects": [
+    {
+      "title": "Riverside Drive — Drainage",
+      "location": "Bournemouth",
+      "type": "Surface Water Drainage",
+      "description": "Full surface-water drainage system installed on a waterlogged plot, transforming an unusable site into build-ready ground.",
+      "before": "assets/projects/riverside-before.jpg",
+      "after": "assets/projects/riverside-after.jpg",
+      "video": "",
+      "bgImage": "",
+      "stats": [
+        { "value": 120, "label": "m³ Excavated" },
+        { "value": 8, "label": "Days On Site" },
+        { "value": 1, "label": "Happy Client" }
+      ]
+    },
+    {
+      "title": "Hillside Foundations",
+      "location": "Poole",
+      "type": "Trench-Fill Foundations",
+      "description": "Trench-fill foundations laid across a sloping plot, delivering a level, build-ready base ahead of schedule.",
+      "before": "assets/projects/hillside-before.jpg",
+      "after": "assets/projects/hillside-after.jpg",
+      "video": "",
+      "bgImage": "",
+      "stats": [
+        { "value": 85, "label": "m³ Concrete" },
+        { "value": 6, "label": "Days On Site" },
+        { "value": 320, "label": "m² Levelled" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+D&C GROUNDWORKS — WHERE TO PUT YOUR FILES
+=========================================
+
+Drop your files into this "assets" folder using these exact names and
+they'll appear on the site automatically. If a file isn't there yet, the
+site shows a tidy navy placeholder instead (so nothing looks broken).
+
+HOMEPAGE DRONE FOOTAGE
+  assets/drone-hero.mp4      <- your HD drone clip for the homepage hero
+  assets/drone-hero.jpg      <- a still frame (shows while the video loads)
+
+LIVE PROJECTS PAGE HERO
+  assets/drone-projects.mp4  <- drone clip for the projects page top
+  assets/drone-projects.jpg  <- still frame
+
+LOGO
+  assets/logo.png            <- your logo (transparent PNG works best)
+
+BEFORE / AFTER PROJECT PHOTOS  (put inside assets/projects/)
+  assets/projects/riverside-before.jpg
+  assets/projects/riverside-after.jpg
+  assets/projects/hillside-before.jpg
+  assets/projects/hillside-after.jpg
+  ...add more per project, then list them in data/projects.json
+
+VIDEO TIPS (so the site stays fast)
+  - MP4 (H.264), 1080p, aim for under ~10 MB per clip, 15–25 seconds, looping.
+  - No sound needed (hero videos are muted).
+  - If your clips are large, tell me and I'll compress them for web.
+
+That's it — drop the files, refresh the preview, and they're live.

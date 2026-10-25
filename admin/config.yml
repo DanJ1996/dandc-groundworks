@@ -1,0 +1,76 @@
+# D&C Groundworks — Decap CMS config
+# Powers the self-serve editor at /admin
+
+backend:
+  name: github
+  repo: OWNER/REPO      # <-- set to your GitHub username/repo once created
+  branch: main
+
+# Fallback upload location (individual collections override this per-folder)
+media_folder: "assets/uploads"
+public_folder: "/assets/uploads"
+
+# Commit straight to the live site (no draft/review step)
+publish_mode: simple
+
+site_url: https://dandcgroundworks.com
+display_url: https://dandcgroundworks.com
+
+collections:
+  # ---------- LIVE PROJECT ----------
+  - name: "live"
+    label: "Live Project"
+    delete: false
+    files:
+      - name: "current"
+        label: "Current Live Project"
+        file: "data/live.json"
+        media_folder: "/assets/live"
+        public_folder: "/assets/live"
+        fields:
+          - label: "Project Details"
+            name: "project"
+            widget: "object"
+            fields:
+              - { label: "Title", name: "title", widget: "string" }
+              - { label: "Location", name: "location", widget: "string" }
+              - { label: "Type", name: "type", widget: "string" }
+              - { label: "Status", name: "status", widget: "string", default: "On Going" }
+              - { label: "Summary", name: "summary", widget: "text" }
+          - label: "Weekly Updates"
+            name: "updates"
+            widget: "list"
+            label_singular: "Update"
+            summary: "{{fields.week}} — {{fields.caption}}"
+            fields:
+              - { label: "Week", name: "week", widget: "string", hint: "e.g. Week 4" }
+              - { label: "Caption", name: "caption", widget: "string" }
+              - { label: "Photo", name: "image", widget: "image" }
+
+  # ---------- PROJECTS GALLERY ----------
+  - name: "gallery"
+    label: "Projects Gallery"
+    files:
+      - name: "photos"
+        label: "Gallery Photos"
+        file: "data/gallery.json"
+        media_folder: "/assets/gallery"
+        public_folder: "/assets/gallery"
+        fields:
+          - label: "Photos"
+            name: "images"
+            widget: "list"
+            label_singular: "Photo"
+            summary: "{{fields.cat}} — {{fields.src}}"
+            fields:
+              - { label: "Photo", name: "src", widget: "image" }
+              - label: "Category"
+                name: "cat"
+                widget: "select"
+                options:
+                  - { label: "Commercial", value: "commercial" }
+                  - { label: "Excavation", value: "excavation" }
+                  - { label: "Foundations", value: "foundations" }
+                  - { label: "Drainage", value: "drainage" }
+                  - { label: "Driveways & Patios", value: "driveways" }
+                  - { label: "Extensions", value: "extensions" }

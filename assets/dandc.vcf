@@ -1,0 +1,15 @@
+BEGIN:VCARD
+VERSION:3.0
+N:;D&C Groundworks & Civils Ltd;;;
+FN:D&C Groundworks & Civils Ltd
+ORG:D&C Groundworks & Civils Ltd
+TITLE:Groundworks & Civil Engineering Contractors
+item1.TEL;TYPE=CELL,VOICE:+447891078768
+item1.X-ABLabel:Dan
+item2.TEL;TYPE=CELL,VOICE:+447929958036
+item2.X-ABLabel:Chris
+EMAIL;TYPE=INTERNET,WORK:office@dandcgroundworks.co.uk
+URL:https://dandcgroundworks.com
+ADR;TYPE=WORK:;;42a Fairfield;Christchurch;;BH23 1QX;United Kingdom
+NOTE:Groundworks, Civil Engineering, Patios, Driveways & more. Available 24/7 across Dorset & Hampshire.
+END:VCARD
