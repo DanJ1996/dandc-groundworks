@@ -130,6 +130,9 @@ table.grid{border-collapse:collapse;width:100%}
 .cts .dow{text-align:left;white-space:nowrap;font-weight:600}
 .cts .dow.we{color:var(--muted)}
 .cts .dow .dnum{color:var(--muted);font-weight:400;margin-left:6px}
+.cts .dow .add{display:block;margin-top:4px}
+.cts tr.more th,.cts tr.more td{border-top:0;padding-top:0}
+.cts tr.split td,.cts tr.split th{border-bottom:0}
 .lines{min-width:640px}
 .lines .q{width:5.5em;text-align:right} .lines .u{width:5em} .lines .rt{width:7em;text-align:right}
 .rc{min-width:680px}
@@ -192,6 +195,8 @@ const addDays=(s,n)=>{const d=parse(s);d.setUTCDate(d.getUTCDate()+n);return iso
 const mondayOf=s=>addDays(s,-((parse(s).getUTCDay()+6)%7));
 const dayDiff=(a,b)=>Math.round((parse(a)-parse(b))/864e5);
 const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+/* a crew day can be split across several jobs — older saves kept one loc/h per day */
+const dayJobs=d=>{if(!d)return [];if(Array.isArray(d.jobs)&&d.jobs.length)return d.jobs.map(j=>({loc:(j&&j.loc)||'',h:num(j&&j.h)}));return [{loc:d.loc||'',h:num(d.h)}];};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmtD=(s,yr)=>{if(!s)return '—';const d=parse(s);return d.getUTCDate()+' '+MON[d.getUTCMonth()]+(yr?' '+d.getUTCFullYear():'');};
 const byName=(a,b)=>String(a.name||'').localeCompare(String(b.name||''));
@@ -363,11 +368,11 @@ views.timesheets=()=>{
   const bp=Object.entries(T.byProject).sort((a,b)=>b[1].h-a[1].h);
   const byJob=`<section class="panel"><div class="panel-h"><h3>This week by job</h3></div>${bp.length?`<ul class="items">${bp.map(([p,o])=>`<li class="item"><div class="item-main">${esc(projName(p)||'General / not on a job')}</div><div class="item-amt"><span class="amt">${hrs(o.h)} h</span><span class="sub">${money(o.cost)} labour</span></div></li>`).join('')}</ul>`:empty('No hours entered for this week','Type hours into the grid above. Totals by job appear here.')}</section>`;
   const crewNorm=(key,x)=>{let tot=0;const byLoc={};let days=null;
-    if(x.days&&x.days.length){days=x.days.map((d,i)=>({day:DOW[i],date:addDays(wk,i),loc:d.loc||'',h:num(d.h)}));x.days.forEach(d=>{const t=num(d.h);if(!t)return;tot+=t;const k=d.loc||'General / not on a job';byLoc[k]=(byLoc[k]||0)+t;});}
+    if(x.days&&x.days.length){days=x.days.map((d,i)=>{const jobs=dayJobs(d).filter(j=>j.h);jobs.forEach(j=>{tot+=j.h;const k=j.loc||'General / not on a job';byLoc[k]=(byLoc[k]||0)+j.h;});return {day:DOW[i],date:addDays(wk,i),jobs};});}
     else if(x.rows&&x.rows.length){x.rows.forEach(r=>{const t=sum((r.h||[]).map(num));if(!t)return;tot+=t;const k=[r.job,r.loc].filter(Boolean).join(' — ')||'General / not on a job';byLoc[k]=(byLoc[k]||0)+t;});}
     return {key,name:x.name||'Crew',tot,byLoc,days};};
   const crewSubs=Object.entries(S.crew_hours||{}).filter(([k,x])=>x&&x.week===wk).map(([k,x])=>crewNorm(k,x)).filter(x=>x.tot>0).sort((a,b)=>a.name.localeCompare(b.name));
-  const crewWeek=x=>{let inner;if(x.days){const rows=x.days.map(d=>`<tr${d.h?'':' class="off"'}><td>${d.day} ${parse(d.date).getUTCDate()} ${MON[parse(d.date).getUTCMonth()]}</td><td>${d.loc?esc(d.loc):'<span class="sub">—</span>'}</td><td class="n">${d.h?hrs(d.h)+' h':'<span class="sub">—</span>'}</td></tr>`).join('');
+  const crewWeek=x=>{let inner;if(x.days){const dash='<span class="sub">—</span>';const rows=x.days.map(d=>{const lbl=`${d.day} ${parse(d.date).getUTCDate()} ${MON[parse(d.date).getUTCMonth()]}`;if(!d.jobs.length)return `<tr class="off"><td>${lbl}</td><td>${dash}</td><td class="n">${dash}</td></tr>`;return d.jobs.map((j,k)=>`<tr><td>${k?'':lbl}</td><td>${j.loc?esc(j.loc):dash}</td><td class="n">${hrs(j.h)} h</td></tr>`).join('');}).join('');
       inner=`<table class="grid" style="min-width:0"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="2">Total</th><td class="n">${hrs(x.tot)} h</td></tr></tfoot></table>`;}
     else{inner='<div class="sub">'+Object.entries(x.byLoc).map(([j,h])=>esc(j)+' · '+hrs(h)+' h').join('<br>')+'</div>';}
     return `<li class="crew-detail"><div class="panel-b" style="padding-top:0">${inner}</div></li>`;};
@@ -1204,15 +1209,17 @@ render();
     const cui={tab:'hours',week:mondayOf(todayISO())};
     const cS={days:[],projects:[],sheets:[],jobs:[],files:{}};
     const docId=w=>uid+'__'+w;
-    const blankWeek=()=>Array.from({length:7},()=>({loc:'',h:0}));
+    const blankDay=()=>({jobs:[{loc:'',h:0}]});
+    const blankWeek=()=>Array.from({length:7},blankDay);
+    const dayTotal=d=>d.jobs.reduce((a,j)=>a+num(j.h),0);
     const locOptions=cur=>{const names=[...new Set([...cS.projects.filter(p=>p&&p.status==='Live').map(p=>(p.site||'').trim()||p.name),...cS.jobs.map(j=>j&&((j.location||'').trim()||j.title))].filter(Boolean))];if(cur&&names.indexOf(cur)<0)names.unshift(cur);return '<option value="">— pick where —</option>'+names.map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('');};
     const tabsEl=$('tabs'),viewEl=$('view');
     let saveT=null,saving=false;
 
     const loadWeek=w=>sb.from('office_docs').select('data').eq('collection','crew_hours').eq('doc_id',docId(w)).maybeSingle()
       .then(r=>{const d=(r.data&&r.data.data)||{};
-        if(d.days&&d.days.length){cS.days=d.days.slice(0,7).map(x=>({loc:x.loc||'',h:num(x.h)}));while(cS.days.length<7)cS.days.push({loc:'',h:0});}
-        else if(d.rows&&d.rows.length){const days=blankWeek();d.rows.forEach(row=>{(row.h||[]).forEach((h,i)=>{const v=num(h);if(v>0){days[i].h+=v;if(!days[i].loc)days[i].loc=row.job||row.loc||'';}});});cS.days=days;}
+        if(d.days&&d.days.length){cS.days=d.days.slice(0,7).map(x=>({jobs:dayJobs(x)}));while(cS.days.length<7)cS.days.push(blankDay());}
+        else if(d.rows&&d.rows.length){const days=blankWeek();d.rows.forEach(row=>{(row.h||[]).forEach((h,i)=>{const v=num(h);if(v>0&&days[i]){const j=days[i].jobs;const loc=row.job||row.loc||'';if(j.length===1&&!j[0].h&&!j[0].loc)j[0]={loc,h:v};else j.push({loc,h:v});}});});cS.days=days;}
         else cS.days=blankWeek();});
     /* crew get ONLY name/site/status of live jobs via a locked-down function —
        never prices, markup, tender, client or notes (see office-schema.sql) */
@@ -1224,23 +1231,26 @@ render();
     const setHint=msg=>{const h=$('c-hint');if(h)h.textContent=msg!=null?msg:(saving?'Saving…':'Saved automatically');};
     function saveHours(){
       saving=true;setHint();
-      const days=cS.days.map(d=>({loc:d.loc||'',h:num(d.h)}));
+      const days=cS.days.map(d=>{const jobs=d.jobs.map(j=>({loc:j.loc||'',h:num(j.h)}));return {loc:(jobs.find(j=>j.loc)||{}).loc||'',h:dayTotal({jobs}),jobs};});
       sb.from('office_docs').upsert({collection:'crew_hours',doc_id:docId(cui.week),data:{uid,name:(profile&&profile.full_name)||'',week:cui.week,days},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
         .then(r=>{saving=false;if(r.error){setHint('Not saved — check your connection');toast('Hours not saved. Check your connection.');}else setHint('Saved');});
     }
     const queueSave=()=>{clearTimeout(saveT);saving=true;setHint();saveT=setTimeout(saveHours,700);};
 
     function updateTotals(){
-      let total=0;cS.days.forEach(d=>total+=num(d.h));
+      let total=0;cS.days.forEach(d=>total+=dayTotal(d));
       const g=viewEl.querySelector('[data-cgrand]');if(g)g.textContent=hrs(total);
     }
 
     function hoursView(){
       const wk=cui.week;if(cS.days.length<7)cS.days=blankWeek();
-      const total=cS.days.reduce((a,d)=>a+num(d.h),0);
+      const total=cS.days.reduce((a,d)=>a+dayTotal(d),0);
       const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-cwk="-7" aria-label="Previous week">‹</button><h2>Week commencing ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-cwk="7" aria-label="Next week">›</button>${wk!==mondayOf(todayISO())?`<button type="button" class="btn ghost sm" data-cwk="0">This week</button>`:''}</div><div class="sub" id="c-hint">Saved automatically</div></div>`;
-      const body=cS.days.map((d,i)=>`<tr><th class="dow${i>4?' we':''}">${DOW[i]}<span class="dnum">${parse(addDays(wk,i)).getUTCDate()}</span></th><td class="job"><select data-cday="${i}" data-cfield="loc" aria-label="Where on ${DOW[i]}">${locOptions(d.loc||'')}</select></td><td class="n"><input class="hr" inputmode="decimal" autocomplete="off" value="${num(d.h)?hrs(num(d.h)):''}" data-cday="${i}" data-cfield="h" aria-label="Hours ${DOW[i]}"></td></tr>`).join('');
-      const table=`<section class="panel"><div class="panel-h"><h3>Your hours, Mon–Sun</h3><span class="sub">Pick where you were each day, then your hours.</span></div><div class="scroll-x"><table class="grid ts cts"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>Weekly total</th><td></td><td class="n" data-cgrand>${hrs(total)}</td></tr></tfoot></table></div></section>`;
+      const body=cS.days.map((d,i)=>{const n=d.jobs.length;return d.jobs.map((j,k)=>{
+        const lbl=k?`<button type="button" class="btn ghost sm x" data-cdel="${i}" data-cj="${k}" aria-label="Remove this job from ${DOW[i]}">×</button>`:`${DOW[i]}<span class="dnum">${parse(addDays(wk,i)).getUTCDate()}</span><button type="button" class="btn ghost sm add" data-cadd="${i}" aria-label="Add another job on ${DOW[i]}">+ Job</button>`;
+        const cls=[k?'more':'',k<n-1?'split':''].filter(Boolean).join(' ');
+        return `<tr${cls?` class="${cls}"`:''}><th class="dow${i>4?' we':''}">${lbl}</th><td class="job"><select data-cday="${i}" data-cj="${k}" data-cfield="loc" aria-label="Where on ${DOW[i]}${k?', job '+(k+1):''}">${locOptions(j.loc||'')}</select></td><td class="n"><input class="hr" inputmode="decimal" autocomplete="off" value="${num(j.h)?hrs(num(j.h)):''}" data-cday="${i}" data-cj="${k}" data-cfield="h" aria-label="Hours ${DOW[i]}${k?', job '+(k+1):''}"></td></tr>`;}).join('');}).join('');
+      const table=`<section class="panel"><div class="panel-h"><h3>Your hours, Mon–Sun</h3><span class="sub">Pick where you were each day, then your hours. On more than one job? Tap “+ Job”.</span></div><div class="scroll-x"><table class="grid ts cts"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>Weekly total</th><td></td><td class="n" data-cgrand>${hrs(total)}</td></tr></tfoot></table></div></section>`;
       return head+table;
     }
     const sheetRow=x=>`<li class="item"><div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}${x.project?' · '+esc(x.project):''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}</div></div><div class="item-act"><button type="button" class="btn sm ghost" data-copen="${esc(x.id)}">Open</button></div></li>`;
@@ -1269,9 +1279,11 @@ render();
       const wk=e.target.closest('[data-cwk]');if(wk){const d=+wk.getAttribute('data-cwk');cui.week=d?mondayOf(addDays(cui.week,d)):mondayOf(todayISO());loadWeek(cui.week).then(render);return;}
       const nw=e.target.closest('[data-cnew]');if(nw){const m=nw.getAttribute('data-cnew');const jt=nw.getAttribute('data-cjob');openDW({mode:m,project:jt||''});return;}
       const op=e.target.closest('[data-copen]');if(op){openDW({id:op.getAttribute('data-copen')});return;}
+      const ad=e.target.closest('[data-cadd]');if(ad){const i=+ad.getAttribute('data-cadd');if(cS.days[i]){cS.days[i].jobs.push({loc:'',h:0});render();const sel=viewEl.querySelector(`select[data-cday="${i}"][data-cj="${cS.days[i].jobs.length-1}"]`);if(sel)sel.focus();}return;}
+      const dl=e.target.closest('[data-cdel]');if(dl){const i=+dl.getAttribute('data-cdel'),k=+dl.getAttribute('data-cj');if(cS.days[i]&&k>0){cS.days[i].jobs.splice(k,1);render();queueSave();}return;}
     });
-    viewEl.addEventListener('input',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='h'&&t.hasAttribute('data-cday')){const i=+t.getAttribute('data-cday');if(cS.days[i]){cS.days[i].h=num(t.value);updateTotals();queueSave();}}});
-    viewEl.addEventListener('change',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='loc'&&t.hasAttribute('data-cday')){const i=+t.getAttribute('data-cday');if(cS.days[i]){cS.days[i].loc=t.value;queueSave();}}});
+    viewEl.addEventListener('input',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='h'&&t.hasAttribute('data-cday')){const j=(cS.days[+t.getAttribute('data-cday')]||{jobs:[]}).jobs[+t.getAttribute('data-cj')||0];if(j){j.h=num(t.value);updateTotals();queueSave();}}});
+    viewEl.addEventListener('change',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='loc'&&t.hasAttribute('data-cday')){const j=(cS.days[+t.getAttribute('data-cday')]||{jobs:[]}).jobs[+t.getAttribute('data-cj')||0];if(j){j.loc=t.value;queueSave();}}});
 
     dwRefresh=()=>loadSheets().then(render);
     fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
