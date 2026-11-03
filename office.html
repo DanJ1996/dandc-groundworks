@@ -1254,10 +1254,13 @@ function dwCombo(inp,getOpts,onPick){
   const reposition=()=>{if(!pop.hidden)place();};
   inp.addEventListener('focus',paint);
   inp.addEventListener('input',paint);
-  inp.addEventListener('blur',()=>setTimeout(()=>{pop.hidden=true;},180));
+  /* longer hide delay so a tap-to-pick lands before the input's blur hides the
+     list; selection uses click (NOT pointerdown) so dragging a finger still
+     scrolls the list instead of being cancelled by preventDefault. */
+  inp.addEventListener('blur',()=>setTimeout(()=>{pop.hidden=true;},260));
   window.addEventListener('scroll',reposition,true);
   window.addEventListener('resize',reposition);
-  pop.addEventListener('pointerdown',e=>{const o=e.target.closest('.dw-copt');if(!o||o.classList.contains('none'))return;e.preventDefault();inp.value=o.textContent;pop.hidden=true;if(onPick)onPick(inp.value);inp.dispatchEvent(new Event('change',{bubbles:true}));inp.dispatchEvent(new Event('input',{bubbles:true}));});
+  pop.addEventListener('click',e=>{const o=e.target.closest('.dw-copt');if(!o||o.classList.contains('none'))return;inp.value=o.textContent;pop.hidden=true;if(onPick)onPick(inp.value);inp.dispatchEvent(new Event('change',{bubbles:true}));inp.dispatchEvent(new Event('input',{bubbles:true}));});
 }
 
 function dwDatalist(id,arr){if($(id))return;const dl=document.createElement('datalist');dl.id=id;dl.innerHTML=arr.map(v=>`<option value="${esc(v)}">`).join('');document.body.appendChild(dl);}
