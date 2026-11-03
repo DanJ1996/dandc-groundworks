@@ -95,3 +95,57 @@ $$;
 
 revoke all on function public.crew_live_projects() from public;
 grant execute on function public.crew_live_projects() to authenticated;
+
+-- Crew day-works MATERIALS dropdown. Same idea as above: a locked-down function
+-- returns ONLY the material DESCRIPTION from the rate card (Materials category),
+-- never the unit cost/rate. Directors load the full rate card for themselves and
+-- so always get a costed version; crew only ever receive names.
+create or replace function public.crew_materials()
+returns table (desc text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select distinct trim(data->>'desc') as desc
+  from public.office_docs
+  where collection = 'rates'
+    and lower(coalesce(data->>'cat','')) like 'material%'
+    and coalesce(trim(data->>'desc'),'') <> ''
+    and auth.uid() is not null
+  order by 1
+$$;
+
+revoke all on function public.crew_materials() from public;
+grant execute on function public.crew_materials() to authenticated;
+
+-- ==================================================================
+-- 5) CREW HOLIDAY REQUESTS  +  LEAD-HAND ("top man") PRIVATE NOTES
+--    Both live in office_docs, keyed doc_id = '<their-user-id>__<id>'
+--    so the SAME own-rows rule scopes each row to its owner.
+--      * holidays        — EVERY crew member can request time off; it
+--                          shows live in the directors' Crew tab, who
+--                          approve/decline (directors have full access
+--                          via office_docs_all above).
+--      * lead_reminders  — the lead hand's OWN private reminders.
+--    (materials / plant_faults / site_diary are reserved for the next
+--     lead-hand perks — listed here so this policy covers them already.)
+--
+--    This REPLACES the crew_hours-only policy with one that covers all
+--    of these owner-scoped collections at once. Safe to re-run.
+-- ==================================================================
+drop policy if exists office_docs_crew_hours on public.office_docs;
+drop policy if exists office_docs_crew_own on public.office_docs;
+create policy office_docs_crew_own on public.office_docs for all to authenticated
+  using (collection in ('crew_hours','holidays','lead_reminders','materials','plant_faults','site_diary')
+         and split_part(doc_id, '__', 1) = auth.uid()::text)
+  with check (collection in ('crew_hours','holidays','lead_reminders','materials','plant_faults','site_diary')
+         and split_part(doc_id, '__', 1) = auth.uid()::text);
+
+-- Mark the lead hand so the app unlocks his extra tabs. The app ALSO
+-- recognises his login email as a fallback, so his Lead perks work even
+-- before you run this line — but setting the role is the tidy way.
+-- 'lead_crew' is NOT a director: is_director() still only matches
+-- role='director', so he gets no access to pricing, quotes or invoices.
+update public.profiles set role = 'lead_crew'
+  where id = (select id from auth.users where lower(email) = 'matt@dandcgroundworks.co.uk');

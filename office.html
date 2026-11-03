@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html data-theme="light"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>D&amp;C Site Office</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Poppins:wght@600;700&display=swap">
 <style>
@@ -7,6 +7,7 @@
   --bg:#EDE7DF; --surface:#F9F6F1; --sunk:#E4DCD1; --ink:#1D2C3D; --muted:#586574; --line:#D3C9BB;
   --accent:#273E57; --on-accent:#F4EFE8; --band:#273E57; --on-band:#EDE7DF; --band-muted:#B4C0CC;
   --good:#2C7A4B; --warn:#9A5A08; --bad:#B23A2E; --info:#5AA7E0;
+  --gang1:#273E57; --gang2:#2E6E8E; --gang3:#6B4E8E; --gang4:#8A6D1F;
   --display:'Poppins',system-ui,'Segoe UI',sans-serif; --body:'IBM Plex Sans',system-ui,'Segoe UI',sans-serif;
   --r:6px;
 }
@@ -48,6 +49,12 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
 .panel-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px}
 .panel-b{padding:14px 16px;border-top:1px solid var(--line)}
+.dropdown-h{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;width:100%;padding:12px 16px;background:none;border:0;cursor:pointer;text-align:left;color:inherit;font:inherit}
+.dropdown-h .dropdown-t{font:600 1.05rem var(--display);display:flex;gap:8px;align-items:baseline}
+.dropdown-h .dropdown-fig{margin-left:auto;color:var(--muted);font-size:.9rem}
+.dropdown-h .dropdown-fig strong{color:var(--ink)}
+.dropdown-h .chev{color:var(--muted);font-size:.9rem}
+.dropdown.open>.dropdown-h{border-bottom:1px solid var(--line)}
 .note{padding:12px 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk)}
 .note.bad{border-color:var(--bad)}
 .empty{padding:26px 16px;text-align:center;color:var(--muted);border-top:1px solid var(--line)}
@@ -87,6 +94,7 @@ textarea{min-height:64px;resize:vertical}
 .pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 13%,var(--surface))}
 .pill.neutral{color:var(--muted);border-color:var(--line)}
 .pill.info{color:var(--info);background:color-mix(in srgb,var(--info) 14%,var(--surface))}
+.startrow{margin-top:5px}
 
 .items{list-style:none;margin:0;padding:0}
 .item{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
@@ -100,6 +108,44 @@ textarea{min-height:64px;resize:vertical}
 .item.crew-sub:hover{background:var(--sunk)}
 .item.crew-sub .chev{color:var(--muted);font-size:.85em}
 .item.crew-sub.open{background:var(--sunk)}
+.rem-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start;margin-top:16px}
+.rem-add{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.rem-add .f{flex:1 1 auto;margin:0}
+.rem-add .f.when{flex:0 1 190px}
+.rem-add .go{flex:0 0 auto}
+.rem .rem-check{flex:0 0 auto;display:flex;align-items:center}
+.rem .rem-check input{width:20px;height:20px}
+.rem.rem-done .item-main{text-decoration:line-through;color:var(--muted)}
+.rem.rem-top{background:var(--sunk)}
+.rem.rem-top .item-main{font-weight:600}
+.rem.rem-top .item-main::before{content:"★ ";color:var(--accent,#c89b3c)}
+.rem-sep{list-style:none;padding:8px 16px;border-top:1px solid var(--line);font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+.maplink{white-space:nowrap;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:1px 8px;margin-left:6px;font-size:.82em}
+.maplink:hover{background:var(--sunk)}
+.dw-weeks{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding:10px 16px}
+.dw-weeks .sub{flex:1 1 100%;margin-bottom:2px}
+/* Dayworks: Job → Month → Week → sheets, nested dropdowns */
+.dw-months{border-top:1px solid var(--line)}
+.subdrop{border-top:1px solid var(--line)}
+.dw-months>.subdrop:first-child{border-top:0}
+.subdrop>.dropdown-h .dropdown-t{font:600 .98rem var(--display)}
+.subdrop.month>.dropdown-h{background:color-mix(in srgb,var(--sunk) 35%,transparent)}
+.subdrop.week>.dropdown-h{padding-left:30px}
+.subdrop.week>.dropdown-h .dropdown-t{font-size:.9rem}
+.subdrop.week>.dropdown-h .dropdown-t::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:2px;align-self:center}
+.subdrop.week .items .item{padding-left:30px}
+.subdrop.week .dw-weeks{padding-left:30px}
+.dwpick-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
+.dw-months>.subdrop:first-child .dwpick-row:first-child,.dwpick-row:first-child{border-top:0}
+.dwpick-row.on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.dwpick-cb{display:flex;align-items:center;padding:0 12px 0 16px;cursor:pointer}
+.dwpick-cb input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
+.dwpick-row>.subdrop{flex:1 1 auto;border-top:0}
+.addr-sug{position:absolute;z-index:3000;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);overflow:hidden;max-height:280px;overflow-y:auto}
+.addr-item{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line)}
+.addr-item:last-child{border-bottom:0}
+.addr-item:hover,.addr-item:focus{background:var(--sunk)}
+.addr-none{padding:10px 12px;color:var(--muted);font-size:.9rem}
 .crew-detail{padding:0;border-top:0;background:var(--sunk)}
 .crew-detail tr.off td{color:var(--muted)}
 button.link{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
@@ -112,6 +158,7 @@ table.grid{border-collapse:collapse;width:100%}
 .grid th.n,.grid td.n{text-align:right}
 .grid tbody tr:last-child td,.grid tfoot tr:last-child td,.grid tfoot tr:last-child th{border-bottom:0}
 .grid input,.grid select{padding:5px 7px}
+.grid tfoot tr.tot th,.grid tfoot tr.tot td{border-top:2px solid var(--line);font-weight:700;font-family:var(--display);white-space:nowrap}
 .ts{min-width:760px}
 .ts .hr{width:3.4em;text-align:center}
 .ts td.we,.ts th.we{background:color-mix(in srgb,var(--sunk) 60%,transparent)}
@@ -130,6 +177,11 @@ table.grid{border-collapse:collapse;width:100%}
 .cts .dow{text-align:left;white-space:nowrap;font-weight:600}
 .cts .dow.we{color:var(--muted)}
 .cts .dow .dnum{color:var(--muted);font-weight:400;margin-left:6px}
+.cts td.x{width:2.2em;text-align:center;padding-left:0}
+.cts td.x .btn{padding:2px 8px;line-height:1}
+.cts tr.cday.more td,.cts tr.cday.more th{border-top:0}
+.cts tr.addrow td{border-top:0;padding-top:2px;padding-bottom:10px}
+.cts tr.addrow .btn{font-size:.8rem}
 .lines{min-width:640px}
 .lines .q{width:5.5em;text-align:right} .lines .u{width:5em} .lines .rt{width:7em;text-align:right}
 .rc{min-width:680px}
@@ -141,6 +193,42 @@ table.grid{border-collapse:collapse;width:100%}
 .totals div{display:flex;justify-content:space-between;gap:16px;align-items:center}
 .totals .grand{font:600 1.15rem var(--display);border-top:2px solid var(--line);padding-top:8px}
 .totals input{width:5em;text-align:right;padding:4px 6px}
+.listfoot{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:14px 16px;border-top:2px solid var(--line);font:600 1.05rem var(--display)}
+.listfoot strong{font-size:1.15rem}
+.listfoot .sub{font-weight:400}
+.item.quoted{background:#eef7f1;box-shadow:inset 3px 0 0 #57d38a}
+.item.unpriced{background:#fdeeee;box-shadow:inset 3px 0 0 #e05656}
+[data-droptender].dragover{outline:2px dashed #57d38a;outline-offset:-6px;background:#eef7f1}
+.sched.gantt{table-layout:fixed;min-width:620px;border-collapse:separate;border-spacing:0}
+.sched.gantt th,.sched.gantt td{border:1px solid var(--line)}
+.sched.gantt th.tcol,.sched.gantt td.tcol{width:74px;min-width:74px;text-align:right;white-space:nowrap;font-weight:600;color:var(--muted);vertical-align:middle;font-size:.78rem;padding:4px 8px;background:var(--surface)}
+.sched.gantt thead th{padding:7px 4px;text-align:center;background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 70%,#000);font-size:.84rem}
+.sched.gantt thead th .sub{display:block;font-weight:500;font-size:.72rem;color:color-mix(in srgb,var(--on-accent) 80%,transparent)}
+.sched.gantt thead th.tcol{background:var(--surface);color:var(--muted);border-color:var(--line)}
+.sched.gantt thead th.today{background:var(--good);border-color:color-mix(in srgb,var(--good) 70%,#000)}
+.sched.gantt td.jcell{padding:2px;height:44px;vertical-align:middle;position:relative;overflow:visible}
+.sched.gantt td.jcell.we{background:color-mix(in srgb,var(--sunk) 45%,transparent)}
+.sched.gantt td.jcell.today{background:color-mix(in srgb,var(--good) 8%,var(--surface))}
+.sched.gantt tr.jobrow{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.sched.gantt tr.jobrow.dragging{cursor:grabbing}
+.sched.gantt tr.jobrow.dragging .jseg{opacity:.85}
+.jseg{background:var(--c);height:40px;line-height:40px;white-space:nowrap;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.jseg.l{border-radius:3px 0 0 3px;z-index:2}
+.jseg.r{border-radius:0 3px 3px 0}
+.jseg.l.r{border-radius:3px}
+.jlabel{color:#fff;font-size:.82rem;font-weight:600;padding:0 8px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vmark{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.cform{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.thanks{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top:1px solid var(--line);color:var(--ink)}
+.sched.gantt td.hcell{height:34px;vertical-align:top;padding:2px}
+.tev{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:1px 0;font-size:.76rem;line-height:1.18;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.tev strong{font-weight:600;display:block}
+.tev .tsub{color:rgba(255,255,255,.85);display:block;font-size:.7rem}
+tr.hourrow{display:none}
+@media(min-width:900px){tr.hourrow{display:table-row}tr.phonevisits{display:none}}
+.slegend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.skey{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
+.skey i{width:14px;height:14px;border-radius:4px;background:var(--c)}
 .week{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .week h2{min-width:0}
 .kv{display:flex;flex-wrap:wrap;gap:6px 22px}
@@ -198,8 +286,8 @@ const byName=(a,b)=>String(a.name||'').localeCompare(String(b.name||''));
 const pill=(k,t)=>`<span class="pill ${k}">${esc(t)}</span>`;
 const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 
-const TABS=[['overview','Overview'],['timesheets','Timesheets'],['dayworks','Jobs'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team']];
-const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours'];
+const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays']];
+const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events'];
 const S={};COLS.forEach(c=>S[c]={});
 const loaded={};
 let db=null, assets=null, mode='connecting';
@@ -216,7 +304,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={tab:'overview',week:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null};
+const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -266,6 +354,25 @@ function weekTotals(wk){
   return T;
 }
 function hoursByProject(){const out={};for(const wk in S.timesheets){const bp=weekTotals(wk).byProject;for(const p in bp){const o=out[p]||(out[p]={h:0,cost:0});o.h+=bp[p].h;o.cost+=bp[p].cost;}}return out;}
+// Combined hours + labour for a week: the lads' own submissions (crew_hours, costed at
+// each man's rate from the Team list, matched by name) PLUS any director-grid rows for
+// people who didn't self-submit (so nobody is counted twice). Used for the Overview
+// headline. The Timesheets grid keeps its own grid-only totals from weekTotals().
+function weekLabour(wk){
+  const emps=S.employees||{}, rateByName={};
+  for(const id in emps){const e=emps[id]||{};if(e.name)rateByName[e.name.trim().toLowerCase()]=num(e.rate);}
+  let hours=0,cost=0;const submitted=new Set();
+  for(const key in (S.crew_hours||{})){const x=S.crew_hours[key]||{};if(x.week!==wk)continue;
+    const nm=(x.name||'').trim(), rate=rateByName[nm.toLowerCase()]||0;let t=0;
+    if(x.entries&&x.entries.length)t=x.entries.reduce((a,e)=>a+num(e.h),0);
+    else if(x.days&&x.days.length)t=x.days.reduce((a,d)=>a+num(d.h),0);
+    else if(x.rows&&x.rows.length)t=x.rows.reduce((a,r)=>a+sum((r.h||[]).map(num)),0);
+    if(!t)continue;hours+=t;cost+=t*rate;if(nm)submitted.add(nm.toLowerCase());}
+  const sheets=(S.timesheets[wk]||{}).sheets||{};
+  for(const emp in sheets){const e=emps[emp]||{};if(e.name&&submitted.has(e.name.trim().toLowerCase()))continue;const rate=num(e.rate);
+    for(const r of sheets[emp]||[]){const t=sum(H(r));if(!t)continue;hours+=t;cost+=t*rate;}}
+  return {hours,cost};
+}
 function projTotals(p){const sub=(p.lines||[]).reduce((t,l)=>t+num(l.qty)*num(l.rate),0);const mk=sub*num(p.markup)/100;return {sub,mk,total:sub+mk};}
 const termsOf=i=>i.terms===''||i.terms==null?30:num(i.terms);
 const gross=i=>num(i.net)*(i.vat==='std'?1.2:1);
@@ -279,19 +386,53 @@ function invPill(i,st,today){
   return pill('warn',i.sendBy?'Send by '+fmtD(i.sendBy):'To send');
 }
 const projName=id=>(S.projects[id]||{}).name||'';
-const quoteValue=q=>{const p=q.projectId&&S.projects[q.projectId];const t=p?projTotals(p).total:0;return t>0?t:num(q.value);};
+const quoteValue=q=>{const p=q.projectId&&S.projects[q.projectId];const t=p?(num(p.tender)||projTotals(p).total):0;return t>0?t:num(q.value);};
 const VAT={std:'20% VAT',drc:'Reverse charge',zero:'Zero rated'};
 const QSTATUS=['New','Visit booked','Pricing','Quoted','Won','Lost'];
 const toPrice=q=>q.status==='New'||q.status==='Visit booked'||q.status==='Pricing';
+// still needs a price = in a pricing stage AND no figure entered yet (matches the red enquiry row)
+const needsPrice=q=>toPrice(q)&&!quoteValue(q);
 const isOpenQ=q=>q.status!=='Won'&&q.status!=='Lost';
 const visitDue=q=>q.visitDate&&!q.visitDone&&isOpenQ(q);
+// A site visit can hang off an enquiry (quote) OR an existing job (project). Both store the same
+// visit* fields; asVisit normalises either into one quote-style shape so the diary, schedule and
+// calendar export treat them identically. vkind 'q' = enquiry, 'p' = job.
+const asVisit=(vkind,r)=>({vkind,id:r.id,
+  client:(vkind==='q'?r.client:r.name)||'—',
+  job:(vkind==='q'?r.job:r.client)||'',
+  site:r.site||'',phone:r.phone||'',
+  visitDate:r.visitDate,visitTime:r.visitTime||'',visitBy:r.visitBy||'',visitNotes:r.visitNotes||'',visitDone:!!r.visitDone});
+// Open, not-yet-done visits across both enquiries and jobs — the diary/attention source.
+const allVisits=()=>list('quotes').filter(visitDue).map(q=>asVisit('q',q))
+  .concat(list('projects').filter(p=>p.visitDate&&!p.visitDone&&p.status!=='Complete').map(p=>asVisit('p',p)));
 const dayLabel=(s,today)=>{const d=dayDiff(s,today);return d===0?'Today':d===1?'Tomorrow':DOW[(parse(s).getUTCDay()+6)%7]+' '+fmtD(s);};
-const mapLink=site=>site?` <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site)}" target="_blank" rel="noopener">Map</a>`:'';
+const mapLink=site=>site?` <a class="maplink" href="https://maps.apple.com/?q=${encodeURIComponent(site)}" target="_blank" rel="noopener" aria-label="Open address in Maps">Map ↗</a>`:'';
 const SOURCES=['Phone call','Email','Website','Referral','Repeat client','Main contractor tender','Social media','Other'];
 const WORK=['Foundations & footings','RC slabs & ground beams','Drainage, foul & surface water','Soakaways & attenuation','Bulk excavation & reduced level dig','Site clearance & muck away','Driveways & paving','Roads, kerbs & footpaths','Retaining walls','Piling mat & attendance','Agricultural buildings','Utilities & street works','Extension groundworks','Other'];
 const ROLES=['Groundworker','Ganger','Machine driver (360)','Dumper driver','Roller driver','Steel fixer','Pipelayer','Labourer','Site manager','Director'];
 const PSTATUS=['Pricing','Ready to start','Live','Complete'];
+// Fixed gangs the office runs; a job is assigned to one and the schedule colours its bar by gang.
+// Reassign a job to a different gang any time by changing its gang on the project.
+const GANGS=[{k:'g1',name:'Gang 1 - Chris',c:'--gang1'},{k:'g2',name:'Gang 2 - Matt',c:'--gang2'},{k:'g3',name:'Gang 3 - Dan',c:'--gang3'},{k:'g4',name:'Gang 4',c:'--gang4'}];
+const gangOf=k=>GANGS.find(g=>g.k===k);
 const projPill=s=>s==='Live'?'good':s==='Ready to start'?'info':s==='Complete'?'neutral':'warn';
+const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
+const evEnd=e=>(e.to&&e.to>=e.from)?e.to:e.from;
+/* Reminder due times are plain local 'YYYY-MM-DDTHH:MM' strings, so they sort and compare as text. */
+const nowLocal=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());};
+const remDuePill=w=>{const n=nowLocal(),day=w.slice(0,10),t=w.slice(11,16);
+  return pill(w<=n?'bad':day===n.slice(0,10)?'warn':'info',(w<=n?'Due ':'')+(day===n.slice(0,10)?'Today':fmtD(day))+' '+t);};
+const evLabel=e=>(e.time?e.time+' · ':'')+(e.title||'Diary')+(e.client?' · '+e.client:'')+(e.who?' · '+e.who:'');
+const telHref=p=>'tel:'+String(p||'').replace(/[^+0-9]/g,'');
+/* What's on for one day — derived live from approved holidays, booked site visits and
+   project start dates, so approving a holiday puts the lad straight into that day. */
+function schedFor(day){
+  const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.from<=day&&day<=h.to);
+  const visits=list('quotes').filter(q=>q.visitDate===day);
+  const dues=list('quotes').filter(q=>q.due===day&&needsPrice(q));
+  const starts=list('projects').filter(p=>p.startDate===day);
+  return {hols,visits,dues,starts,count:hols.length+visits.length+dues.length+starts.length};
+}
 
 /* ---------- form helpers ---------- */
 const dv=(form,name,def)=>{const d=ui.drafts[form];return d&&name in d?d[name]:(def??'');};
@@ -303,44 +444,128 @@ const del=(key,label)=>ui.confirm===key
   :`<button type="button" class="btn sm ghost${label==='×'?' x':''}" id="ask-${key}" data-act="ask" data-key="${key}" aria-label="Delete">${label||'Delete'}</button>`;
 const empty=(title,text,btn)=>`<div class="empty"><strong>${title}</strong>${text}${btn?`<div style="margin-top:10px">${btn}</div>`:''}</div>`;
 const goBtn=(tab,label)=>`<button type="button" class="btn sm" data-act="tab" data-tab="${tab}">${label}</button>`;
+/* Collapsible overview panel — the header line stays readable when it's shut. */
+const dropSec=(key,title,fig,body)=>{const o=!!ui.ovOpen[key];
+  return `<section class="panel dropdown${o?' open':''}"><button type="button" class="dropdown-h" data-act="ovSec" data-k="${key}" aria-expanded="${o}"><span class="dropdown-t">${title}</span>${fig?`<span class="dropdown-fig">${fig}</span>`:''}<span class="chev">${o?'▴':'▾'}</span></button>${o?body:''}</section>`;};
 
 /* ---------- views ---------- */
 const views={};
 
 views.overview=()=>{
-  const today=todayISO(), wk=mondayOf(today), W=weekTotals(wk);
-  const quotes=list('quotes'), open=quotes.filter(toPrice), sentQ=quotes.filter(q=>q.status==='Quoted');
-  const visits=quotes.filter(visitDue).sort((a,b)=>(a.visitDate+(a.visitTime||'')).localeCompare(b.visitDate+(b.visitTime||'')));
+  const today=todayISO(), wk=mondayOf(today), W=weekTotals(wk), WL=weekLabour(wk);
+  const quotes=list('quotes'), open=quotes.filter(toPrice), toQuote=open.filter(q=>!quoteValue(q)), sentQ=quotes.filter(q=>q.status==='Quoted');
+  const visits=allVisits().sort((a,b)=>(a.visitDate+(a.visitTime||'')).localeCompare(b.visitDate+(b.visitTime||'')));
   const visits7=visits.filter(q=>{const d=dayDiff(q.visitDate,today);return d>=0&&d<=7;});
   const inv=list('invoices').map(i=>({...i,st:invState(i,today)}));
   const g=a=>a.reduce((t,i)=>t+gross(i),0);
   const toSend=inv.filter(i=>i.st==='tosend'||i.st==='late'), awaiting=inv.filter(i=>i.st==='awaiting'||i.st==='overdue'), overdue=inv.filter(i=>i.st==='overdue');
-  const nextDue=open.filter(q=>q.due).sort((a,b)=>a.due.localeCompare(b.due))[0];
+  const nextDue=toQuote.filter(q=>q.due).sort((a,b)=>a.due.localeCompare(b.due))[0];
   const stats=`<div class="stats">
-    <div class="stat"><span class="k">Hours this week</span><span class="v">${hrs(W.hours)}</span><span class="sub">${money(W.cost)} labour · w/c ${fmtD(wk)}</span></div>
-    <div class="stat"><span class="k">Enquiries to price</span><span class="v">${open.length}</span><span class="sub">${nextDue?'Next due '+fmtD(nextDue.due):'None with a deadline'}${sentQ.length?' · '+sentQ.length+' quoted':''}</span></div>
+    <div class="stat"><span class="k">Hours this week</span><span class="v">${hrs(WL.hours)}</span><span class="sub">${money(WL.cost)} labour · w/c ${fmtD(wk)}</span></div>
+    <div class="stat"><span class="k">Enquiries to price</span><span class="v">${toQuote.length}</span><span class="sub">${nextDue?'Next due '+fmtD(nextDue.due):'None with a deadline'}${sentQ.length?' · '+sentQ.length+' quoted':''}</span></div>
     <div class="stat"><span class="k">Site visits, next 7 days</span><span class="v">${visits7.length}</span><span class="sub">${visits7.length?'Next '+dayLabel(visits7[0].visitDate,today)+(visits7[0].visitTime?' '+visits7[0].visitTime:''):'None booked'}</span></div>
     <div class="stat"><span class="k">Invoices to send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} invoice${toSend.length===1?'':'s'}, inc VAT</span></div>
     <div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent, inc VAT</span></div>
     <div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length?overdue.length+' past terms':'Nothing past terms'}</span></div>
   </div>`;
+  const qByProj={};quotes.forEach(q=>{if(q.projectId)qByProj[q.projectId]=q;});
   const att=[];
   quotes.filter(q=>q.status==='New').forEach(q=>att.push([dayDiff(q.received||today,today),'warn','New enquiry',`${q.client} · ${q.job}${q.phone?' · '+q.phone:''}`,'quotes']));
-  visits.filter(q=>q.visitDate<today).forEach(q=>att.push([dayDiff(q.visitDate,today),'bad','Visit not marked done',`${q.client} · ${fmtD(q.visitDate)}`,'quotes']));
-  open.filter(q=>q.status!=='New'&&q.due&&dayDiff(q.due,today)<=7).forEach(q=>{const d=dayDiff(q.due,today);att.push([d,d<0?'bad':'warn',d<0?'Quote overdue':'Quote due '+(d===0?'today':'in '+d+'d'),`${q.client} · ${q.job}`,'quotes']);});
+  visits.filter(v=>v.visitDate<today).forEach(v=>att.push([dayDiff(v.visitDate,today),'bad','Visit not marked done',`${v.client} · ${fmtD(v.visitDate)}`,v.vkind==='p'?'projects':'quotes',v.id,v.vkind]));
+  open.filter(q=>q.status!=='New'&&!quoteValue(q)&&q.due&&dayDiff(q.due,today)<=7).forEach(q=>{const d=dayDiff(q.due,today);att.push([d,d<0?'bad':'warn',d<0?'Quote overdue':'Quote due '+(d===0?'today':'in '+d+'d'),`${q.client} · ${q.job}`,'quotes']);});
   inv.filter(i=>i.st==='late').forEach(i=>att.push([dayDiff(i.sendBy,today),'bad','Invoice not sent',`${i.number||'No number'} · ${i.client} · ${money(num(i.net))} net`,'invoices']));
   overdue.forEach(i=>{const d=dayDiff(addDays(i.sent,termsOf(i)),today);att.push([d,'bad','Payment overdue '+(-d)+'d',`${i.number||'No number'} · ${i.client} · ${money(gross(i))}`,'invoices']);});
+  // A job's schedule has run out (end date reached) but nothing's been invoiced against it yet —
+  // remind to raise the invoice. Skips pricing stubs (an enquiry still being priced) and clears
+  // once any invoice is linked to the project or it's marked Complete.
+  list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices']);});
+  list('reminders').filter(r=>r.when&&!r.done).forEach(r=>{const d=dayDiff(r.when.slice(0,10),today);if(d<=0)att.push([d,'warn','Reminder · '+(r.owner==='chris'?'Chris':'Dan'),`${r.text} · ${d===0?'today':fmtD(r.when.slice(0,10))} ${r.when.slice(11,16)}`,'reminders']);});
   att.sort((a,b)=>a[0]-b[0]);
-  const attention=`<section class="panel"><div class="panel-h"><h3>Needs attention</h3></div>${att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, unsent invoices and late payments show here.')}</section>`;
+  const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Visit done</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
   const upcoming=visits.filter(q=>q.visitDate>=today);
-  const diary=`<section class="panel"><div class="panel-h"><h3>Site visit diary</h3>${goBtn('quotes','Enquiries')}</div>${upcoming.length?`<ul class="items">${upcoming.map(q=>`<li class="item"><div>${pill(q.visitDate===today?'warn':'good',dayLabel(q.visitDate,today)+(q.visitTime?' '+q.visitTime:''))}</div><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.site||'No site address yet')}${mapLink(q.site)}${q.phone?' · '+esc(q.phone):''}</div>${q.visitNotes?`<div class="sub">${esc(q.visitNotes)}</div>`:''}</div><div class="sub">${esc(q.visitBy||'Unassigned')}</div></li>`).join('')}</ul>`:empty('No site visits booked','Book a visit from any open enquiry and it shows here in date order.')}</section>`;
+  // Book a site visit straight from the Overview — against an open enquiry OR an existing job.
+  const staffOv=['Dan','Chris'].concat(list('employees').filter(e=>e.active!==false).map(e=>e.name)).filter((x,i,a)=>x&&a.indexOf(x)===i);
+  const openEnq=quotes.filter(isOpenQ).sort((a,b)=>String(a.client||'').localeCompare(String(b.client||'')));
+  // Jobs you can book a visit on = live projects (not pricing-stubs for a still-open enquiry).
+  const openJobs=list('projects').filter(p=>{if(p.status==='Complete')return false;const q=qByProj[p.id];return !q||q.status==='Won';}).sort(byName);
+  const vref=dv('bookVisit','ref','');
+  const enqOpts=openEnq.map(q=>`<option value="q:${esc(q.id)}"${vref==='q:'+q.id?' selected':''}>${esc((q.client||'—')+(q.job?' · '+q.job:'')+(q.visitDate?' — visit booked':''))}</option>`).join('');
+  const jobOpts=openJobs.map(p=>`<option value="p:${esc(p.id)}"${vref==='p:'+p.id?' selected':''}>${esc((p.name||'—')+(p.client?' · '+p.client:'')+(p.visitDate?' — visit booked':''))}</option>`).join('');
+  const pickSel=`<label class="f wide"><span>Which enquiry or job</span><select id="bookVisit-ref" name="ref"><option value="">Pick an enquiry or job…</option>${enqOpts?`<optgroup label="Enquiries">${enqOpts}</optgroup>`:''}${jobOpts?`<optgroup label="Jobs">${jobOpts}</optgroup>`:''}</select></label>`;
+  const bookForm=(openEnq.length||openJobs.length)
+    ?`<form class="panel-b form" data-form="bookVisit">${pickSel}${fld('bookVisit','visitDate','Date',today,{type:'date',attrs:'required'})}${fld('bookVisit','visitTime','Time','',{type:'time'})}${fld('bookVisit','visitBy','Who is going','',{attrs:'list="dl-staff-ov"'})}${fld('bookVisit','visitNotes','Access, what to measure','',{cls:'wide'})}<div class="go"><button class="btn">Book site visit</button></div></form><datalist id="dl-staff-ov">${staffOv.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>`
+    :`<div class="panel-b sub">Log an enquiry or add a job first, then you can book a site visit here.</div>`;
+  const diary=dropSec('diary','Site visit diary',upcoming.length?upcoming.length+' booked':'None booked',(upcoming.length?`<ul class="items">${upcoming.map(q=>`<li class="item"><div>${pill(q.visitDate===today?'warn':'good',dayLabel(q.visitDate,today)+(q.visitTime?' '+q.visitTime:''))}</div><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.site||'No site address yet')}${mapLink(q.site)}${q.phone?' · '+esc(q.phone):''}</div>${q.visitNotes?`<div class="sub">${esc(q.visitNotes)}</div>`:''}</div><div class="sub">${esc(q.visitBy||'Unassigned')}</div><div class="item-act"><button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Visit done</button><button type="button" class="btn sm ghost" data-act="ics" data-id="${q.id}" data-vkind="${q.vkind}">Add to calendar</button></div></li>`).join('')}</ul>`:empty('No site visits booked','Book a visit from any open enquiry or job below and it shows here in date order.'))+bookForm+`<div class="panel-b">${goBtn('quotes','Enquiries')}</div>`);
   const hb=hoursByProject();
-  const live=list('projects').filter(p=>p.status!=='Complete').sort(byName);
+  // An enquiry being priced lives as a "project" record (created by Price it) linked from an
+  // open quote — those belong in Enquiries, not Projects. Only show it here once the enquiry is
+  // Won, matching the Projects tab.
+  const live=list('projects').filter(p=>{if(p.status==='Complete')return false;const q=qByProj[p.id];return !q||q.status==='Won';}).sort(byName);
   const invBy={};inv.forEach(i=>{if(i.projectId)invBy[i.projectId]=(invBy[i.projectId]||0)+num(i.net);});
-  const projects=`<section class="panel"><div class="panel-h"><h3>Current projects</h3>${goBtn('projects','All projects')}</div>${live.length?`<div class="scroll-x" id="sx-ov"><table class="grid" style="min-width:620px"><thead><tr><th>Project</th><th>Stage</th><th class="n">Priced</th><th class="n">Invoiced</th><th class="n">Labour to date</th><th class="n">Hours</th></tr></thead><tbody>${live.map(p=>{const h=hb[p.id]||{h:0,cost:0};return `<tr><td><button type="button" class="link" data-act="openProject" data-id="${p.id}">${esc(p.name)}</button><div class="sub">${esc(p.client||'')}</div></td><td>${pill(projPill(p.status),p.status||'Pricing')}</td><td class="n">${p.tender?money(num(p.tender)):money(projTotals(p).total)}</td><td class="n">${money(invBy[p.id]||0)}</td><td class="n">${money(h.cost)}</td><td class="n">${hrs(h.h)}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No projects yet','Add a project to price it off the rate card and attach its drawings.',goBtn('projects','Add a project'))}</section>`;
+  const ovTot=live.reduce((t,p)=>{const h=hb[p.id]||{h:0,cost:0};t.priced+=num(p.tender)||projTotals(p).total;t.inv+=invBy[p.id]||0;t.cost+=h.cost;t.h+=h.h;return t;},{priced:0,inv:0,cost:0,h:0});
+  const projBody=live.length?`<div class="scroll-x" id="sx-ov"><table class="grid" style="min-width:620px"><thead><tr><th>Project</th><th>Stage</th><th class="n">Priced</th><th class="n">Invoiced</th><th class="n">Labour to date</th><th class="n">Hours</th></tr></thead><tbody>${live.map(p=>{const h=hb[p.id]||{h:0,cost:0};return `<tr><td><button type="button" class="link" data-act="openProject" data-id="${p.id}">${esc(p.name)}</button><div class="sub">${esc(p.client||'')}</div></td><td>${pill(projPill(p.status),p.status||'Pricing')}${p.status==='Ready to start'?`<div class="startrow">${p.startDate?pill('good','Starts '+fmtD(p.startDate)):pill('warn','Set start date')}</div>`:''}</td><td class="n">${p.tender?money(num(p.tender)):money(projTotals(p).total)}</td><td class="n">${money(invBy[p.id]||0)}</td><td class="n">${money(h.cost)}</td><td class="n">${hrs(h.h)}</td></tr>`;}).join('')}</tbody><tfoot><tr class="tot"><th>Total</th><td></td><td class="n">${money(ovTot.priced)}</td><td class="n">${money(ovTot.inv)}</td><td class="n">${money(ovTot.cost)}</td><td class="n">${hrs(ovTot.h)}</td></tr></tfoot></table></div><div class="panel-b">${goBtn('projects','All projects')}</div>`:empty('No projects yet','Add a project to price it off the rate card and attach its drawings.',goBtn('projects','Add a project'));
+  const projects=dropSec('projects','Current projects'+(live.length?' <span class="sub">'+live.length+' on</span>':''),`Priced <strong>${money(ovTot.priced)}</strong> · Invoiced <strong>${money(ovTot.inv)}</strong>`,projBody);
   const steps=[[list('employees').length,'Add your team and their hourly rates','team'],[list('rates').length,'Load the rate card','rates'],[list('projects').length,'Add your projects','projects'],[Object.keys(S.timesheets).length,"Enter this week's timesheets",'timesheets']];
-  const setup=steps.every(s=>s[0])?'':`<section class="panel"><div class="panel-h"><h3>Getting set up</h3></div><div class="panel-b"><ol class="steps">${steps.map(s=>`<li class="${s[0]?'done':''}">${s[0]?esc(s[1]):`<button type="button" class="link" data-act="tab" data-tab="${s[2]}">${esc(s[1])}</button>`}</li>`).join('')}</ol></div></section>`;
-  return `<div class="head"><div><h2>This week at a glance</h2><p class="sub">${fmtD(today,true)}</p></div></div>${stats}${setup}${attention}${diary}${projects}`;
+  const setup=steps.every(s=>s[0])?'':dropSec('setup','Getting set up',steps.filter(s=>s[0]).length+' of '+steps.length+' done',`<div class="panel-b"><ol class="steps">${steps.map(s=>`<li class="${s[0]?'done':''}">${s[0]?esc(s[1]):`<button type="button" class="link" data-act="tab" data-tab="${s[2]}">${esc(s[1])}</button>`}</li>`).join('')}</ol></div>`);
+  const offs=list('holidays').filter(h=>h.status==='approved'&&h.to>=today).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
+  const timeoff=dropSec('timeoff',"Who's off",offs.length?offs.length+' booked':'Nobody booked',(offs.length?`<ul class="items">${offs.map(h=>{const nowOff=h.from<=today&&today<=h.to;return `<li class="item"><div>${pill(nowOff?'warn':'info',nowOff?'Off now':'Booked')}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(holSpan(h))} <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span></div></li>`;}).join('')}</ul>`:empty('No booked time off','Approved holiday requests show here and on the schedule automatically.'))+`<div class="panel-b">${goBtn('schedule','Schedule')}</div>`);
+  const statsSec=`<section class="panel"><div class="panel-h"><h3>This week in numbers</h3></div><div class="panel-b">${stats}</div></section>`;
+  return `<div class="head"><div><h2>This week at a glance</h2><p class="sub">${fmtD(today,true)}</p></div></div>${statsSec}${setup}${attention}${diary}${timeoff}${projects}`;
+};
+
+views.schedule=()=>{
+  const today=todayISO(), wk=ui.schedWeek, thisWk=mondayOf(today), wkEnd=addDays(wk,6);
+  const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="-7" aria-label="Previous week">‹</button><h2>Week of ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="7" aria-label="Next week">›</button>${wk!==thisWk?`<button type="button" class="btn ghost sm" data-act="schedWeek" data-d="0">This week</button>`:''}</div></div>`;
+  const days=[];for(let i=0;i<7;i++){const day=addDays(wk,i);days.push({day,i,we:i>4,isT:day===today});}
+  const cls=d=>`day${d.we?' we':''}${d.isT?' today':''}`;
+  const col=iso=>Math.max(0,Math.min(6,dayDiff(iso,wk)));
+  const th=`<th class="tcol"></th>`+days.map(d=>`<th class="${cls(d)}">${DOW[d.i]}<span class="sub"> ${parse(d.day).getUTCDate()} ${MON[parse(d.day).getUTCMonth()]}</span></th>`).join('');
+  // A horizontal bar spanning the days it covers, drawn across 7 individual day cells so every
+  // day stays a drag target. jid makes the row a draggable job; otherwise it's a static span (holiday).
+  const spanRow=(label,s,e,colorVar,opts)=>{
+    opts=opts||{};const cs=col(s<wk?wk:s), ce=col(e>wkEnd?wkEnd:e), contL=s<wk, contR=e>wkEnd;
+    let cells=`<th class="tcol">${label||''}</th>`;
+    for(let i=0;i<7;i++){const inSpan=i>=cs&&i<=ce;
+      // Repeat the label in every day the bar covers so each day reads on its own, not just the colour.
+      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span></div>`:'';
+      cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${seg}</td>`;}
+    return `<tr class="${opts.rowcls||''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
+  };
+  // Jobs = draggable bars. Any non-complete project with a start date that overlaps this week.
+  const jobs=list('projects').filter(p=>p.status!=='Complete'&&p.startDate).map(p=>({p,s:p.startDate,e:(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate})).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
+  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--accent',{text:(g?g.name+' · ':'')+j.p.name,jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  // Timed site visits — small markers on their day. Booked against an enquiry or a job.
+  const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
+  const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
+  const visitRow=dayVisits.some(a=>a.length)?`<tr class="phonevisits"><th class="tcol">Visits</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}">${dayVisits[i].map(q=>`<div class="vmark" style="--c:var(--info)">${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'')}${q.visitBy?' · '+esc(q.visitBy):''}</div>`).join('')}</td>`).join('')}</tr>`:'';
+  // Quote-due deadlines (still unpriced) — markers on the due day.
+  const dayDues=days.map(d=>list('quotes').filter(q=>q.due===d.day&&needsPrice(q)));
+  const dueRow=dayDues.some(a=>a.length)?`<tr><th class="tcol">Quotes due</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}">${dayDues[i].map(q=>`<div class="vmark" style="--c:var(--warn)">${esc(q.client||'')}</div>`).join('')}</td>`).join('')}</tr>`:'';
+  // Approved holidays — static spanning bars.
+  const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.to>=wk&&h.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
+  const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off',rowcls:'offrow'})).join('');
+  // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
+  const evs=list('events').filter(e=>e.from&&evEnd(e)>=wk&&e.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))||String(a.title||'').localeCompare(String(b.title||'')));
+  const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:'--good',{text:(g?g.name+' · ':'')+evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
+  // Desktop only: a Google-Calendar hour grid. Timed site visits sit at their hour;
+  // jobs, diary, holidays and quote-dues stay in the all-day band above. On a phone
+  // these hour rows are hidden (they'd be cramped) and visits show as the compact row.
+  const H0=7,H1=18, hourLab=h=>h===12?'12pm':h<12?h+'am':(h-12)+'pm';
+  const hourBody=(()=>{let out='';for(let h=H0;h<=H1;h++){
+    const cells=days.map((d,i)=>{
+      const vs=dayVisits[i].filter(q=>{const t=parseInt(String(q.visitTime||'').slice(0,2),10);const hh=isNaN(t)?H0:Math.min(H1,Math.max(H0,t));return hh===h;});
+      return `<td class="hcell ${d.we?'we':''}${d.isT?' today':''}">${vs.map(q=>`<div class="tev" style="--c:var(--info)"><strong>${esc(q.client||'Visit')}</strong><span class="tsub">${q.visitTime?esc(q.visitTime):''}${q.visitBy?(q.visitTime?' · ':'')+esc(q.visitBy):''}</span>${q.phone?`<span class="tsub"><a href="${esc(telHref(q.phone))}">${esc(q.phone)}</a></span>`:''}${q.site?`<span class="tsub">${esc(q.site)}${mapLink(q.site)}</span>`:''}</div>`).join('')}</td>`;
+    }).join('');
+    out+=`<tr class="hourrow"><th class="tcol">${hourLab(h)}</th>${cells}</tr>`;}
+    return out;})();
+  const usedGangs=[...new Set(jobs.map(j=>j.p.gang).concat(evs.map(e=>e.gang)).filter(k=>gangOf(k)))];
+  const gangKeys=usedGangs.map(k=>{const g=gangOf(k);return `<span class="skey"><i style="--c:var(${g.c})"></i>${esc(g.name)}</span>`;}).join('')+(!jobs.length||jobs.some(j=>!gangOf(j.p.gang))?`<span class="skey"><i style="--c:var(--accent)"></i>Job</span>`:'');
+  const legend=`<div class="slegend">${gangKeys}<span class="skey"><i style="--c:var(--info)"></i>Site visit</span><span class="skey"><i style="--c:var(--warn)"></i>Quote due</span><span class="skey"><i style="--c:var(--good)"></i>Diary</span><span class="skey"><i style="--c:var(--muted)"></i>Off</span></div>`;
+  const pend=list('holidays').filter(h=>h.status==='pending').length;
+  const defDate=(today>=wk&&today<=wkEnd)?today:wk;
+  const evList=evs.length?`<ul class="items">${evs.map(e=>{const g=gangOf(e.gang);const meta=[g?esc(g.name):'',e.time?esc(e.time):'',e.who?'with '+esc(e.who):''].filter(Boolean).join(' · ');const contact=[e.phone?`<a href="${esc(telHref(e.phone))}">${esc(e.phone)}</a>`:'',e.site?esc(e.site)+mapLink(e.site):''].filter(Boolean).join(' · ');return `<li class="item"><div>${pill('good',holSpan({from:e.from,to:evEnd(e)}))}</div><div class="item-main"><strong>${esc(e.title||'')}</strong>${e.client?' · '+esc(e.client):''}${meta?'<div class="sub">'+meta+'</div>':''}${contact?'<div class="sub">'+contact+'</div>':''}</div><div class="item-act">${del('events/'+e.id,'×')}</div></li>`;}).join('')}</ul>`:'';
+  const addEv=`<section class="panel"><div class="panel-h"><h3>Add to the schedule</h3><span class="sub">Emergency jobs, meetings, deliveries, plant on hire — anything that isn't a full project. Pick a gang to colour it like a job.</span></div><form class="panel-b form" data-form="event">${fld('event','title','What',"",{attrs:'required placeholder="Emergency — burst main, site meeting…"',cls:'wide'})}${fld('event','client','Name / client','',{attrs:'placeholder="Who you\'re meeting"'})}${fld('event','phone','Phone','',{type:'tel'})}${fld('event','site','Address','',{attrs:'data-addr autocomplete="off" placeholder="Site or meeting address"',cls:'wide'})}${fld('event','from','Date',defDate,{type:'date',attrs:'required'})}${fld('event','to','Until (optional)','',{type:'date'})}${fld('event','time','Time (optional)','',{type:'time'})}${sel('event','gang','Gang (optional)','',[['','No gang — diary item']].concat(GANGS.map(g=>[g.k,g.name])))}${fld('event','who','Who is going (optional)','')}<div class="go"><button class="btn">Add to schedule</button></div></form>${evList}</section>`;
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}${hourBody}</tbody></table></div><div class="panel-b sub">Drag a bar across the days to set how long it runs. Tap a job to open it. On a computer, timed visits show on the hour grid below.</div></section>`+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
@@ -359,32 +584,86 @@ views.timesheets=()=>{
     return `<tr class="emp"><th colspan="8" scope="rowgroup">${esc(e.name)}<span class="sub">${esc(e.role||'')}${e.rate?' · '+money(num(e.rate))+'/hr':''}</span><button type="button" class="btn ghost sm" id="tsa-${e.id}" data-act="tsAdd" data-e="${e.id}">+ Job</button></th><td class="n">${hrs(et.h)}</td><td class="n sub">${money(et.cost)}</td></tr>`+
     rows.map((r,i)=>{const h=H(r);return `<tr><td class="job"><select id="tsp-${e.id}-${i}" data-chg="tsp" data-e="${e.id}" data-r="${i}" aria-label="Job, ${esc(e.name)}">${opts(r.p||'')}</select></td>${h.map((x,d)=>`<td class="day${d>4?' we':''}"><input id="ts-${e.id}-${i}-${d}" class="hr" inputmode="decimal" autocomplete="off" value="${x?hrs(x):''}" data-chg="ts" data-e="${e.id}" data-r="${i}" data-d="${d}" aria-label="${DOW[d]} hours, ${esc(e.name)}"></td>`).join('')}<td class="n">${hrs(sum(h))}</td><td class="n">${saved.length?`<button type="button" class="btn ghost sm x" id="tsx-${e.id}-${i}" data-act="tsDel" data-e="${e.id}" data-r="${i}" aria-label="Remove row">×</button>`:''}</td></tr>`;}).join('');
   }).join('');
-  const table=`<section class="panel"><div class="panel-h"><h3>Hours per day, per job</h3><span class="sub">Saves as you go</span></div><div class="scroll-x" id="sx-ts"><table class="grid ts"><thead><tr><th>Job</th>${DOW.map((d,i)=>`<th class="day${i>4?' we':''}">${d} ${parse(addDays(wk,i)).getUTCDate()}</th>`).join('')}<th class="n">Hours</th><th class="n">Cost</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>All staff</th>${T.byDay.map((x,d)=>`<td class="day${d>4?' we':''}">${hrs(x)}</td>`).join('')}<td class="n">${hrs(T.hours)}</td><td class="n">${money(T.cost)}</td></tr></tfoot></table></div></section>`;
+  const tgo=ui.tsGridOpen;
+  const table=`<section class="panel dropdown${tgo?' open':''}"><button type="button" class="dropdown-h" data-act="tsGrid" aria-expanded="${tgo}"><span class="dropdown-t">Hours per day, per job</span><span class="dropdown-fig">${hrs(T.hours)} h · ${money(T.cost)}</span><span class="chev">${tgo?'▴':'▾'}</span></button>${tgo?`<div class="scroll-x" id="sx-ts"><table class="grid ts"><thead><tr><th>Job</th>${DOW.map((d,i)=>`<th class="day${i>4?' we':''}">${d} ${parse(addDays(wk,i)).getUTCDate()}</th>`).join('')}<th class="n">Hours</th><th class="n">Cost</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>All staff</th>${T.byDay.map((x,d)=>`<td class="day${d>4?' we':''}">${hrs(x)}</td>`).join('')}<td class="n">${hrs(T.hours)}</td><td class="n">${money(T.cost)}</td></tr></tfoot></table></div><div class="panel-b sub">Enter hours here only if you're filling in for a lad. Otherwise the crew submit their own below.</div>`:''}</section>`;
   const bp=Object.entries(T.byProject).sort((a,b)=>b[1].h-a[1].h);
   const byJob=`<section class="panel"><div class="panel-h"><h3>This week by job</h3></div>${bp.length?`<ul class="items">${bp.map(([p,o])=>`<li class="item"><div class="item-main">${esc(projName(p)||'General / not on a job')}</div><div class="item-amt"><span class="amt">${hrs(o.h)} h</span><span class="sub">${money(o.cost)} labour</span></div></li>`).join('')}</ul>`:empty('No hours entered for this week','Type hours into the grid above. Totals by job appear here.')}</section>`;
   const crewNorm=(key,x)=>{let tot=0;const byLoc={};let days=null;
-    if(x.days&&x.days.length){days=x.days.map((d,i)=>({day:DOW[i],date:addDays(wk,i),loc:d.loc||'',h:num(d.h)}));x.days.forEach(d=>{const t=num(d.h);if(!t)return;tot+=t;const k=d.loc||'General / not on a job';byLoc[k]=(byLoc[k]||0)+t;});}
+    const add=(loc,h)=>{const t=num(h);if(!t)return;tot+=t;const k=loc||'General / not on a job';byLoc[k]=(byLoc[k]||0)+t;};
+    if(x.entries&&x.entries.length){days=x.entries.slice().sort((a,b)=>(+a.d||0)-(+b.d||0)).map(e=>({day:DOW[+e.d||0],date:addDays(wk,+e.d||0),loc:e.loc||'',h:num(e.h)}));x.entries.forEach(e=>add(e.loc,e.h));}
+    else if(x.days&&x.days.length){days=x.days.map((d,i)=>({day:DOW[i],date:addDays(wk,i),loc:d.loc||'',h:num(d.h)}));x.days.forEach(d=>add(d.loc,d.h));}
     else if(x.rows&&x.rows.length){x.rows.forEach(r=>{const t=sum((r.h||[]).map(num));if(!t)return;tot+=t;const k=[r.job,r.loc].filter(Boolean).join(' — ')||'General / not on a job';byLoc[k]=(byLoc[k]||0)+t;});}
     return {key,name:x.name||'Crew',tot,byLoc,days};};
   const crewSubs=Object.entries(S.crew_hours||{}).filter(([k,x])=>x&&x.week===wk).map(([k,x])=>crewNorm(k,x)).filter(x=>x.tot>0).sort((a,b)=>a.name.localeCompare(b.name));
-  const crewWeek=x=>{let inner;if(x.days){const rows=x.days.map(d=>`<tr${d.h?'':' class="off"'}><td>${d.day} ${parse(d.date).getUTCDate()} ${MON[parse(d.date).getUTCMonth()]}</td><td>${d.loc?esc(d.loc):'<span class="sub">—</span>'}</td><td class="n">${d.h?hrs(d.h)+' h':'<span class="sub">—</span>'}</td></tr>`).join('');
-      inner=`<table class="grid" style="min-width:0"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="2">Total</th><td class="n">${hrs(x.tot)} h</td></tr></tfoot></table>`;}
-    else{inner='<div class="sub">'+Object.entries(x.byLoc).map(([j,h])=>esc(j)+' · '+hrs(h)+' h').join('<br>')+'</div>';}
-    return `<li class="crew-detail"><div class="panel-b" style="padding-top:0">${inner}</div></li>`;};
-  const crewPanel=`<section class="panel"><div class="panel-h"><h3>Submitted by the crew</h3><span class="sub">Hours the lads logged on their own page — tap a name to see their week</span></div>${crewSubs.length?`<ul class="items">${crewSubs.map(x=>{const open=ui.crewOpen===x.key;const jobs=Object.entries(x.byLoc).map(([j,h])=>esc(j)+' · '+hrs(h)+'h').join(' &nbsp;·&nbsp; ');return `<li class="item crew-sub${open?' open':''}" data-act="crewWeek" data-key="${esc(x.key)}" role="button" tabindex="0" aria-expanded="${open}"><div class="item-main"><strong>${esc(x.name)}</strong> <span class="chev">${open?'▾':'▸'}</span><div class="sub">${jobs}</div></div><div class="item-amt"><span class="amt">${hrs(x.tot)} h</span></div></li>${open?crewWeek(x):''}`;}).join('')}</ul>`:empty('No crew hours submitted yet','When a lad fills in their hours on their page, they appear here automatically — live.')}</section>`;
+  const crewWeek=x=>{
+    const doc=S.crew_hours[x.key]||{};
+    // Modern submissions store an `entries` array — those are editable here. Older
+    // days/rows-shaped docs stay read-only (rare; only old weeks).
+    if(!(doc.entries&&Array.isArray(doc.entries))){
+      let inner;if(x.days){const rows=x.days.map(d=>`<tr${d.h?'':' class="off"'}><td>${d.day} ${parse(d.date).getUTCDate()} ${MON[parse(d.date).getUTCMonth()]}</td><td>${d.loc?esc(d.loc):'<span class="sub">—</span>'}</td><td class="n">${d.h?hrs(d.h)+' h':'<span class="sub">—</span>'}</td></tr>`).join('');
+        inner=`<table class="grid" style="min-width:0"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="2">Total</th><td class="n">${hrs(x.tot)} h</td></tr></tfoot></table>`;}
+      else{inner='<div class="sub">'+Object.entries(x.byLoc).map(([j,h])=>esc(j)+' · '+hrs(h)+' h').join('<br>')+'</div>';}
+      return `<li class="crew-detail"><div class="panel-b" style="padding-top:0">${inner}</div></li>`;
+    }
+    const ents=doc.entries, tot=ents.reduce((a,e)=>a+num(e.h),0);
+    const dayOpts=sel=>DOW.map((d,i)=>`<option value="${i}"${i===(+sel||0)?' selected':''}>${d} ${parse(addDays(wk,i)).getUTCDate()}</option>`).join('');
+    const rows=ents.map((e,i)=>`<tr><td><select data-chg="cwd" data-key="${esc(x.key)}" data-i="${i}" aria-label="Day">${dayOpts(e.d)}</select></td><td><input value="${esc(e.loc||'')}" data-chg="cwl" data-key="${esc(x.key)}" data-i="${i}" autocomplete="off" aria-label="Where"></td><td class="n"><input class="hr" inputmode="decimal" value="${num(e.h)?hrs(num(e.h)):''}" data-chg="cwh" data-key="${esc(x.key)}" data-i="${i}" aria-label="Hours"></td><td class="n"><button type="button" class="btn ghost sm x" data-act="cwDel" data-key="${esc(x.key)}" data-i="${i}" aria-label="Remove row">×</button></td></tr>`).join('');
+    return `<li class="crew-detail"><div class="panel-b" style="padding-top:0"><table class="grid ts" style="min-width:0"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th colspan="2">Total</th><td class="n">${hrs(tot)} h</td><td></td></tr></tfoot></table><div style="margin-top:8px"><button type="button" class="btn ghost sm" data-act="cwAdd" data-key="${esc(x.key)}">+ Add a day</button> <span class="sub">Edits save straight to ${esc(x.name)}'s page.</span></div></div></li>`;};
+  const crewPanel=`<section class="panel"><div class="panel-h"><h3>Submitted by the crew</h3><span class="sub">Hours the lads logged on their own page — tap a name to see or edit their week</span></div>${crewSubs.length?`<ul class="items">${crewSubs.map(x=>{const open=ui.crewOpen===x.key;const jobs=Object.entries(x.byLoc).map(([j,h])=>esc(j)+' · '+hrs(h)+'h').join(' &nbsp;·&nbsp; ');return `<li class="item crew-sub${open?' open':''}" data-act="crewWeek" data-key="${esc(x.key)}" role="button" tabindex="0" aria-expanded="${open}"><div class="item-main"><strong>${esc(x.name)}</strong> <span class="chev">${open?'▾':'▸'}</span><div class="sub">${jobs}</div></div><div class="item-amt"><span class="amt">${hrs(x.tot)} h</span></div></li>${open?crewWeek(x):''}`;}).join('')}</ul>`:empty('No crew hours submitted yet','When a lad fills in their hours on their page, they appear here automatically — live.')}</section>`;
   return head+table+byJob+crewPanel;
 };
 
 views.dayworks=()=>{
-  const head=`<div class="head"><div><h2>Jobs</h2><p class="sub">Every job, with its day works &amp; variation sheets filed underneath. Add a job, then log sheets against it — on site too.</p></div><div class="item-act"><button type="button" class="btn sm" data-act="newDW" data-mode="dayworks">+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation">+ Variation</button><button type="button" class="btn ghost sm" data-act="refreshDW" aria-label="Refresh">↻</button></div></div>`;
+  const head=`<div class="head"><div><h2>Dayworks</h2><p class="sub">Every job, with its day works &amp; variation sheets filed underneath. Add a job, then log sheets against it — on site too.</p></div><div class="item-act"><button type="button" class="btn sm" data-act="newDW" data-mode="dayworks">+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation">+ Variation</button><button type="button" class="btn ghost sm" data-act="refreshDW" aria-label="Refresh">↻</button></div></div>`;
   if(!DWDATA.loaded){dwLoad();return head+`<section class="panel">${empty('Loading day works…','')}</section>`;}
   const jobs=DWDATA.jobs,sheets=DWDATA.sheets;
   const byTitle={};sheets.forEach(x=>{const k=x.project||'—';(byTitle[k]=byTitle[k]||[]).push(x);});
   const sRow=x=>{const k='dwdel/'+x.id;const act=ui.confirm===k
     ?`<span class="confirm"><button type="button" class="btn sm danger" data-act="delDWSheet" data-id="${esc(x.id)}">Delete sheet</button><button type="button" class="btn sm ghost" data-act="cancel">Keep</button></span>`
-    :`<button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button><button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
+    :ui.moveDW===x.id
+    ?`<span class="confirm"><select class="dwmove" id="dwmove-${esc(x.id)}" aria-label="Move this sheet to another job"><option value="">Move to job…</option>${jobs.map(j=>`<option value="${esc(j.id)}"${x.project===j.title?' disabled':''}>${esc(j.title)}</option>`).join('')}</select><button type="button" class="btn sm" data-act="moveDWdo" data-id="${esc(x.id)}">Done</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></span>`
+    :`<button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button>${jobs.length?`<button type="button" class="btn sm ghost" data-act="moveDWask" data-id="${esc(x.id)}">Move</button>`:''}<button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
     return `<li class="item"><div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}${x.creator_name?' · '+esc(x.creator_name):''}</div></div><div class="item-amt"><span class="amt">${x.grand?money(num(x.grand)):''}</span></div><div class="item-act">${act}</div></li>`;};
-  const section=(title,client,jobid,rows)=>{const jb=`data-job="${esc(title)}"${jobid?` data-jobid="${esc(jobid)}"`:''}`;return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}</h3><div class="item-act"><button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${rows.length?`<ul class="items">${rows.map(sRow).join('')}</ul>`:`<div class="panel-b sub">No sheets yet.</div>`}</section>`;};
+  // A collapsible sub-level (month / week) that reuses the dropdown styling but
+  // sits inside the job panel rather than being its own panel.
+  const subDrop=(key,cls,title,fig,body)=>{const o=!!ui.ovOpen[key];
+    return `<div class="dropdown subdrop ${cls}${o?' open':''}"><button type="button" class="dropdown-h" data-act="ovSec" data-k="${esc(key)}" aria-expanded="${o}"><span class="dropdown-t">${title}</span>${fig?`<span class="dropdown-fig">${fig}</span>`:''}<span class="chev">${o?'▴':'▾'}</span></button>${o?body:''}</div>`;};
+  const sheetsFig=(rows,tot)=>`${rows.length} sheet${rows.length>1?'s':''}${tot?' · <strong>'+money(tot)+'</strong>':''}`;
+  // Group a job's sheets by month, then by week. Each week shows its date span
+  // (first → last sheet) and opens to the individual sheets underneath.
+  const weekBlock=(title,wk,rows)=>{
+    const wrows=rows.slice().sort((a,b)=>String(b.work_date||'').localeCompare(String(a.work_date||'')));
+    const dated=wrows.filter(x=>x.work_date).map(x=>x.work_date).sort();
+    const span=dated.length?(dated[0]===dated[dated.length-1]?fmtD(dated[0]):fmtD(dated[0])+' – '+fmtD(dated[dated.length-1])):'Undated';
+    const tot=wrows.reduce((s,x)=>s+num(x.grand),0);
+    const exp=wk==='—'?'':`<div class="dw-weeks"><span class="sub">Export this week to Excel:</span><button type="button" class="btn sm ghost" data-act="dwWeek" data-job="${esc(title)}" data-week="${wk}">w/e ${fmtD(addDays(wk,6))}</button></div>`;
+    const drop=subDrop('dww/'+title+'/'+wk,'week',span,sheetsFig(wrows,tot),`<ul class="items">${wrows.map(sRow).join('')}</ul>${exp}`);
+    if(ui.dwPick&&ui.dwPick[title]&&wk!=='—'){
+      const on=!!(ui.dwSel&&ui.dwSel[title]&&ui.dwSel[title][wk]);
+      return `<div class="dwpick-row${on?' on':''}"><label class="dwpick-cb"><input type="checkbox" data-act="dwPickWk" data-job="${esc(title)}" data-week="${wk}"${on?' checked':''}></label>${drop}</div>`;
+    }
+    return drop;
+  };
+  const monthBlock=(title,mk,rows)=>{
+    const byWeek={};rows.forEach(x=>{const w=x.work_date?mondayOf(x.work_date):'—';(byWeek[w]=byWeek[w]||[]).push(x);});
+    const weeks=Object.keys(byWeek).sort((a,b)=>b.localeCompare(a));
+    const tot=rows.reduce((s,x)=>s+num(x.grand),0);
+    const lab=mk==='—'?'Undated':MON[+mk.slice(5,7)-1]+' '+mk.slice(0,4);
+    return subDrop('dwm/'+title+'/'+mk,'month',lab,sheetsFig(rows,tot),weeks.map(w=>weekBlock(title,w,byWeek[w])).join(''));
+  };
+  const section=(title,client,jobid,rows)=>{const jb=`data-job="${esc(title)}"${jobid?` data-jobid="${esc(jobid)}"`:''}`;
+    const byMonth={};rows.forEach(x=>{const mk=x.work_date?x.work_date.slice(0,7):'—';(byMonth[mk]=byMonth[mk]||[]).push(x);});
+    const months=Object.keys(byMonth).sort((a,b)=>b.localeCompare(a));
+    const weekSet={};rows.forEach(x=>{if(x.work_date)weekSet[mondayOf(x.work_date)]=1;});
+    const nWeeks=Object.keys(weekSet).length;
+    const picking=!!(ui.dwPick&&ui.dwPick[title]);
+    const selCount=picking?Object.keys((ui.dwSel&&ui.dwSel[title])||{}).filter(k=>ui.dwSel[title][k]).length:0;
+    const combine=nWeeks>=2?(picking
+      ?`<button type="button" class="btn sm" data-act="dwCombineDo" data-job="${esc(title)}"${selCount?'':' disabled'}>Export ${selCount||''} week${selCount===1?'':'s'} together</button><button type="button" class="btn sm ghost" data-act="dwCombineCancel" data-job="${esc(title)}">Cancel</button>`
+      :`<button type="button" class="btn sm ghost" data-act="dwCombine" data-job="${esc(title)}">Combine weeks</button>`):'';
+    const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`:'';
+    const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
+    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}</h3><div class="item-act">${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','')}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
   const seen={};
   let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
@@ -394,7 +673,7 @@ views.dayworks=()=>{
 };
 
 const opt=a=>a.map(x=>[x,x]);
-const quoteFields=(f,q)=>fld(f,'client','Caller / client',q.client,{attrs:'required'})+fld(f,'phone','Phone',q.phone,{type:'tel'})+fld(f,'email','Email',q.email,{type:'email'})+sel(f,'source','Came in by',q.source||'Phone call',opt(SOURCES))+sel(f,'workType','Type of work',q.workType||WORK[0],opt(WORK))+fld(f,'job','What they need',q.job,{attrs:'required placeholder="e.g. Footings and drainage for rear extension"',cls:'wide'})+fld(f,'site','Site address / postcode',q.site,{cls:'wide'})+fld(f,'received','Received',q.received,{type:'date'})+fld(f,'due','Quote due',q.due,{type:'date'})+fld(f,'value','Value £ (if known)',nf(q.value||''),{attrs:'inputmode="decimal"'})+area(f,'notes','Notes from the call',q.notes);
+const quoteFields=(f,q)=>fld(f,'client','Caller / client',q.client,{attrs:'required'})+fld(f,'phone','Phone',q.phone,{type:'tel'})+fld(f,'email','Email',q.email,{type:'email'})+sel(f,'source','Came in by',q.source||'Phone call',opt(SOURCES))+sel(f,'workType','Type of work',q.workType||WORK[0],opt(WORK))+fld(f,'job','What they need',q.job,{attrs:'required placeholder="e.g. Footings and drainage for rear extension"',cls:'wide'})+fld(f,'site','Site address / postcode',q.site,{cls:'wide',attrs:'data-addr autocomplete="off"'})+fld(f,'received','Received',q.received,{type:'date'})+fld(f,'due','Quote due',q.due,{type:'date'})+fld(f,'value','Value £ (if known)',nf(q.value||''),{attrs:'inputmode="decimal"'})+area(f,'notes','Notes from the call',q.notes);
 const visitPill=(q,today)=>!q.visitDate?'':pill(q.visitDone?'neutral':q.visitDate<today?'bad':q.visitDate===today?'warn':'good',(q.visitDone?'Visited '+fmtD(q.visitDate):'Site visit '+dayLabel(q.visitDate,today)+(q.visitTime?' '+q.visitTime:''))+(q.visitBy?' · '+q.visitBy:''));
 views.quotes=()=>{
   const today=todayISO();
@@ -402,7 +681,8 @@ views.quotes=()=>{
   const shown=all.filter(q=>ui.quoteFilter==='all'||isOpenQ(q)).sort((a,b)=>(isOpenQ(b)-isOpenQ(a))||String(a.due||'9999').localeCompare(String(b.due||'9999'))||String(b.received||'').localeCompare(String(a.received||'')));
   const won=all.filter(q=>q.status==='Won'), decided=won.length+all.filter(q=>q.status==='Lost').length;
   const open=all.filter(isOpenQ), quoted=all.filter(q=>q.status==='Quoted'), visits=all.filter(visitDue);
-  const stats=`<div class="stats"><div class="stat"><span class="k">To price</span><span class="v">${all.filter(toPrice).length}</span><span class="sub">${all.filter(q=>q.status==='New').length} new, not yet actioned</span></div><div class="stat"><span class="k">Site visits booked</span><span class="v">${visits.length}</span><span class="sub">${visits.length?'Next '+dayLabel(visits.map(q=>q.visitDate).sort()[0],today):'None in the diary'}</span></div><div class="stat"><span class="k">Quoted, awaiting answer</span><span class="v">${money0(quoted.reduce((t,q)=>t+quoteValue(q),0))}</span><span class="sub">${quoted.length} out with clients</span></div><div class="stat"><span class="k">Won</span><span class="v">${won.length}</span><span class="sub">${decided?Math.round(won.length/decided*100)+'% of '+decided+' decided':'No decisions yet'}</span></div></div>`;
+  const onTender=open.reduce((s,q)=>s+quoteValue(q),0);
+  const stats=`<div class="stats"><div class="stat"><span class="k">To price</span><span class="v">${all.filter(needsPrice).length}</span><span class="sub">${all.filter(q=>q.status==='New').length} new, not yet actioned</span></div><div class="stat"><span class="k">Site visits booked</span><span class="v">${visits.length}</span><span class="sub">${visits.length?'Next '+dayLabel(visits.map(q=>q.visitDate).sort()[0],today):'None in the diary'}</span></div><div class="stat"><span class="k">Quoted, awaiting answer</span><span class="v">${money0(quoted.reduce((t,q)=>t+quoteValue(q),0))}</span><span class="sub">${quoted.length} out with clients</span></div><div class="stat"><span class="k">Won</span><span class="v">${won.length}</span><span class="sub">${decided?Math.round(won.length/decided*100)+'% of '+decided+' decided':'No decisions yet'}</span></div></div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Log an enquiry</h3><span class="sub">Take it down while they are on the phone.</span></div><form class="panel-b form" data-form="quote">${quoteFields('quote',{received:today})}<div class="go"><button class="btn">Add enquiry</button></div></form></section>`;
   const staff=['Dan'].concat(list('employees').filter(e=>e.active!==false).map(e=>e.name)).filter((x,i,a)=>x&&a.indexOf(x)===i);
   const row=q=>{
@@ -410,13 +690,14 @@ views.quotes=()=>{
     if(ui.edit===key)return `<li class="item editing"><form class="form" data-form="quoteEdit">${quoteFields('quoteEdit',q)}<div class="go"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
     if(ui.edit===vkey)return `<li class="item editing"><p style="margin-bottom:10px"><strong>Site visit</strong> · ${esc(q.client)} · ${esc(q.site||'no site address yet')}</p><form class="form" data-form="visit">${fld('visit','visitDate','Date',q.visitDate||today,{type:'date',attrs:'required'})}${fld('visit','visitTime','Time',q.visitTime||'',{type:'time'})}${fld('visit','visitBy','Who is going',q.visitBy||'',{attrs:'list="dl-staff"'})}${fld('visit','visitNotes','Access, parking, what to measure',q.visitNotes||'',{cls:'wide'})}<div class="go"><button class="btn">Save visit</button>${q.visitDate?`<button type="button" class="btn ghost" data-act="clearVisit" data-id="${q.id}">Remove visit</button>`:''}<button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
     const d=q.due?dayDiff(q.due,today):null;
-    const due=!q.due?'':toPrice(q)?pill(d<0?'bad':d<=7?'warn':'neutral',d<0?'Quote overdue '+(-d)+' days':d===0?'Quote due today':'Quote due '+fmtD(q.due)):`<span class="sub">Quote due ${fmtD(q.due)}</span>`;
+    // A priced enquiry has effectively been sent, so the "Quote due" chase disappears.
+    const due=!q.due||quoteValue(q)?'':needsPrice(q)?pill(d<0?'bad':d<=7?'warn':'neutral',d<0?'Quote overdue '+(-d)+' days':d===0?'Quote due today':'Quote due '+fmtD(q.due)):`<span class="sub">Quote due ${fmtD(q.due)}</span>`;
     const v=quoteValue(q), linked=q.projectId&&S.projects[q.projectId];
     const contact=[q.phone,q.email].filter(Boolean).map(esc).join(' · ');
     const visitBtn=visitDue(q)?`<button type="button" class="btn sm" id="qvd-${q.id}" data-act="visitDone" data-id="${q.id}">Visit done</button><button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Change visit</button>`:isOpenQ(q)?`<button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Book site visit</button>`:'';
-    return `<li class="item"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
+    return `<li class="item${v?' quoted':isOpenQ(q)?' unpriced':''}"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked&&num(linked.tender)>0?'tender':linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
   };
-  const listing=`<section class="panel"><div class="panel-h"><h3>Enquiries</h3><div class="item-act"><button type="button" class="btn sm ${ui.quoteFilter==='open'?'':'ghost'}" id="qf-open" data-act="qfilter" data-v="open">Open (${open.length})</button><button type="button" class="btn sm ${ui.quoteFilter==='all'?'':'ghost'}" id="qf-all" data-act="qfilter" data-v="all">All (${all.length})</button></div></div>${shown.length?`<ul class="items">${shown.map(row).join('')}</ul>`:empty(all.length?'No open enquiries':'No enquiries logged yet','Log each call or email as it comes in, book the site visit, then use Price it to build the quote off your rate card.')}</section>`;
+  const listing=`<section class="panel"><div class="panel-h"><h3>Enquiries</h3><div class="item-act"><button type="button" class="btn sm ${ui.quoteFilter==='open'?'':'ghost'}" id="qf-open" data-act="qfilter" data-v="open">Open (${open.length})</button><button type="button" class="btn sm ${ui.quoteFilter==='all'?'':'ghost'}" id="qf-all" data-act="qfilter" data-v="all">All (${all.length})</button></div></div>${shown.length?`<ul class="items">${shown.map(row).join('')}</ul>`:empty(all.length?'No open enquiries':'No enquiries logged yet','Log each call or email as it comes in, book the site visit, then use Price it to build the quote off your rate card.')}${onTender>0?`<div class="listfoot"><span>Out on tender</span><strong>${money(onTender)} <span class="sub">${money(onTender*1.2)} inc VAT</span></strong></div>`:''}</section>`;
   return `<div class="head"><div><h2>Enquiries &amp; quotes</h2><p class="sub">From first call to site visit, price, and decision.</p></div></div><datalist id="dl-staff">${staff.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>${stats}${add}${listing}`;
 };
 
@@ -425,17 +706,22 @@ views.projects=()=>{
   if(p)return vProject({...p,id:ui.project});
   const hb=hoursByProject(), invBy={};
   list('invoices').forEach(i=>{if(i.projectId)invBy[i.projectId]=(invBy[i.projectId]||0)+num(i.net);});
-  const all=list('projects').sort((a,b)=>PSTATUS.indexOf(a.status)-PSTATUS.indexOf(b.status)||byName(a,b));
-  const add=`<section class="panel"><div class="panel-h"><h3>New project</h3></div><form class="panel-b form" data-form="project">${fld('project','name','Project',"",{attrs:'required',cls:'wide'})}${fld('project','client','Client','')}${fld('project','site','Site','')}${sel('project','status','Stage','Pricing',PSTATUS.map(s=>[s,s]))}<div class="go"><button class="btn">Add and open</button></div></form></section>`;
-  const rows=all.map(q=>{const h=hb[q.id]||{h:0,cost:0};return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}</div><div class="item-amt"><span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'agreed price':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span></div><div class="item-amt"><span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span></div></li>`;}).join('');
-  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}<section class="panel"><div class="panel-h"><h3>All projects</h3></div>${all.length?`<ul class="items">${rows}</ul>`:empty('No projects yet','Add one above, or use Price it on a quote request.')}</section>`;
+  // Enquiries still being priced live a "project" record (created by Price it) linked from an
+  // open quote. Those belong in Dayworks/enquiries, not here — only show them as projects once
+  // the enquiry is Won.
+  const qByProj={};list('quotes').forEach(q=>{if(q.projectId)qByProj[q.projectId]=q;});
+  const all=list('projects').filter(p=>{const q=qByProj[p.id];return !q||q.status==='Won';}).sort((a,b)=>PSTATUS.indexOf(a.status)-PSTATUS.indexOf(b.status)||byName(a,b));
+  const projTotal=all.reduce((s,p)=>s+(num(p.tender)||projTotals(p).total),0);
+  const add=`<section class="panel"><div class="panel-h"><h3>New project</h3></div><form class="panel-b form" data-form="project">${fld('project','name','Project',"",{attrs:'required',cls:'wide'})}${fld('project','client','Client','')}${fld('project','site','Site','',{attrs:'data-addr autocomplete="off"'})}${sel('project','status','Stage','Pricing',PSTATUS.map(s=>[s,s]))}<div class="go"><button class="btn">Add and open</button></div></form></section>`;
+  const rows=all.map(q=>{const h=hb[q.id]||{h:0,cost:0};return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt"><span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span></div><div class="item-amt"><span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span></div></li>`;}).join('');
+  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}<section class="panel"><div class="panel-h"><h3>All projects${all.length?' <span class="sub">'+all.length+'</span>':''}</h3></div>${all.length?`<ul class="items">${rows}</ul>`:empty('No projects yet','Add one above, or use Price it on a quote request.')}${projTotal>0?`<div class="listfoot"><span>Total</span><strong>${money(projTotal)} <span class="sub">${money(projTotal*1.2)} inc VAT</span></strong></div>`:''}</section>`;
 };
 
 function vProject(p){
   const t=projTotals(p), h=hoursByProject()[p.id]||{h:0,cost:0};
   const inv=list('invoices').filter(i=>i.projectId===p.id), invNet=sum(inv.map(i=>i.net)), paid=sum(inv.filter(i=>i.paid).map(i=>i.net));
-  const pf=(k,label,o={})=>`<label class="f ${o.cls||''}"><span>${label}</span><input id="pf-${k}" value="${esc(p[k]??'')}" data-chg="pf" data-id="${p.id}" data-k="${k}"></label>`;
-  const details=`<section class="panel"><div class="panel-h"><h3>Details</h3>${del('projects/'+p.id,'Delete project')}</div><div class="panel-b form">${pf('name','Project',{cls:'wide'})}${pf('client','Client')}${pf('site','Site')}<label class="f"><span>Stage</span><select id="pf-status" data-chg="pf" data-id="${p.id}" data-k="status">${PSTATUS.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}</select></label><label class="f"><span>Accepted tender £</span><input id="pf-tender" value="${esc(nf(p.tender||''))}" inputmode="decimal" placeholder="Agreed price" data-chg="pf" data-id="${p.id}" data-k="tender"></label><label class="f full"><span>Notes</span><textarea id="pf-notes" data-chg="pf" data-id="${p.id}" data-k="notes">${esc(p.notes||'')}</textarea></label></div><div class="panel-b kv"><div><span class="sub">Priced</span><strong>${money(t.total)}</strong></div><div><span class="sub">Accepted tender</span><strong>${p.tender?money(num(p.tender)):'—'}</strong></div><div><span class="sub">Invoiced</span><strong>${money(invNet)}</strong></div><div><span class="sub">Paid</span><strong>${money(paid)}</strong></div><div><span class="sub">Labour to date</span><strong>${money(h.cost)}</strong></div><div><span class="sub">Hours booked</span><strong>${hrs(h.h)}</strong></div></div></section>`;
+  const pf=(k,label,o={})=>`<label class="f ${o.cls||''}"><span>${label}</span><input id="pf-${k}" value="${esc(p[k]??'')}" data-chg="pf" data-id="${p.id}" data-k="${k}" ${o.attrs||''}></label>`;
+  const details=`<section class="panel"><div class="panel-h"><h3>Details</h3><div class="item-act">${p.site?mapLink(p.site):''}${del('projects/'+p.id,'Delete project')}</div></div><div class="panel-b form">${pf('name','Project',{cls:'wide'})}${pf('client','Client')}${pf('site','Site',{attrs:'data-addr autocomplete="off"'})}<label class="f"><span>Stage</span><select id="pf-status" data-chg="pf" data-id="${p.id}" data-k="status">${PSTATUS.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}</select></label><label class="f"><span>Start date</span><input id="pf-startDate" type="date" value="${esc(p.startDate||'')}" data-chg="pf" data-id="${p.id}" data-k="startDate"></label><label class="f"><span>End date</span><input id="pf-endDate" type="date" value="${esc(p.endDate||'')}" data-chg="pf" data-id="${p.id}" data-k="endDate"></label><label class="f"><span>Gang on this job</span><select id="pf-gang" data-chg="pf" data-id="${p.id}" data-k="gang"><option value="">Unassigned</option>${GANGS.map(g=>`<option value="${g.k}"${p.gang===g.k?' selected':''}>${esc(g.name)}</option>`).join('')}</select></label><label class="f full"><span>Notes</span><textarea id="pf-notes" data-chg="pf" data-id="${p.id}" data-k="notes">${esc(p.notes||'')}</textarea></label></div><div class="panel-b kv"><div><span class="sub">Priced</span><strong>${money(t.total)}</strong></div><div><span class="sub">Tender</span><strong>${p.tender?money(num(p.tender)):'—'}</strong></div><div><span class="sub">Invoiced</span><strong>${money(invNet)}</strong></div><div><span class="sub">Paid</span><strong>${money(paid)}</strong></div><div><span class="sub">Labour to date</span><strong>${money(h.cost)}</strong></div><div><span class="sub">Hours booked</span><strong>${hrs(h.h)}</strong></div></div></section>`;
   const rates=list('rates'), cats=[...new Set(rates.map(r=>r.cat||'Other'))].sort();
   const lines=p.lines||[];
   const ln=(l,k,cls,extra='')=>`<input id="ln-${l.id}-${k}" class="${cls}" value="${esc(nf(l[k]))}" data-chg="line" data-id="${p.id}" data-l="${l.id}" data-k="${k}" aria-label="${k}" ${extra}>`;
@@ -446,7 +732,11 @@ function vProject(p){
   <div class="panel-b"><div class="totals">${Object.entries(byCat).sort().map(([c,v])=>`<div class="sub"><span>${esc(c)}</span><span>${money(v)}</span></div>`).join('')}<div><span>Subtotal</span><strong>${money(t.sub)}</strong></div><div><label for="pf-markup">Overheads &amp; profit %</label><span><input id="pf-markup" value="${esc(nf(p.markup||''))}" inputmode="decimal" data-chg="pf" data-id="${p.id}" data-k="markup"> ${money(t.mk)}</span></div><div class="grand"><span>Price ex VAT</span><span>${money(t.total)}</span></div></div></div></section>`;
   const docs=p.docs||[];
   const scan=ui.tenderScan&&ui.tenderScan.pid===p.id?ui.tenderScan:null;
-  const tenderBox=`<section class="panel"><div class="panel-h"><h3>Set tender from a PDF</h3><span class="sub">Drop the accepted tender — it files it under Documents below and reads the £ figures so you tap the agreed total.</span></div><div class="panel-b">${assets?`<label class="btn sm filebtn">${scan&&scan.busy?'Reading the PDF…':'Read a tender PDF'}<input class="vh" type="file" accept="application/pdf" data-chg="tenderPdf" data-id="${p.id}"${scan&&scan.busy?' disabled':''}></label>`:'<p class="dw-xhint">This view cannot read PDFs here — type the figure into “Accepted tender £” above.</p>'}${scan&&!scan.busy?(scan.amounts.length?`<p class="dw-xhint" style="margin:12px 0 6px">Tap the agreed total. The biggest figure is usually the tender.</p><div class="dw-xbtns">${scan.amounts.map((a,i)=>`<button type="button" class="btn sm${i===0?'':' ghost'}" data-act="useTender" data-id="${p.id}" data-v="${a.val}">${money(a.val)}${a.ctx?`<span class="sub" style="display:block;font-weight:400">${esc(a.ctx)}</span>`:''}</button>`).join('')}</div>`:`<p class="dw-xhint" style="margin-top:12px">${scan.error==='fail'?'Could not read that PDF. If it is a scan/photo it has no text — type the figure in manually above.':'No £ figures found. Type the figure into “Accepted tender £” above.'}</p>`):''}</div></section>`;
+  const tv=num(p.tender);
+  // VAT rate on the tender is a dropdown of the UK rates (default 20%). Pick 0% for reverse charge
+  // / zero rated, 5% reduced rate, or 20% standard. Stored per project as vatRate.
+  const vr=p.vatRate===''||p.vatRate==null?20:num(p.vatRate);
+  const tenderBox=`<section class="panel" data-droptender="${p.id}"><div class="panel-h"><h3>Tender</h3><span class="sub">Type the figure, or drop a tender PDF or Excel here to read it.</span></div><div class="panel-b form"><label class="f"><span>Tender price (ex VAT) £</span><input id="pf-tender" value="${esc(nf(p.tender||''))}" inputmode="decimal" placeholder="e.g. 12500" data-chg="pf" data-id="${p.id}" data-k="tender"></label><label class="f"><span>VAT rate</span><select id="pf-vatRate" data-chg="pf" data-id="${p.id}" data-k="vatRate">${[[20,'20% — standard'],[5,'5% — reduced rate'],[0,'0% — zero / reverse charge']].map(([r,l])=>`<option value="${r}"${vr===r?' selected':''}>${l}</option>`).join('')}</select></label></div>${tv?`<div class="panel-b"><div class="totals"><div><span>Tender (ex VAT)</span><strong>${money(tv)}</strong></div><div class="sub"><span>VAT at ${vr}%</span><span>${money(tv*vr/100)}</span></div><div class="grand"><span>Total inc VAT</span><span>${money(tv*(1+vr/100))}</span></div></div></div>`:''}<div class="panel-b">${assets?`<label class="btn sm filebtn">${scan&&scan.busy?'Reading the file…':'Read a PDF or Excel'}<input class="vh" type="file" accept=".pdf,.xlsx,.xlsm,application/pdf" data-chg="tenderFile" data-id="${p.id}"${scan&&scan.busy?' disabled':''}></label><p class="dw-xhint" style="margin-top:8px">Or drag a tender PDF or Excel onto this panel.</p>`:'<p class="dw-xhint">This view cannot read files here — type the tender figure above.</p>'}${scan&&!scan.busy?(scan.amounts.length?(()=>{const bottom=pickBottom(scan.amounts);return `<p class="dw-xhint" style="margin:14px 0 6px">The bottom line is the final total ex VAT (your "plus VAT" figure). Tap it to set the tender, or pick another figure.</p><button type="button" class="btn" data-act="useTender" data-id="${p.id}" data-v="${bottom.val}" style="width:100%">Bottom line — ${money(bottom.val)}</button><div class="dw-xbtns" style="margin-top:10px">${scan.amounts.map(a=>`<button type="button" class="btn sm ghost" data-act="useTender" data-id="${p.id}" data-v="${a.val}">${money(a.val)}${a.ctx?`<span class="sub" style="display:block;font-weight:400">${esc(a.ctx)}</span>`:''}</button>`).join('')}</div>`;})():`<p class="dw-xhint" style="margin-top:12px">${scan.error==='fail'?'Could not read that file. If a PDF is a scan/photo it has no text — type the figure in manually above.':'No £ figures found. Type the tender figure above.'}</p>`):''}</div></section>`;
   const documents=`<section class="panel"><div class="panel-h"><h3>Documents</h3>${assets?`<label class="btn sm filebtn">${ui.busy==='upload'?'Uploading…':'Add PDFs'}<input class="vh" type="file" id="doc-up" accept="application/pdf,image/png,image/jpeg" multiple data-chg="upload" data-id="${p.id}"${ui.busy==='upload'?' disabled':''}></label>`:''}</div>${docs.length?`<ul class="items">${docs.map(d=>`<li class="item"><div class="item-main"><a href="/_blob/${esc(d.id)}" target="_blank" rel="noopener">${esc(d.name)}</a><div class="sub">${size(num(d.size))} · added ${fmtD(d.added,true)}</div></div>${assets?`<div class="item-act">${del('doc/'+p.id+'/'+d.id,'Remove')}</div>`:''}</li>`).join('')}</ul>`:empty('No documents attached',assets?'Add drawings, specs, tender documents and quotes as PDFs (up to 20 MB each).':'Documents can be added by people with edit access to this page.')}</section>`;
   return `<div class="head"><div><button type="button" class="btn ghost sm" id="p-back" data-act="closeProject">‹ All projects</button></div></div><div class="head"><div><h2>${esc(p.name)}</h2><p class="sub">${[p.client,p.site].filter(Boolean).map(esc).join(' · ')}</p></div>${pill(projPill(p.status),p.status||'Pricing')}</div>${details}${tenderBox}${pricing}${documents}`;
 }
@@ -503,15 +793,83 @@ views.team=()=>{
   return `<div class="head"><div><h2>Team</h2><p class="sub">Untick someone who has left to keep their past hours but drop them from new timesheets.</p></div></div>${add}${table}`;
 };
 
+views.reminders=()=>{
+  const all=list('reminders');
+  const col=(owner,label)=>{
+    const mine=all.filter(r=>r.owner===owner);
+    const open=mine.filter(r=>!r.done).sort((a,b)=>((+b.pri||0)-(+a.pri||0))||(String(a.when||'9999').localeCompare(String(b.when||'9999')))||((a.created||0)-(b.created||0)));
+    const done=mine.filter(r=>r.done).sort((a,b)=>(b.created||0)-(a.created||0));
+    const form='reminder'+(owner==='dan'?'Dan':'Chris');
+    const row=r=>{const ekey='rem/'+r.id;
+      if(ui.edit===ekey)return `<li class="item editing"><form class="form rem-add" data-form="remEdit"><label class="f full"><span class="vh">Edit reminder</span><input id="remEdit-text" name="text" value="${esc(dv('remEdit','text',r.text))}" autocomplete="off"></label><label class="f when"><span class="vh">Remind me at</span><input id="remEdit-when" name="when" type="datetime-local" value="${esc(dv('remEdit','when',r.when||''))}"></label><div class="go"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form></li>`;
+      const pinned=!r.done&&(+r.pri||0)>0;
+      return `<li class="item rem${r.done?' rem-done':''}${pinned?' rem-top':''}"><label class="rem-check"><input type="checkbox" data-chg="remDone" data-id="${r.id}"${r.done?' checked':''} aria-label="Mark done"></label><div class="item-main">${esc(r.text)}${r.when&&!r.done?`<div class="sub">${remDuePill(r.when)}</div>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="edit" data-key="${ekey}">Edit</button>${r.done?'':`<button type="button" class="btn sm ghost" data-act="remPin" data-id="${r.id}" data-pin="${pinned?'0':'1'}" title="${pinned?'Unpin':'Pin to top'}">${pinned?'Unpin':'↑ Pin'}</button>`}${del('reminders/'+r.id,'×')}</div></li>`;};
+    const other=owner==='dan'?'Chris':'Dan';
+    return `<section class="panel"><div class="panel-h"><h3>${label} <span class="sub">${open.length} to do</span></h3></div>`
+      +`<form class="panel-b form rem-add" data-form="${form}"><label class="f full"><span class="vh">Add a reminder for ${label}</span><input id="${form}-text" name="text" placeholder="Add a reminder…" autocomplete="off"></label><label class="f when"><span class="vh">Remind me at (optional)</span><input id="${form}-when" name="when" type="datetime-local"></label><div class="go"><button class="btn sm">Add</button></div></form>`
+      +(open.length||done.length
+        ?`<ul class="items rem-list">${open.map(row).join('')}${done.length?`<li class="rem-sep">Done · ${done.length}</li>`+done.map(row).join(''):''}</ul>`
+        :empty('Nothing yet','Type anything the moment it comes to you — it saves straight away and '+other+' sees it too.'))
+      +`</section>`;
+  };
+  const nOn=('Notification' in window)&&Notification.permission==='granted';
+  const nBtn=('Notification' in window)&&Notification.permission!=='denied'
+    ?`<div class="item-act">${nOn?pill('good','Alerts on'):`<button type="button" class="btn sm" data-act="notifyOn">Turn on alerts</button>`}</div>`:'';
+  // Put the signed-in director's own list first (top on a phone, left on a computer).
+  const me=/chris/i.test(DWME.name||'')?'chris':'dan';
+  const mine=me==='chris'?col('chris','Chris'):col('dan','Dan');
+  const theirs=me==='chris'?col('dan','Dan'):col('chris','Chris');
+  return `<div class="head"><div><h2>Reminders</h2><p class="sub">Your running list — type and it saves instantly. You both see each other's. Put a date and time on one and it pings you when it's due.</p></div>${nBtn}</div><div class="rem-cols">${mine}${theirs}</div>`;
+};
+
+/* Crew tab — holiday requests the lads send in. Directors approve or decline;
+   the lad sees the decision in their app. Rows live in office_docs 'holidays'
+   keyed <uid>__<id>, loaded live like everything else. */
+views.crew=()=>{
+  const hols=list('holidays').sort((a,b)=>String(b.created||0)-String(a.created||0)||String(b.from||'').localeCompare(String(a.from||'')));
+  const pending=hols.filter(h=>h.status==='pending');
+  const decided=hols.filter(h=>h.status!=='pending');
+  const span=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
+  const row=h=>{
+    const st=h.status==='approved'?pill('good','Approved'):h.status==='declined'?pill('bad','Declined'):pill('warn','Pending');
+    const act=h.status==='pending'
+      ?`<button type="button" class="btn sm" data-act="holSet" data-id="${esc(h.id)}" data-v="approved">Approve</button><button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="declined">Decline</button>`
+      :`<button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="pending">Reopen</button>`;
+    return `<li class="item"><div>${st}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(span(h))} <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${act}</div></li>`;
+  };
+  const sec=(title,rows,emptyTxt)=>`<section class="panel"><div class="panel-h"><h3>${title}${rows.length?' <span class="sub">'+rows.length+'</span>':''}</h3></div>${rows.length?`<ul class="items">${rows.map(row).join('')}</ul>`:empty(emptyTxt,'')}</section>`;
+  // Directors book their own time off — no approval, straight onto the schedule.
+  const who=[...new Set([(DWME.name||'').trim(),...list('employees').filter(e=>e.active!==false).map(e=>(e.name||'').trim())].filter(Boolean))];
+  const book=`<section class="panel"><div class="panel-h"><h3>Book time off</h3><span class="sub">Goes straight on the schedule — no approval needed.</span></div><form class="panel-b form" data-form="timeoff">${who.length?sel('timeoff','who','Who',who[0],who.map(n=>[n,n])):fld('timeoff','who','Who',DWME.name||'')}${fld('timeoff','from','From','',{type:'date',attrs:'required'})}${fld('timeoff','to','To (optional)','',{type:'date'})}${fld('timeoff','note','Note (optional)','',{cls:'wide'})}<div class="go"><button class="btn">Book it</button></div></form></section>`;
+  return `<div class="head"><div><h2>Holidays</h2><p class="sub">Holiday requests from the lads — approve or decline and they'll see it straight away.</p></div></div>`
+    +book
+    +sec('Awaiting your decision',pending,'No requests waiting')
+    +(decided.length?sec('Decided',decided,''):'');
+};
+
 /* ---------- actions ---------- */
 const actions={
   tab(d){ui.tab=d.tab;ui.edit=null;ui.confirm=null;if(d.tab==='projects')ui.project=null;try{localStorage.setItem('dc-tab',d.tab);}catch(e){}try{history.replaceState(null,'','#'+d.tab);}catch(e){}window.scrollTo(0,0);},
   week(d){ui.week=+d.d?addDays(ui.week,+d.d):mondayOf(todayISO());},
+  schedWeek(d){ui.schedWeek=+d.d?addDays(ui.schedWeek,+d.d):mondayOf(todayISO());},
+  ovSec(d){ui.ovOpen[d.k]=!ui.ovOpen[d.k];},
+  tsGrid(){ui.tsGridOpen=!ui.tsGridOpen;},
   newDW(d){openDW({mode:d.mode||'dayworks',jobid:d.jobid,project:d.job});},
   openDWSheet(d){openDW({id:d.id});},
+  moveDWask(d){ui.moveDW=d.id;ui.confirm=null;},
+  // Pick a job in the select, then tap Done — reads the select value and moves the sheet.
+  moveDWdo(d){const sel=document.getElementById('dwmove-'+d.id);const v=sel&&sel.value;if(!v){toast('Pick a job first');return;}const j=(DWDATA.jobs||[]).find(x=>x.id===v);if(!j)return;ui.moveDW=null;SB.from('sheets').update({project:j.title,client:j.client||null}).eq('id',d.id).then(r=>{if(r.error){toast('Move failed: '+(r.error.message||''));return;}toast('Sheet moved to '+j.title);if(dwLoad)dwLoad();});},
   delDWSheet(d){ui.confirm=null;if(!d.id)return;SB.from('sheets').delete().eq('id',d.id).then(r=>{if(r.error){toast('Delete failed: '+(r.error.message||''));return;}toast('Sheet deleted');if(dwLoad)dwLoad();});},
   refreshDW(){dwLoad();},
+  dwWeek(d,el){dwExportWeek(d.job,d.week,el);},
+  dwCombine(d){ui.dwPick=ui.dwPick||{};ui.dwSel=ui.dwSel||{};ui.dwPick[d.job]=true;ui.dwSel[d.job]={};},
+  dwCombineCancel(d){if(ui.dwPick)ui.dwPick[d.job]=false;if(ui.dwSel)ui.dwSel[d.job]={};},
+  dwPickWk(d,el){ui.dwSel=ui.dwSel||{};const m=ui.dwSel[d.job]=ui.dwSel[d.job]||{};if(el&&el.checked)m[d.week]=true;else delete m[d.week];},
+  dwCombineDo(d,el){const m=(ui.dwSel&&ui.dwSel[d.job])||{};const wks=Object.keys(m).filter(k=>m[k]);if(!wks.length){toast('Tick at least one week');return;}dwExportWeeks(d.job,wks,el);if(ui.dwPick)ui.dwPick[d.job]=false;},
+  holSet(d){const h=S.holidays[d.id];if(!h)return;write('holidays',d.id,'update',d.v==='pending'?{status:'pending',decidedBy:'',decidedAt:0}:{status:d.v,decidedBy:DWME.name||'Director',decidedAt:Date.now()});toast(d.v==='approved'?'Holiday approved':d.v==='declined'?'Holiday declined':'Request reopened');},
   crewWeek(d){ui.crewOpen=ui.crewOpen===d.key?null:d.key;},
+  cwAdd(d){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));ents.push({d:0,loc:'',h:0});write('crew_hours',d.key,'update',{entries:ents});},
+  cwDel(d){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e})).filter((_,i)=>i!==+d.i);write('crew_hours',d.key,'update',{entries:ents});},
   copyWeek(){
     const prev=(S.timesheets[addDays(ui.week,-7)]||{}).sheets||{}, out={};
     for(const e in prev){const rs=(prev[e]||[]).filter(r=>sum(H(r))>0);if(rs.length&&(S.employees[e]||{}).active!==false)out[e]=JSON.parse(JSON.stringify(rs));}
@@ -521,9 +879,9 @@ const actions={
   tsAdd(d){const rows=rowsOf(ui.week,d.e);if(!rows.length)rows.push(blankRow());rows.push(blankRow());saveSheet(ui.week,d.e,rows);ui.focusNext='tsp-'+d.e+'-'+(rows.length-1);},
   tsDel(d){const rows=rowsOf(ui.week,d.e);rows.splice(+d.r,1);saveSheet(ui.week,d.e,rows);},
   ask(d){ui.confirm=d.key;ui.focusNext='cf-'+d.key;},
-  cancel(){ui.confirm=null;ui.edit=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;},
-  edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';},
-  visitDone(d){const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDone:true,status:q.status==='Visit booked'?'Pricing':q.status});toast('Visit done. Ready to price.');},
+  cancel(){ui.confirm=null;ui.edit=null;ui.moveDW=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;},
+  edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';if(d.key.indexOf('rem/')===0){delete ui.drafts.remEdit;ui.focusNext='remEdit-text';}},
+  visitDone(d){if(d.vkind==='p'){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{visitDone:true});toast('Site visit marked done.');return;}const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDone:true,status:q.status==='Visit booked'?'Pricing':q.status});toast('Visit done. Ready to price.');},
   clearVisit(d){const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,status:q.status==='Visit booked'?'New':q.status});ui.edit=null;delete ui.drafts.visit;},
   del(d){
     const [kind,a,b]=d.key.split('/');ui.confirm=null;
@@ -545,9 +903,12 @@ const actions={
     ui.tab='projects';ui.project=pid;window.scrollTo(0,0);
   },
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
-  useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Accepted tender set to '+money(num(d.v)));},
+  useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
   closeProject(){ui.project=null;ui.confirm=null;},
-  invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');}
+  invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
+  remPin(d){write('reminders',d.id,'update',{pri:d.pin==='1'?Date.now():0});},
+  notifyOn(){askNotify(true);},
+  ics(d){const col=d.vkind==='p'?'projects':'quotes';const r=S[col][d.id];if(!r||!r.visitDate)return;const v=asVisit(d.vkind==='p'?'p':'q',r);const txt=icsForVisit(v);if(!txt)return;const nm='site-visit-'+((v.client||'visit').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'visit')+'.ics';dwDownload(new Blob([txt],{type:'text/calendar;charset=utf-8'}),nm);toast('Opening in Calendar…');}
 };
 const changes={
   ts(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].h=H(rows[i]);rows[i].h[+d.d]=Math.max(0,Math.min(24,num(v)));saveSheet(ui.week,d.e,rows);},
@@ -562,10 +923,49 @@ const changes={
   emp(d,v){write('employees',d.id,'update',{[d.k]:d.k==='rate'?num(v):v});},
   empActive(d,v,el){write('employees',d.id,'update',{active:el.checked});},
   upload(d,v,el){const files=[...el.files];el.value='';uploadDocs(d.id,files);},
-  tenderPdf(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanTenderPdf(d.id,f);},
-  importRates(d,v,el){const f=(el.files||[])[0];el.value='';if(f)importRates(f);}
+  tenderFile(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanTenderFile(d.id,f);},
+  importRates(d,v,el){const f=(el.files||[])[0];el.value='';if(f)importRates(f);},
+  remDone(d,v,el){write('reminders',d.id,'update',{done:el.checked});},
+  cwh(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].h=Math.max(0,Math.min(24,num(v)));write('crew_hours',d.key,'update',{entries:ents});},
+  cwl(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].loc=v;write('crew_hours',d.key,'update',{entries:ents});},
+  cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});}
 };
+/* Dated reminders ping whoever has the Site Office open — both directors see every
+   reminder, so you both get the nudge. Browser alerts need permission once, and only
+   fire while the app is open (on an iPhone, add the app to your home screen). */
+function askNotify(tell){
+  if(!('Notification' in window)){if(tell)toast('This browser cannot show alerts');return;}
+  if(Notification.permission==='granted'){if(tell)toast('Alerts are already on');return;}
+  Notification.requestPermission().then(p=>{toast(p==='granted'?'Alerts on — you will get a ping when a reminder is due':'Alerts are blocked in your browser settings. Reminders still show in the app.');schedule();}).catch(()=>{});
+}
+let remFired=[];try{remFired=JSON.parse(localStorage.getItem('dc-rem-fired')||'[]');}catch(e){}
+function remCheck(){
+  const n=nowLocal();
+  list('reminders').filter(r=>r.when&&!r.done&&r.when<=n&&remFired.indexOf(r.id)<0).forEach(r=>{
+    remFired.push(r.id);try{localStorage.setItem('dc-rem-fired',JSON.stringify(remFired.slice(-200)));}catch(e){}
+    const who=r.owner==='chris'?'Chris':'Dan';
+    if(('Notification' in window)&&Notification.permission==='granted'){try{new Notification('Reminder · '+who,{body:r.text,tag:r.id});}catch(e){}}
+    toast('Reminder · '+who+': '+r.text);
+  });
+}
+setInterval(()=>{try{remCheck();}catch(e){}},30000);
+function addReminder(owner,f){const t=(f.text||'').trim();if(!t)return false;const when=f.when||'';write('reminders',uid(),'set',{owner,text:t,when,done:false,created:Date.now()});if(when)askNotify();ui.focusNext='reminder'+(owner==='dan'?'Dan':'Chris')+'-text';return true;}
 const forms={
+  reminderDan(f){return addReminder('dan',f);},
+  reminderChris(f){return addReminder('chris',f);},
+  event(f){
+    const t=(f.title||'').trim();if(!t||!f.from)return false;
+    write('events',uid(),'set',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim(),created:Date.now()});
+    ui.schedWeek=mondayOf(f.from);ui.focusNext='event-title';toast('Added to the schedule');return true;
+  },
+  timeoff(f){
+    if(!f.from)return false;
+    const to=(f.to&&f.to>=f.from)?f.to:f.from;
+    const days=Math.round((parse(to)-parse(f.from))/86400000)+1;
+    write('holidays',uid(),'set',{uid:'',name:(f.who||'').trim()||DWME.name||'Office',from:f.from,to,days,note:(f.note||'').trim(),status:'approved',decidedBy:DWME.name||'Director',decidedAt:Date.now(),created:Date.now()});
+    toast('Booked — it is on the schedule');return true;
+  },
+  remEdit(f){if(!ui.edit)return true;const id=ui.edit.split('/')[1];const t=(f.text||'').trim();if(t)write('reminders',id,'update',{text:t,when:f.when||''});if(f.when)askNotify();ui.edit=null;return true;},
   job(f){const title=(f.title||'').trim();if(!title)return false;SB.from('jobs').insert({title,client:(f.client||'').trim(),location:(f.location||'').trim(),created_by:DWME.id,creator_name:DWME.name}).then(r=>{if(r.error){toast('Could not add job: '+(r.error.message||''));return;}toast('Job added');if(dwLoad)dwLoad();});ui.focusNext='job-title';return true;},
   employee(f){write('employees',uid(),'set',{name:f.name.trim(),role:f.role.trim(),rate:num(f.rate),active:true});ui.focusNext='employee-name';return true;},
   rate(f){write('rates',uid(),'set',{cat:f.cat.trim()||'Other',code:f.code.trim(),desc:f.desc.trim(),unit:f.unit.trim()||'item',rate:num(f.rate)});ui.drafts.rate={cat:f.cat,unit:f.unit};ui.focusNext='rate-code';return false;},
@@ -580,6 +980,7 @@ const forms={
   quote(f){write('quotes',uid(),'set',{...enqBody(f),received:f.received||todayISO(),status:'New',projectId:'',visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,created:todayISO()});toast('Enquiry logged');ui.focusNext='quote-client';return true;},
   quoteEdit(f){const id=ui.edit.split('/')[1];write('quotes',id,'update',enqBody(f));ui.edit=null;return true;},
   visit(f){const id=ui.edit.split('/')[1],q=S.quotes[id];if(!q||!f.visitDate)return false;write('quotes',id,'update',{visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:f.visitBy.trim(),visitNotes:f.visitNotes.trim(),visitDone:false,status:q.status==='New'?'Visit booked':q.status});ui.edit=null;toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
+  bookVisit(f){const ref=f.ref||'',kind=ref.slice(0,1),id=ref.slice(2);if(kind!=='q'&&kind!=='p'){toast('Pick an enquiry or job first');return false;}if(!f.visitDate){toast('Add a date');return false;}const patch={visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:(f.visitBy||'').trim(),visitNotes:(f.visitNotes||'').trim(),visitDone:false};if(kind==='q'){const q=S.quotes[id];if(!q){toast('Pick an enquiry or job first');return false;}write('quotes',id,'update',{...patch,status:q.status==='New'?'Visit booked':q.status});}else{const p=S.projects[id];if(!p){toast('Pick an enquiry or job first');return false;}write('projects',id,'update',patch);}toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
   invoice(f){write('invoices',uid(),'set',invBody(f,false));toast('Invoice added to send');return true;},
   invoiceEdit(f){const id=ui.edit.split('/')[1];write('invoices',id,'update',invBody(f,true));ui.edit=null;return true;}
 };
@@ -638,10 +1039,92 @@ function extractAmounts(text){
     if(!isFinite(val)||val<1)continue;
     const key=val.toFixed(2);if(seen[key])continue;seen[key]=1;
     const ctx=text.slice(Math.max(0,m.index-36),m.index).replace(/[^\x20-\x7E£]/g,' ').trim().slice(-30);
-    out.push({val,ctx});
+    out.push({val,ctx,idx:m.index});
   }
   out.sort((a,b)=>b.val-a.val);
   return out.slice(0,10);
+}
+// bottom line = the final TOTAL ex VAT (the tender field is ex VAT). The last money
+// figure on a quote is usually "Total inc VAT"; if it's ≈ another figure × 1.2, that
+// other figure is the ex-VAT total — pick it. Dan quotes as "£X plus VAT".
+function pickBottom(a){
+  if(!a||!a.length)return null;
+  const last=a.reduce((x,y)=>y.idx>x.idx?y:x);
+  const ex=a.find(o=>o.val<last.val&&Math.abs(last.val-o.val*1.2)<=o.val*0.002+0.05);
+  return ex||last;
+}
+/* --- read the figures out of an Excel (.xlsx/.xlsm) the director drops in --- */
+async function inflateRaw(bytes){const ds=new DecompressionStream('deflate-raw');const ab=await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer();return new Uint8Array(ab);}
+function readZip(ab){
+  const dv=new DataView(ab),u8=new Uint8Array(ab);
+  let eocd=-1;for(let i=u8.length-22;i>=0;i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+  if(eocd<0)throw new Error('not a zip');
+  const count=dv.getUint16(eocd+10,true);let p=dv.getUint32(eocd+16,true);
+  const entries={},td=new TextDecoder();
+  for(let i=0;i<count;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true),nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),cmtLen=dv.getUint16(p+32,true),lho=dv.getUint32(p+42,true);
+    const name=td.decode(u8.subarray(p+46,p+46+nameLen));
+    entries[name]={method,compSize,lho};
+    p+=46+nameLen+extraLen+cmtLen;
+  }
+  return {dv,u8,entries};
+}
+async function readZipText(z,name){
+  const e=z.entries[name];if(!e)return '';
+  const nLen=z.dv.getUint16(e.lho+26,true),xLen=z.dv.getUint16(e.lho+28,true);
+  const start=e.lho+30+nLen+xLen;
+  const data=z.u8.subarray(start,start+e.compSize);
+  const raw=e.method===0?data:await inflateRaw(data);
+  return new TextDecoder().decode(raw);
+}
+function extractSheetAmounts(xml){
+  // numeric cells, INCLUDING formula cells: <c ...><f>SUM(..)</f><v>NUMBER</v></c>.
+  // Totals/VAT are almost always formulas, so skipping <f> loses the bottom line.
+  const out=[],seen={};let m;const re=/<c\b([^>]*)>(?:<f[^>]*\/>|<f[^>]*>[\s\S]*?<\/f>)?\s*<v>([^<]*)<\/v>/g;
+  while(m=re.exec(xml)){
+    const attrs=m[1];
+    if(/\bt="(s|str|inlineStr|b|e)"/.test(attrs))continue;
+    const val=parseFloat(m[2]);
+    if(!isFinite(val)||val<1)continue;
+    const key=val.toFixed(2);if(seen[key]!=null)continue;seen[key]=1;
+    out.push({val,ctx:'',idx:m.index});
+  }
+  out.sort((a,b)=>b.val-a.val);
+  return out.slice(0,12);
+}
+// resolve the FIRST sheet in workbook order (the quote), not Rates/PickList tabs
+async function firstSheetPath(z){
+  try{
+    const wb=await readZipText(z,'xl/workbook.xml');
+    const rid=(wb.match(/<sheet[^>]*r:id="([^"]*)"/)||[])[1];
+    if(rid){
+      const rels=await readZipText(z,'xl/_rels/workbook.xml.rels');
+      const tag=(rels.match(new RegExp('<Relationship[^>]*Id="'+rid+'"[^>]*>'))||[])[0];
+      const tgt=tag&&(tag.match(/Target="([^"]*)"/)||[])[1];
+      if(tgt){const p=tgt.charAt(0)==='/'?tgt.slice(1):'xl/'+tgt;if(z.entries[p])return p;}
+    }
+  }catch(e){}
+  const sheets=Object.keys(z.entries).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort((a,b)=>(+a.match(/(\d+)/)[1])-(+b.match(/(\d+)/)[1]));
+  return sheets[0];
+}
+async function scanTenderXlsx(pid,file){
+  ui.tenderScan={pid,busy:true,amounts:[],error:''};schedule();
+  if(assets)uploadDocs(pid,[file]);
+  try{
+    const z=readZip(await file.arrayBuffer());
+    const sheets=[await firstSheetPath(z)].filter(Boolean);
+    let xml='';for(const s of sheets)xml+=' '+await readZipText(z,s);
+    const found=extractSheetAmounts(xml);
+    ui.tenderScan={pid,busy:false,amounts:found,error:found.length?'':'none'};
+  }catch(e){ui.tenderScan={pid,busy:false,amounts:[],error:'fail'};}
+  schedule();
+}
+function scanTenderFile(pid,file){
+  if(!file)return;
+  if(/\.(xlsx|xlsm)$/i.test(file.name)){scanTenderXlsx(pid,file);return;}
+  if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){scanTenderPdf(pid,file);return;}
+  toast('Drop a PDF or an Excel file (.xlsx).');
 }
 /* --- import a rate card from a CSV the director picks on their device --- */
 function parseCSV(text){
@@ -726,16 +1209,69 @@ const DW_MATERIALS=(_RL.materials&&_RL.materials.length)?_RL.materials:['Type 1 
 const DW_UNITS=['tonne','m³','m²','m','no.','bag','load','each','hrs','litre'];
 const DW_FIELDS=['f_date','f_sheet','f_day','f_project','f_client','f_site','f_by','f_byrole','f_po','f_desc','f_reason','f_notes','f_markup','f_sig1name','f_sig1date','f_sig2name','f_sig2date'];
 const dwGbp=n=>(isFinite(n)?n:0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+/* Materials dropdown is sourced from the rate book — Materials category ONLY.
+   Directors load the full rate card (list('rates')) so they get names + costs.
+   Crew have no rates access; their names come from the locked-down crew_materials
+   RPC (names only, never a price) into DW_CREW_MATS. Both fall back to the static
+   DW_MATERIALS list if nothing is loaded yet. */
+let DW_CREW_MATS=null;
+function dwMatRB(){try{if(typeof list==='function')return list('rates').filter(r=>/^material/i.test(r.cat||'')&&(r.desc||'').trim());}catch(e){}return [];}
+/* The dropdown ALWAYS offers the common materials (concrete, Type 1 etc.) merged
+   with whatever the rate book / crew list adds — so nothing standard is ever
+   missing, and crew/directors can still type a one-off that isn't listed. */
+function dwMatList(){const rb=dwMatRB().map(r=>(r.desc||'').trim());const crew=(DW_CREW_MATS&&DW_CREW_MATS.length)?DW_CREW_MATS:[];return [...new Set([...rb,...crew,...DW_MATERIALS].filter(Boolean))].sort((a,b)=>a.localeCompare(b));}
+/* Director cost auto-fill: match the chosen material anywhere in the rate book
+   (not just the Materials category) so e.g. concrete priced elsewhere still fills. */
+function dwMatRate(name){try{if(typeof list==='function'){const n=String(name).trim().toLowerCase();const r=list('rates').find(x=>(x.desc||'').trim().toLowerCase()===n);if(r)return {rate:num(r.rate),unit:r.unit||''};}}catch(e){}return null;}
 const dwCfg={
   labour:[{k:'name',lab:'Operative',ph:'Select crew…',sel:DW_FIRM_CREW,wide:1},{k:'role',lab:'Role / Trade',ph:'Role / trade',list:'dw_dl_trades'},{k:'hours',lab:'Hours',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}],
   plant:[{k:'desc',lab:'Plant / Machinery',ph:'Select plant…',sel:DW_PLANT,wide:1},{k:'hours',lab:'Days',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}],
-  mat:[{k:'desc',lab:'Material',ph:'Material description',list:'dw_dl_mat',wide:1},{k:'qty',lab:'Qty',ph:'0',num:1},{k:'unit',lab:'Unit',ph:'unit',list:'dw_dl_units'},{k:'cost',lab:'Unit Cost (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}]
+  mat:[{k:'desc',lab:'Material',ph:'Tap to pick or type a material…',combo:1,wide:1},{k:'qty',lab:'Qty',ph:'0',num:1},{k:'unit',lab:'Unit',ph:'unit',list:'dw_dl_units'},{k:'cost',lab:'Unit Cost (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}]
 };
+/* keep the Materials datalist in sync with the rate book so the field is a
+   type-to-search prompt (not a long scroll). Director sees rate-book names,
+   crew sees crew_materials names, both fall back to the static list. */
+function dwRefreshMatList(){const dl=document.getElementById('dw_dl_mat');if(dl)dl.innerHTML=dwMatList().map(v=>`<option value="${esc(v)}">`).join('');}
+/* A real tap-to-open, type-to-filter combo box. Native <input list> datalists do
+   NOT render inside the installed (standalone / home-screen) app on iOS, so every
+   prompt dropdown in the day-works sheet uses this instead. getOpts() is read live
+   each time so the list reflects whatever's loaded (rate book / live projects). */
+function dwCombo(inp,getOpts,onPick){
+  if(!inp||inp._combo)return;inp._combo=true;
+  inp.removeAttribute('list');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('autocapitalize','off');
+  /* pop lives on <body>, NOT in the card — the day-works section cards use
+     overflow:hidden (for rounded corners) which would clip an inline dropdown.
+     Fixed positioning anchored to the input dodges all clipping. */
+  const pop=document.createElement('div');pop.className='dw-cpop';pop.hidden=true;document.body.appendChild(pop);
+  const place=()=>{const r=inp.getBoundingClientRect();const below=window.innerHeight-r.bottom;pop.style.left=r.left+'px';pop.style.width=r.width+'px';pop.style.maxHeight=Math.max(140,Math.min(300,below-12))+'px';pop.style.top=r.bottom+'px';};
+  const paint=()=>{
+    const all=(getOpts()||[]).filter(Boolean);
+    const f=(inp.value||'').trim().toLowerCase();
+    const list=f?all.filter(v=>String(v).toLowerCase().includes(f)):all;
+    pop.innerHTML=list.length?list.slice(0,120).map(v=>`<div class="dw-copt" role="option">${esc(v)}</div>`).join(''):`<div class="dw-copt none">${all.length?'No match — type your own and it still saves':'Type the material — it will save'}</div>`;
+    place();pop.hidden=false;
+  };
+  const reposition=()=>{if(!pop.hidden)place();};
+  inp.addEventListener('focus',paint);
+  inp.addEventListener('input',paint);
+  inp.addEventListener('blur',()=>setTimeout(()=>{pop.hidden=true;},180));
+  window.addEventListener('scroll',reposition,true);
+  window.addEventListener('resize',reposition);
+  pop.addEventListener('pointerdown',e=>{const o=e.target.closest('.dw-copt');if(!o||o.classList.contains('none'))return;e.preventDefault();inp.value=o.textContent;pop.hidden=true;if(onPick)onPick(inp.value);inp.dispatchEvent(new Event('change',{bubbles:true}));inp.dispatchEvent(new Event('input',{bubbles:true}));});
+}
 
 function dwDatalist(id,arr){if($(id))return;const dl=document.createElement('datalist');dl.id=id;dl.innerHTML=arr.map(v=>`<option value="${esc(v)}">`).join('');document.body.appendChild(dl);}
 
 let DW_SITES=[];
 function dwSetSites(arr){DW_SITES=[...new Set((arr||[]).map(s=>(s||'').trim()).filter(Boolean))];const dl=$('dw_dl_sites');if(dl)dl.innerHTML=DW_SITES.map(v=>`<option value="${esc(v)}">`).join('');}
+/* names of the live projects currently on the go — feeds the Project + Client
+   prompt dropdowns (directors from S.projects, crew from crew_live_projects) */
+let DW_PROJECTS=[];
+function dwSetProjects(arr){DW_PROJECTS=[...new Set((arr||[]).map(s=>(s||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));}
+/* client / main-contractor names (Verreley Homes, Glossbrook Builders …) — feeds
+   the Client prompt. Director: from project + job clients. Crew: from job clients. */
+let DW_CLIENTS=[];
+function dwSetClients(arr){DW_CLIENTS=[...new Set((arr||[]).map(s=>(s||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));}
 
 let dwBuilt=false;
 function dwBuild(){
@@ -766,6 +1302,11 @@ function dwBuild(){
     #dw-ov .dw-out{background:#f3f0ea;font-weight:600}
     #dw-ov .dw-del{position:absolute;top:8px;right:0;background:none;border:none;color:#b6523f;font-size:1.3rem;line-height:1;cursor:pointer;padding:0 4px}
     #dw-ov .dw-add{margin-top:10px}
+    .dw-cpop{position:fixed;z-index:9999;background:#fff;color:#222831;color-scheme:light;border:1px solid #cfc8bc;border-radius:10px;max-height:min(300px,48vh);overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);-webkit-overflow-scrolling:touch}
+    .dw-copt{padding:11px 12px;cursor:pointer;font-size:.95rem;color:#222831;border-top:1px solid #f0ece4}
+    .dw-copt:first-child{border-top:0}
+    .dw-copt:hover,.dw-copt.active{background:#eef3f8}
+    .dw-copt.none{color:#8a909b;cursor:default;font-style:italic}
     #dw-ov .dw-sum{margin-top:14px;border-top:2px solid var(--band,#273E57)}
     #dw-ov .dw-sumrow{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line,#eee)}
     #dw-ov .dw-sumrow.grand{font-weight:700;font-size:1.12rem;border-bottom:0}
@@ -836,13 +1377,21 @@ function dwBuild(){
         </div>
         <p class="dw-crewnote">Pricing is added by the office — just record the works, hours, plant and materials above.</p>
       </div></div>
-      <div class="dw-sec dw-excel"><div class="dw-sec-h">Send to Excel cost sheet</div><div class="dw-sec-b">
-        <p class="dw-xhint">Copy a block, then paste it into your Dayworks template at the day you're filling — <b>Mon&nbsp;row&nbsp;10, Tue&nbsp;17, Wed&nbsp;23, Thu&nbsp;29, Fri&nbsp;35, Sat&nbsp;41, Sun&nbsp;47</b>. Rates fill in automatically from your rate book.</p>
+      <div class="dw-sec dw-excel"><div class="dw-sec-h">Excel cost sheet</div><div class="dw-sec-b">
+        <p class="dw-xhint">One tap fills your Dayworks template for this day and prices it automatically — no copy&nbsp;&amp;&nbsp;paste. First time, set your template below (and again whenever you refresh your rates).</p>
         <div class="dw-xbtns">
-          <button type="button" class="btn sm" data-dwxl="lp">Copy labour + plant</button>
-          <button type="button" class="btn sm" data-dwxl="mat">Copy materials</button>
-          <button type="button" class="btn sm ghost" data-dwxl="desc">Copy description</button>
+          <button type="button" class="btn sm" data-dwexport>Export to Excel</button>
+          <label class="btn sm ghost filebtn">Set / replace template<input class="vh" type="file" accept=".xlsx" data-dwtpl></label>
         </div>
+        <details style="margin-top:12px">
+          <summary class="dw-xhint" style="cursor:pointer;list-style:revert">Or copy &amp; paste manually</summary>
+          <p class="dw-xhint" style="margin:8px 0 6px">Paste into your template at the day — <b>Mon&nbsp;row&nbsp;10, Tue&nbsp;17, Wed&nbsp;23, Thu&nbsp;29, Fri&nbsp;35, Sat&nbsp;41, Sun&nbsp;47</b>.</p>
+          <div class="dw-xbtns">
+            <button type="button" class="btn sm ghost" data-dwxl="lp">Copy labour + plant</button>
+            <button type="button" class="btn sm ghost" data-dwxl="mat">Copy materials</button>
+            <button type="button" class="btn sm ghost" data-dwxl="desc">Copy description</button>
+          </div>
+        </details>
       </div></div>
       <div class="dw-sec"><div class="dw-sec-h">Photos / Attachments</div><div class="dw-sec-b">
         <div class="dw-drop" data-drop><div class="big">Tap to add photos or files</div><small>Camera, gallery or PDFs — saved with the sheet.</small></div>
@@ -858,14 +1407,18 @@ function dwBuild(){
       </div></div>
     </div>`;
   document.body.appendChild(ov);
-  ov.querySelector('[data-f="f_project"]').setAttribute('list','');
-  ov.querySelector('[data-f="f_client"]').setAttribute('list','');
+  dwCombo(ov.querySelector('[data-f="f_project"]'),()=>DW_PROJECTS);
+  dwCombo(ov.querySelector('[data-f="f_client"]'),()=>DW_CLIENTS);
+  dwCombo(ov.querySelector('[data-f="f_site"]'),()=>DW_SITES);
   ov.querySelector('[data-dwclose]').addEventListener('click',closeDW);
   ov.querySelector('[data-dwsave]').addEventListener('click',()=>dwSave(ov));
   ov.querySelector('[data-dwpdf]').addEventListener('click',()=>{setTimeout(()=>window.print(),50);});
   ov.querySelectorAll('[data-dwadd]').forEach(b=>b.addEventListener('click',()=>{ov.querySelector('[data-rows="'+b.dataset.dwadd+'"]').appendChild(dwMakeRow(ov,b.dataset.dwadd));}));
   ov.querySelectorAll('[data-dwxl]').forEach(b=>b.addEventListener('click',()=>dwCopyExcel(ov,b.dataset.dwxl)));
+  ov.querySelector('[data-dwexport]').addEventListener('click',()=>dwExportExcel(ov));
+  ov.querySelector('[data-dwtpl]').addEventListener('change',e=>{const f=(e.target.files||[])[0];e.target.value='';if(f)dwUploadTemplate(f);});
   ov.querySelector('[data-f="f_markup"]').addEventListener('input',()=>dwRecalc(ov));
+  ov.querySelector('[data-f="f_date"]').addEventListener('change',e=>{const wd=e.target.value;if(!wd)return;const dn=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(parse(wd).getUTCDay()+6)%7];const sel=ov.querySelector('[data-f="f_day"]');if(dn&&sel)sel.value=dn;});
   const drop=ov.querySelector('[data-drop]'),fi=ov.querySelector('[data-fileinput]');
   drop.addEventListener('click',()=>fi.click());
   fi.addEventListener('change',()=>{dwHandleFiles(ov,fi.files);fi.value='';});
@@ -886,11 +1439,12 @@ function dwMakeRow(ov,type,data){
     const cell=document.createElement('div');cell.className='dw-cell'+(c.wide?' wide':'')+(c.m?' dw-m':'');
     cell.innerHTML=`<label>${c.lab}</label>`;
     let inp;
-    if(c.sel){
+    const selArr=c.selFn?c.selFn():c.sel;
+    if(selArr){
       inp=document.createElement('select');
-      inp.innerHTML=`<option value="">${esc(c.ph||'Select…')}</option>`+c.sel.map(v=>`<option>${esc(v)}</option>`).join('');
+      inp.innerHTML=`<option value="">${esc(c.ph||'Select…')}</option>`+selArr.map(v=>`<option>${esc(v)}</option>`).join('');
       const dv=data[c.k];
-      if(dv!=null&&dv!==''){if(!c.sel.includes(dv))inp.insertAdjacentHTML('beforeend',`<option>${esc(dv)}</option>`);inp.value=dv;}
+      if(dv!=null&&dv!==''){if(!selArr.includes(dv))inp.insertAdjacentHTML('beforeend',`<option>${esc(dv)}</option>`);inp.value=dv;}
     }else{
       inp=document.createElement('input');
       if(c.ph)inp.placeholder=c.ph;
@@ -906,8 +1460,19 @@ function dwMakeRow(ov,type,data){
   r.appendChild(del);
   r.addEventListener('input',()=>{dwRecalcRow(r);dwRecalc(ov);});
   r.addEventListener('change',()=>{dwRecalcRow(r);dwRecalc(ov);});
+  if(type==='mat'){const md=r.querySelector('[data-k="desc"]');if(md){dwCombo(md,dwMatList);md.addEventListener('input',()=>dwFillMatRate(ov,r,md.value));md.addEventListener('change',()=>dwFillMatRate(ov,r,md.value));}}
   if(data&&Object.keys(data).length)dwRecalcRow(r);
   return r;
+}
+/* Director only: picking a material fills its rate-book unit cost (+ unit if blank).
+   Crew never reach this branch — their money columns are hidden and no rate loads. */
+function dwFillMatRate(ov,r,name){
+  if(DWME.role!=='director')return;
+  const m=dwMatRate(name);if(!m)return;
+  const cost=r.querySelector('[data-k="cost"]'),unit=r.querySelector('[data-k="unit"]');
+  if(cost&&m.rate)cost.value=m.rate;
+  if(unit&&m.unit&&!unit.value)unit.value=m.unit;
+  dwRecalcRow(r);dwRecalc(ov);
 }
 function dwRecalcRow(r){
   const type=r.dataset.type,get=k=>{const i=r.querySelector('[data-k="'+k+'"]');return i?num(i.value):0;};
@@ -1012,6 +1577,30 @@ function dwCollect(ov){
   const p1=ov._pad1.data(),p2=ov._pad2.data();if(p1)s.sig1=p1;if(p2)s.sig2=p2;
   return s;
 }
+/* ===== keep every £ figure out of a crew member's browser entirely =====
+   The money columns are already CSS-hidden for crew, but the raw rate/cost
+   and markup still arrived in the sheet data (readable in dev-tools). For crew
+   we STRIP them before restoring so they never reach the page, KEEP a positional
+   copy, then REAPPLY on save so a crew edit can't wipe the office's pricing.
+   The stored line totals are computed (readOnly) so they aren't saved anyway. */
+const DW_MONEY={labour:['rate'],plant:['rate'],mat:['cost']};
+function dwKeepMoney(s){
+  const keep={markup:(s&&s.fields&&s.fields.f_markup)||'',lines:{labour:[],plant:[],mat:[]}};
+  ['labour','plant','mat'].forEach(t=>{keep.lines[t]=((s&&s.lines&&s.lines[t])||[]).map(r=>{const o={};(DW_MONEY[t]||[]).forEach(k=>{o[k]=r[k];});return o;});});
+  return keep;
+}
+function dwStripMoney(s){
+  if(!s)return s;
+  if(s.fields)s.fields.f_markup='';
+  if(s.lines)['labour','plant','mat'].forEach(t=>{(s.lines[t]||[]).forEach(r=>{(DW_MONEY[t]||[]).forEach(k=>{delete r[k];});});});
+  return s;
+}
+function dwReapplyMoney(s,keep){
+  if(!keep||!s)return s;
+  if(s.fields&&keep.markup!=null&&keep.markup!=='')s.fields.f_markup=keep.markup;
+  ['labour','plant','mat'].forEach(t=>{const km=(keep.lines&&keep.lines[t])||[];((s.lines&&s.lines[t])||[]).forEach((r,i)=>{if(km[i])Object.keys(km[i]).forEach(k=>{if(km[i][k]!=null&&km[i][k]!=='')r[k]=km[i][k];});});});
+  return s;
+}
 function dwCopyExcel(ov,which){
   const C=dwCollect(ov),L=C.lines;
   const clean=v=>(v==null?'':String(v)).replace(/[\t\r\n]+/g,' ').trim();
@@ -1035,6 +1624,246 @@ function dwClipFallback(text,ok){
   try{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.top='0';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);ok();}
   catch(e){toast('Copy not supported on this device');}
 }
+
+/* ===== One-click Excel export — fills Dan's real Dayworks template (keeps his VLOOKUP pricing) ===== */
+var DW_TPL='dayworks-template.xlsx';   // fixed path in the private office-files bucket
+/* Day block: description cell row, first line row, number of line rows available */
+var DW_XL_DAYS={Monday:{desc:9,row:10,n:6},Tuesday:{desc:16,row:17,n:5},Wednesday:{desc:22,row:23,n:5},Thursday:{desc:28,row:29,n:5},Friday:{desc:34,row:35,n:5},Saturday:{desc:40,row:41,n:5},Sunday:{desc:46,row:47,n:5}};
+var DW_XL_ORDER=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(function(n){return DW_XL_DAYS[n];});
+/* "Monday 26 Oct" — the day label cell (col A) gets the real day + date so combined weeks are distinguishable. */
+function dwDayLabel(wd){if(!wd)return '';var dn=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(parse(wd).getUTCDay()+6)%7];return dn+' '+fmtD(wd);}
+var zipLib=null;
+function loadZip(){
+  if(zipLib)return Promise.resolve(zipLib);
+  if(window.JSZip){zipLib=window.JSZip;return Promise.resolve(zipLib);}
+  return new Promise(function(res,rej){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload=function(){zipLib=window.JSZip;zipLib?res(zipLib):rej(new Error('zip failed'));};
+    s.onerror=function(){rej(new Error('zip failed to load'));};
+    document.head.appendChild(s);
+  });
+}
+/* --- Excel surgery: edit ONLY the value cells inside the template's sheet XML,
+   keeping each cell's own style index (s="…") so the logo, navy headers, borders,
+   dropdowns and VLOOKUP formulas stay byte-identical. Prices recalc on open
+   (template keeps fullCalcOnLoad). --- */
+var dwXesc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+function dwSetCell(xml,addr,kind,val){
+  var re=new RegExp('<c r="'+addr+'"[^>]*?(/>|>[\\s\\S]*?</c>)');
+  var m=xml.match(re);if(!m)return xml;            // target cell must pre-exist (it does in the template)
+  var s=(m[0].match(/\ss="(\d+)"/)||[])[1];
+  var sa=(s!=null?' s="'+s+'"':'');
+  var cell;
+  if(kind==='n'){var n=parseFloat(String(val).replace(/[^0-9.\-]/g,''));if(!isFinite(n))return xml;cell='<c r="'+addr+'"'+sa+'><v>'+n+'</v></c>';}
+  else{if(val==='')return xml;cell='<c r="'+addr+'"'+sa+' t="inlineStr"><is><t xml:space="preserve">'+dwXesc(val)+'</t></is></c>';}
+  return xml.replace(re,cell);
+}
+/* Build the exact strings the Copy buttons produce, so pricing fidelity == copy/paste. */
+function dwExcelRows(C){
+  var clean=function(v){return (v==null?'':String(v)).replace(/[\t\r\n]+/g,' ').trim();};
+  var lp=[],mat=[];
+  (C.lines.labour||[]).forEach(function(r){var n=clean(r.name);if(n)lp.push([n,clean(r.hours)]);});
+  (C.lines.plant||[]).forEach(function(r){var n=clean(r.desc);if(n)lp.push([n,clean(r.hours)]);});
+  (C.lines.mat||[]).forEach(function(r){var n=clean(r.desc);if(n)mat.push([n,clean(r.qty)]);});
+  return {lp:lp,mat:mat};
+}
+/* Fill ONE day block in the sheet XML. Only writes value cells (B/C/G/H + description)
+   — never a formula cell. Returns {xml, over} where over = lines that didn't fit. */
+function dwFillDayXml(xml,block,d){
+  if(d.dateLabel)xml=dwSetCell(xml,'A'+block.desc,'s',d.dateLabel);
+  if(d.desc)xml=dwSetCell(xml,'B'+block.desc,'s',d.desc);
+  (d.lp||[]).forEach(function(r,i){if(i>=block.n)return;xml=dwSetCell(xml,'B'+(block.row+i),'s',r[0]);xml=dwSetCell(xml,'C'+(block.row+i),'n',r[1]);});
+  (d.mat||[]).forEach(function(r,i){if(i>=block.n)return;xml=dwSetCell(xml,'G'+(block.row+i),'s',r[0]);xml=dwSetCell(xml,'H'+(block.row+i),'n',r[1]);});
+  var over=Math.max(0,(d.lp||[]).length-block.n)+Math.max(0,(d.mat||[]).length-block.n);
+  return {xml:xml,over:over};
+}
+/* Find the Dayworks worksheet's part path inside the zip (name → r:id → rels),
+   falling back to the usual sheet1.xml. */
+function dwSheetPath(zip){
+  var def='xl/worksheets/sheet1.xml';
+  try{
+    var wbf=zip.file('xl/workbook.xml');if(!wbf)return Promise.resolve(def);
+    return wbf.async('string').then(function(wb){
+      var m=wb.match(/<sheet\b[^>]*\bname="Dayworks"[^>]*\/?>/i);
+      if(!m)return def;
+      var rid=(m[0].match(/r:id="([^"]+)"/)||[])[1];
+      if(!rid)return def;
+      var relf=zip.file('xl/_rels/workbook.xml.rels');if(!relf)return def;
+      return relf.async('string').then(function(rels){
+        var rm=rels.match(new RegExp('<Relationship\\b[^>]*\\bId="'+rid+'"[^>]*>'));
+        if(!rm)return def;
+        var tgt=(rm[0].match(/Target="([^"]+)"/)||[])[1];
+        if(!tgt)return def;
+        return 'xl/'+tgt.replace(/^\/?xl\//,'').replace(/^\//,'');
+      });
+    });
+  }catch(e){return Promise.resolve(def);}
+}
+/* Load template → edit only the Dayworks sheet XML → repackage. header={project,client};
+   days=[{block, desc, lp, mat}] (one per day logged). Returns {blob, over}. */
+function dwBuildWorkbook(JSZip,buf){return function(header,days){
+  return JSZip.loadAsync(buf).then(function(zip){
+    return dwSheetPath(zip).then(function(path){
+      var f=zip.file(path)||zip.file('xl/worksheets/sheet1.xml');
+      if(!f)throw new Error('That template has no Dayworks sheet');
+      return f.async('string').then(function(xml){
+        if(header&&header.project)xml=dwSetCell(xml,'C3','s',header.project);
+        if(header&&header.client)xml=dwSetCell(xml,'C4','s',header.client);
+        var over=0;
+        (days||[]).forEach(function(d){var r=dwFillDayXml(xml,d.block,d);xml=r.xml;over+=r.over;});
+        zip.file(f.name,xml);
+        return zip.generateAsync({type:'blob',compression:'DEFLATE',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}).then(function(blob){return {blob:blob,over:over};});
+      });
+    });
+  });
+};}
+function dwDownload(blob,name){
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
+}
+function icsEsc(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');}
+function icsForVisit(q){
+  var ymd=(q.visitDate||'').replace(/-/g,'');if(!ymd)return '';
+  var pad=function(n){return String(n).padStart(2,'0');};
+  var stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  var uid='visit-'+(q.id||ymd)+'@dandcgroundworks.com';
+  var y=+q.visitDate.slice(0,4),mo=+q.visitDate.slice(5,7)-1,da=+q.visitDate.slice(8,10),dt;
+  if(q.visitTime&&/^\d{1,2}:\d{2}/.test(q.visitTime)){
+    var hh=+q.visitTime.slice(0,2),mm=+q.visitTime.slice(3,5);
+    var s=new Date(y,mo,da,hh,mm),e=new Date(y,mo,da,hh+1,mm);
+    var fmt=function(x){return ''+x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate())+'T'+pad(x.getHours())+pad(x.getMinutes())+'00';};
+    dt='DTSTART:'+fmt(s)+'\r\nDTEND:'+fmt(e);
+  }else{
+    var n=new Date(y,mo,da+1),end=''+n.getFullYear()+pad(n.getMonth()+1)+pad(n.getDate());
+    dt='DTSTART;VALUE=DATE:'+ymd+'\r\nDTEND;VALUE=DATE:'+end;
+  }
+  var desc=[q.job?'Job: '+q.job:'',q.phone?'Phone: '+q.phone:'',q.visitBy?'Who: '+q.visitBy:'',q.visitNotes?'Notes: '+q.visitNotes:''].filter(Boolean).join('\n');
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//D&C Groundworks//Site Office//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp,dt,'SUMMARY:'+icsEsc('Site visit: '+(q.client||'')),q.site?'LOCATION:'+icsEsc(q.site):'',desc?'DESCRIPTION:'+icsEsc(desc):'','END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
+}
+function dwUploadTemplate(file){
+  if(!SB){toast('Not connected — check your connection');return;}
+  if(!/\.xlsx$/i.test(file.name)){toast('Please choose your Dayworks .xlsx template');return;}
+  toast('Saving your template…');
+  SB.storage.from('office-files').upload(DW_TPL,file,{upsert:true,contentType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    .then(function(r){toast(r.error?('Could not save template: '+(r.error.message||'')):'Template saved — "Export to Excel" is ready');});
+}
+/* Fetch the saved template, then run build(JSZip, buf) which returns {blob, over}. */
+function dwWithTemplate(build){
+  return loadZip().then(function(JSZip){
+    return SB.storage.from('office-files').download(DW_TPL).then(function(dl){
+      if(dl.error||!dl.data)throw new Error('no-template');
+      return dl.data.arrayBuffer().then(function(buf){return build(JSZip,buf);});
+    });
+  });
+}
+function dwExportError(e){
+  if(e&&e.message==='no-template')toast('No template saved yet — tap "Set / replace template" and choose your Dayworks .xlsx');
+  else toast('Export failed: '+((e&&e.message)||'unknown'));
+}
+/* Export the single sheet open in the editor. */
+function dwExportExcel(ov){
+  if(!SB){toast('Not connected — check your connection');return;}
+  var C=dwCollect(ov),f=C.fields||{};
+  var day=(f.f_day||'').trim(),block=DW_XL_DAYS[day];
+  if(!block){toast('Set the Day / Weekday (Monday–Sunday) so it lands in the right block');return;}
+  var rows=dwExcelRows(C);
+  if(!rows.lp.length&&!rows.mat.length){toast('Nothing to export yet — add labour, plant or materials first');return;}
+  var btn=ov.querySelector('[data-dwexport]');
+  var reset=function(){if(btn){btn.disabled=false;btn.textContent='Export to Excel';}};
+  if(btn){btn.disabled=true;btn.textContent='Building…';}
+  dwWithTemplate(function(JSZip,buf){
+    var build=dwBuildWorkbook(JSZip,buf);
+    return build({project:(f.f_project||'').trim(),client:(f.f_client||'').trim()},
+      [{block:block,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat,dateLabel:dwDayLabel(f.f_date||todayISO())}]);
+  }).then(function(r){
+    var proj=(f.f_project||'sheet').replace(/[^\w ()\-]+/g,'').trim()||'sheet';
+    var name='Dayworks '+proj+' '+(f.f_date||todayISO())+'.xlsx';
+    dwDownload(r.blob,name);
+    toast(r.over?('Exported — but '+r.over+' line(s) didn\u2019t fit the day block, check the sheet'):'Exported '+name);
+  }).catch(dwExportError).then(reset,reset);
+}
+/* Export a whole week for one job: gathers every day works sheet saved against that
+   job whose work date falls in the Mon–Sun week, drops each into its weekday block,
+   and produces ONE file. "automatic" — no day-ticking. */
+function dwExportWeek(job,weekMon,btn){
+  if(!SB){toast('Not connected — check your connection');return;}
+  var reset=function(){if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||'Export week';}};
+  if(btn){btn.dataset.label=btn.textContent;btn.disabled=true;btn.textContent='Building…';}
+  var weekEnd=addDays(weekMon,6);
+  var mine=(DWDATA.sheets||[]).filter(function(x){
+    return x.project===job && x.mode!=='variation' && x.work_date && x.work_date>=weekMon && x.work_date<=weekEnd;
+  });
+  if(!mine.length){toast('No day works sheets saved for that week');reset();return;}
+  var ids=mine.map(function(x){return x.id;});
+  SB.from('sheets').select('data,work_date,day,project,client').in('id',ids).then(function(res){
+    if(res.error)throw new Error(res.error.message||'load failed');
+    var recs=res.data||[];
+    var header=null,days=[],usedBlocks={};
+    recs.forEach(function(rec){
+      var data=rec.data||{},f=data.fields||{};
+      if(!header)header={project:(f.f_project||rec.project||job||'').trim(),client:(f.f_client||rec.client||'').trim()};
+      var dayName=(f.f_day||rec.day||'').trim();
+      if(!dayName||!DW_XL_DAYS[dayName]){var wd=rec.work_date||f.f_date;if(wd)dayName=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(parse(wd).getUTCDay()+6)%7];}
+      var block=DW_XL_DAYS[dayName];if(!block)return;
+      if(usedBlocks[dayName])return;                 // one sheet per weekday block
+      usedBlocks[dayName]=1;
+      var rows=dwExcelRows(data);
+      if(!rows.lp.length&&!rows.mat.length)return;
+      days.push({block:block,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat,dateLabel:dwDayLabel(rec.work_date||f.f_date)});
+    });
+    if(!days.length)throw new Error('Nothing to export in that week');
+    return dwWithTemplate(function(JSZip,buf){return dwBuildWorkbook(JSZip,buf)(header,days);}).then(function(r){
+      var proj=(job||'sheet').replace(/[^\w ()\-]+/g,'').trim()||'sheet';
+      var name='Dayworks '+proj+' w-e '+weekEnd+'.xlsx';
+      dwDownload(r.blob,name);
+      toast(r.over?('Exported '+days.length+' day(s) — but '+r.over+' line(s) didn\u2019t fit, check the sheet'):'Exported '+days.length+' day(s) — '+name);
+    });
+  }).catch(dwExportError).then(reset,reset);
+}
+/* Export several weeks of one job as ONE sheet: every logged day across the picked
+   weeks is laid into the next day block in date order, with the real day + date in
+   the label (e.g. "Monday 26 Oct") so weeks are distinguishable. One sheet = 7 blocks;
+   beyond that it fills 7 and reports the overflow. */
+function dwExportWeeks(job,weekMons,btn){
+  if(!SB){toast('Not connected — check your connection');return;}
+  weekMons=(weekMons||[]).slice().sort();
+  if(!weekMons.length){toast('Tick at least one week');return;}
+  if(weekMons.length===1){dwExportWeek(job,weekMons[0],btn);return;}
+  var reset=function(){if(btn){btn.disabled=false;if(btn.dataset.label)btn.textContent=btn.dataset.label;}};
+  if(btn){btn.dataset.label=btn.textContent;btn.disabled=true;btn.textContent='Building…';}
+  var wset={};weekMons.forEach(function(wm){wset[wm]=1;});
+  var mine=(DWDATA.sheets||[]).filter(function(x){return x.project===job && x.mode!=='variation' && x.work_date && wset[mondayOf(x.work_date)];});
+  if(!mine.length){toast('No day works sheets saved for those weeks');reset();return;}
+  var ids=mine.map(function(x){return x.id;});
+  SB.from('sheets').select('data,work_date,day,project,client').in('id',ids).then(function(res){
+    if(res.error)throw new Error(res.error.message||'load failed');
+    var recs=(res.data||[]).slice().sort(function(a,b){return String(a.work_date||'').localeCompare(String(b.work_date||''));});
+    var header=null,entries=[];
+    recs.forEach(function(rec){
+      var data=rec.data||{},f=data.fields||{};
+      if(!header)header={project:(f.f_project||rec.project||job||'').trim(),client:(f.f_client||rec.client||'').trim()};
+      var rows=dwExcelRows(data);
+      if(!rows.lp.length&&!rows.mat.length)return;
+      entries.push({wd:rec.work_date||f.f_date,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat});
+    });
+    if(!entries.length)throw new Error('Nothing to export in those weeks');
+    var cap=DW_XL_ORDER.length;
+    var dropped=Math.max(0,entries.length-cap);
+    var days=entries.slice(0,cap).map(function(e,i){return {block:DW_XL_ORDER[i],desc:e.desc,lp:e.lp,mat:e.mat,dateLabel:dwDayLabel(e.wd)};});
+    return dwWithTemplate(function(JSZip,buf){return dwBuildWorkbook(JSZip,buf)(header,days);}).then(function(r){
+      var proj=(job||'sheet').replace(/[^\w ()\-]+/g,'').trim()||'sheet';
+      var last=entries[Math.min(entries.length,cap)-1].wd;
+      var name='Dayworks '+proj+' '+entries[0].wd+' to '+last+'.xlsx';
+      dwDownload(r.blob,name);
+      var msg;
+      if(dropped)msg='Exported first '+cap+' days — '+dropped+' more didn\u2019t fit one sheet (combine fewer weeks)';
+      else msg='Exported '+days.length+' day(s) — '+name;
+      if(r.over)msg+=' · '+r.over+' line(s) didn\u2019t fit a day block';
+      toast(msg);
+    });
+  }).catch(dwExportError).then(reset,reset);
+}
 function dwRestore(ov,s){
   s=s||{};
   dwSetMode(ov,s.mode||((s.fields&&s.fields.f_reason&&s.fields.f_reason.trim())?'variation':'dayworks'));
@@ -1053,8 +1882,12 @@ function dwRestore(ov,s){
 function dwSave(ov){
   if(!SB){toast('Not connected — check your connection');return;}
   const data=dwCollect(ov),f=data.fields;
-  const grand=num(ov.querySelector('[data-s="grand"]').textContent);
-  const rec={creator_name:DWME.name,project:(f.f_project||'').trim()||null,client:(f.f_client||'').trim()||null,sheet_no:(f.f_sheet||'').trim()||null,work_date:f.f_date||null,day:(f.f_day||'').trim()||null,grand:grand||0,data,updated_at:new Date().toISOString()};
+  /* crew never see or touch pricing — put the office's figures back so a crew
+     save can't wipe them, and leave the grand column alone (never zero it) */
+  const crew=DWME.role!=='director';
+  if(crew&&ov._keep)dwReapplyMoney(data,ov._keep);
+  const rec={creator_name:DWME.name,project:(f.f_project||'').trim()||null,client:(f.f_client||'').trim()||null,sheet_no:(f.f_sheet||'').trim()||null,work_date:f.f_date||null,day:(f.f_day||'').trim()||null,data,updated_at:new Date().toISOString()};
+  if(!crew)rec.grand=num(ov.querySelector('[data-s="grand"]').textContent)||0;
   const btn=ov.querySelector('[data-dwsave]');btn.disabled=true;btn.textContent='Saving…';
   const done=r=>{btn.disabled=false;btn.textContent='Save';if(r.error){toast('Save failed: '+(r.error.message||''));return;}if(r.data)ov.dataset.id=r.data.id;toast('Day works sheet saved');if(dwRefresh)dwRefresh();};
   if(ov.dataset.id)SB.from('sheets').update(rec).eq('id',ov.dataset.id).select('id').single().then(done);
@@ -1063,14 +1896,16 @@ function dwSave(ov){
 function openDW(opts){
   opts=opts||{};
   const ov=dwBuild();
+  dwRefreshMatList();
   ov.dataset.id='';
+  ov._keep=null;
   dwSetMode(ov,opts.mode||'dayworks');
   dwBlank(ov);
   const title=ov.querySelector('[data-dwtitle]');
   if(opts.id){
     title.textContent='Day works sheet';
     ov.classList.add('show');document.documentElement.style.overflow='hidden';setTimeout(()=>{ov._pad1.size();ov._pad2.size();},40);
-    SB.from('sheets').select('data').eq('id',opts.id).single().then(r=>{if(r.error||!r.data){toast('Could not open sheet');return;}ov.dataset.id=opts.id;dwRestore(ov,r.data.data||{});});
+    SB.from('sheets').select('data').eq('id',opts.id).single().then(r=>{if(r.error||!r.data){toast('Could not open sheet');return;}ov.dataset.id=opts.id;let d=r.data.data||{};if(DWME.role!=='director'){ov._keep=dwKeepMoney(d);d=dwStripMoney(d);}dwRestore(ov,d);});
   }else{
     title.textContent=opts.mode==='variation'?'New variation':'New day works sheet';
     if(opts.project){const pe=ov.querySelector('[data-f="f_project"]');if(pe)pe.value=opts.project;}
@@ -1085,7 +1920,7 @@ function render(){
   if(ae&&ae.id&&(view.contains(ae)||tabsEl.contains(ae)))keep={id:ae.id,value:ae.value,s:null,e:null,text:/^(INPUT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=='checkbox'&&ae.type!=='file'};
   if(keep&&keep.text){try{keep.s=ae.selectionStart;keep.e=ae.selectionEnd;}catch(e){}}
   const sx=[...view.querySelectorAll('.scroll-x[id]')].map(el=>[el.id,el.scrollLeft]);
-  const nq=list('quotes').filter(toPrice).length, ni=list('invoices').filter(i=>!i.sent&&!i.paid).length, badge={quotes:nq,invoices:ni};
+  const nq=list('quotes').filter(needsPrice).length, ni=list('invoices').filter(i=>!i.sent&&!i.paid).length, np=list('projects').filter(p=>p.status!=='Complete').length, nh=list('holidays').filter(h=>h.status==='pending').length, badge={quotes:nq,invoices:ni,projects:np,crew:nh};
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
@@ -1100,6 +1935,134 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
 view.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.chg)return;const fn=changes[el.dataset.chg];if(fn){ui.skipKeep=el.id;fn(el.dataset,el.value,el);schedule();}});
 view.addEventListener('input',e=>{const el=e.target;if(el.dataset&&el.dataset.inp){ui[el.dataset.inp]=el.value;schedule();return;}const f=el.closest('form[data-form]');if(f&&el.name){(ui.drafts[f.dataset.form]||(ui.drafts[f.dataset.form]={}))[el.name]=el.value;}});
 view.addEventListener('submit',e=>{const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();const name=f.dataset.form,fn=forms[name];if(!fn)return;const data=Object.fromEntries(new FormData(f));if(fn(data,f)===true)delete ui.drafts[name];schedule();});
+view.addEventListener('dragover',e=>{const z=e.target.closest('[data-droptender]');if(!z)return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('dragover');});
+view.addEventListener('dragleave',e=>{const z=e.target.closest('[data-droptender]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('dragover');});
+view.addEventListener('drop',e=>{const z=e.target.closest('[data-droptender]');if(!z)return;e.preventDefault();z.classList.remove('dragover');const f=(e.dataTransfer.files||[])[0];if(f)scanTenderFile(z.dataset.droptender,f);});
+
+/* ---------- Schedule: drag a job bar across the days to set how long it runs ----------
+   Start stays pinned and you drag the end; drag before the start to pull the start earlier.
+   A plain tap (no drag) opens the project. */
+let jobDrag=null;
+function paintJobDrag(){
+  if(!jobDrag)return;
+  const tds=[...jobDrag.row.querySelectorAll('td.jcell')];
+  tds.forEach((td,i)=>{
+    const inSpan=i>=jobDrag.min&&i<=jobDrag.max;
+    td.innerHTML=inSpan?`<div class="jseg${i===jobDrag.min?' l':''}${i===jobDrag.max?' r':''}" style="--c:var(${jobDrag.color})">${i===jobDrag.min?`<span class="jlabel">${esc(jobDrag.text)}</span>`:''}</div>`:'';
+  });
+}
+view.addEventListener('pointerdown',e=>{
+  const td=e.target.closest('tr.jobrow td.jcell[data-jday][data-jid]');if(!td)return;
+  const row=td.closest('tr.jobrow');if(!row)return;
+  const jid=td.dataset.jid, kind=td.dataset.jkind||'job';
+  const tds=[...row.querySelectorAll('td.jcell')];let lo=7,hi=-1;
+  tds.forEach((c,i)=>{if(c.querySelector('.jseg')){lo=Math.min(lo,i);hi=Math.max(hi,i);}});
+  if(hi<0){lo=hi=+td.dataset.jday;}
+  const label=((row.querySelector('.jlabel')||{}).textContent||'').replace(/^‹\s*/,'').replace(/\s*›$/,'');
+  const r=(kind==='event'?S.events[jid]:S.projects[jid])||{};
+  const oS=kind==='event'?r.from:r.startDate, oE=kind==='event'?(r.from?evEnd(r):''):(r.endDate||r.startDate);
+  jobDrag={jid,kind,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,text:label,moved:false,origStart:oS,origEnd:oE};
+  row.classList.add('dragging');
+  try{td.setPointerCapture(e.pointerId);}catch(_){}
+});
+view.addEventListener('pointermove',e=>{
+  if(!jobDrag)return;
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const td=el&&el.closest&&el.closest('td.jcell[data-jday]');
+  if(!td||td.closest('tr.jobrow')!==jobDrag.row)return;
+  const d=+td.dataset.jday;let min,max;
+  if(d>=jobDrag.startLo){min=jobDrag.startLo;max=d;}else{min=d;max=jobDrag.startHi;}
+  if(min!==jobDrag.min||max!==jobDrag.max){jobDrag.min=min;jobDrag.max=max;jobDrag.moved=true;paintJobDrag();}
+});
+function endJobDrag(){
+  if(!jobDrag)return;const jd=jobDrag;jobDrag=null;jd.row.classList.remove('dragging');
+  if(jd.moved){
+    const wk=ui.schedWeek, wkEnd=addDays(wk,6);
+    let ns=addDays(wk,jd.min), ne=addDays(wk,jd.max);
+    if(jd.origStart&&jd.origStart<wk&&jd.min===0)ns=jd.origStart;        // keep a start that began before this week
+    if(jd.origEnd&&jd.origEnd>wkEnd&&jd.max===6)ne=jd.origEnd;           // keep an end that runs past this week
+    if(jd.kind==='event')write('events',jd.jid,'update',{from:ns,to:ne});
+    else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
+    toast('Updated '+(jd.text||'job'));
+  }else if(jd.kind!=='event'){
+    actions.openProject({id:jd.jid});
+  }
+  schedule();
+}
+view.addEventListener('pointerup',endJobDrag);
+view.addEventListener('pointercancel',endJobDrag);
+
+/* ---------- address autocomplete (type → pick the real address) ----------
+   Suggestions come from OpenStreetMap's free Nominatim search (UK only, no key).
+   Light, debounced manual use only. Picking one fills the field; the Map ↗ link
+   then drops a precise pin. */
+(function(){
+  var box=null,timer=null,ctrl=null,active=null,items=[];
+  function close(){if(box){box.remove();box=null;}items=[];active=null;if(ctrl){ctrl.abort();ctrl=null;}}
+  function place(inp){
+    if(!box)return;var r=inp.getBoundingClientRect();
+    box.style.left=(r.left+window.scrollX)+'px';
+    box.style.top=(r.bottom+window.scrollY+4)+'px';
+    box.style.width=r.width+'px';
+  }
+  function pick(inp,val){
+    inp.value=val;
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
+    inp.dispatchEvent(new Event('change',{bubbles:true}));
+    close();inp.focus();
+  }
+  var esc2=function(s){return String(s).replace(/[&<>]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':'&gt;';});};
+  /* Build a clean "number street, town, postcode" from Nominatim address parts,
+     keeping the house number whenever OSM actually has it. Falls back to the
+     display name (minus the country) when parts are sparse. */
+  function fmtAddr(x){
+    var a=x.address||{};
+    var line1=[a.house_number,a.road||a.pedestrian||a.footway].filter(Boolean).join(' ');
+    var town=a.town||a.village||a.city||a.hamlet||a.suburb||a.municipality||'';
+    var parts=[line1||a.neighbourhood||x.name,town,a.postcode].filter(Boolean);
+    var seen={},out=[];
+    parts.forEach(function(p){var k=p.toLowerCase();if(!seen[k]){seen[k]=1;out.push(p);}});
+    var s=out.join(', ');
+    return s||String(x.display_name||'').replace(/,\s*United Kingdom$/i,'').trim();
+  }
+  function show(inp,results){
+    close();active=inp;
+    box=document.createElement('div');box.className='addr-sug';
+    if(!results.length){box.innerHTML='<div class="addr-none">No matches — type a bit more, or just enter it by hand</div>';}
+    else{
+      items=results.filter(function(v,i,a){return v&&a.indexOf(v)===i;}).slice(0,6);
+      box.innerHTML=items.map(function(v){return '<button type="button" class="addr-item">'+esc2(v)+'</button>';}).join('');
+      box.querySelectorAll('.addr-item').forEach(function(b,i){
+        b.addEventListener('mousedown',function(e){e.preventDefault();pick(inp,items[i]);});
+      });
+    }
+    document.body.appendChild(box);place(inp);
+  }
+  /* Prefer addresses in D&C's patch (Dorset / Hampshire / south coast) but still
+     find anything else. viewbox = minLon,maxLat,maxLon,minLat; bounded=0 = soft bias. */
+  var DC_VIEWBOX='-2.9,51.35,-0.9,50.5';
+  function lookup(inp){
+    var q=inp.value.trim();
+    if(q.length<3){close();return;}
+    if(ctrl)ctrl.abort();
+    ctrl=('AbortController'in window)?new AbortController():null;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=gb&limit=8&viewbox='+DC_VIEWBOX+'&bounded=0&q='+encodeURIComponent(q),
+      {signal:ctrl?ctrl.signal:undefined,headers:{'Accept':'application/json'}})
+      .then(function(r){return r.ok?r.json():[];})
+      .then(function(list){if(document.activeElement===inp)show(inp,(list||[]).map(fmtAddr));})
+      .catch(function(){});
+  }
+  document.addEventListener('input',function(e){
+    var inp=e.target;if(!inp||!inp.hasAttribute||!inp.hasAttribute('data-addr'))return;
+    clearTimeout(timer);timer=setTimeout(function(){lookup(inp);},450);
+  });
+  document.addEventListener('focusout',function(e){
+    if(e.target&&e.target.hasAttribute&&e.target.hasAttribute('data-addr'))setTimeout(close,120);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  window.addEventListener('scroll',function(){if(box&&active)place(active);},true);
+  window.addEventListener('resize',close);
+})();
 
 /* ---------- boot ---------- */
 (function(){let t=(location.hash||'').slice(1);if(!TABS.some(x=>x[0]===t)){try{t=localStorage.getItem('dc-tab')||'';}catch(e){t='';}}if(TABS.some(x=>x[0]===t))ui.tab=t;})();
@@ -1191,64 +2154,91 @@ render();
     dwLoad=()=>Promise.all([
       sb.from('jobs').select('id,title,client,location').order('created_at',{ascending:false}),
       sb.from('sheets').select('id,project,client,sheet_no,work_date,day,grand,creator_name,mode:data->>mode').order('work_date',{ascending:false})
-    ]).then(([j,s])=>{DWDATA.jobs=j.data||[];DWDATA.sheets=s.data||[];DWDATA.loaded=true;dwSetSites([...DWDATA.jobs.map(x=>x.location),...Object.values(S.projects||{}).map(p=>p&&p.site)]);schedule();});
+    ]).then(([j,s])=>{DWDATA.jobs=j.data||[];DWDATA.sheets=s.data||[];DWDATA.loaded=true;dwSetSites([...DWDATA.jobs.map(x=>x.location),...Object.values(S.projects||{}).map(p=>p&&p.site)]);dwSetProjects(Object.values(S.projects||{}).filter(p=>p&&p.status==='Live').map(p=>p.name));dwSetClients([...Object.values(S.projects||{}).map(p=>p&&p.client),...DWDATA.jobs.map(x=>x.client)]);schedule();});
     dwRefresh=dwLoad;
     if(!db){db=sbShim();subscribe();}
     fgRefresh=()=>{if(db)COLS.forEach(c=>db.collection(c).limit(1000).get().then(s=>take(c,s)).catch(()=>{}));if(typeof dwLoad==='function')dwLoad();};};
 
   /* ===== CREW APP — each lad's own page, in the Site Office style ===== */
+  /* our lead hand ("top man") gets extra perks — gated by role lead_crew OR
+     this email as a fallback so it works before the role is set in Supabase */
+  const LEAD_EMAIL='matt@dandcgroundworks.co.uk';
   let crewStarted=false;
-  function crewApp(profile,uid){
+  function crewApp(profile,uid,opts){
+    opts=opts||{};const lead=!!opts.lead;
     hideGate();setWho(profile);
-    const CTABS=[['hours','My hours'],['dayworks','Day works'],['jobs','Jobs']];
-    const cui={tab:'hours',week:mondayOf(todayISO())};
-    const cS={days:[],projects:[],sheets:[],jobs:[],files:{}};
+    if(lead){const w=$('who');if(w)w.textContent=(w.textContent||'')+' · Lead';}
+    const CTABS=(lead?[['reminders','Reminders']]:[]).concat([['jobs','Jobs'],['holiday','Holiday'],['hours','My hours']]);
+    const cui={tab:CTABS[0][0],week:mondayOf(todayISO())};
+    const cS={entries:[],projects:[],sheets:[],jobs:[],files:{},holidays:[],reminders:[]};
     const docId=w=>uid+'__'+w;
-    const blankWeek=()=>Array.from({length:7},()=>({loc:'',h:0}));
+    const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    /* a lad can be on 1–3 jobs the same day, so hours are a flat list of
+       {id,d:0–6,loc,h} entries — more than one can share a day. Make sure every
+       day has at least one (blank) row so the grid always shows Mon–Sun. */
+    const normEntries=()=>{for(let i=0;i<7;i++){if(!cS.entries.some(e=>e.d===i))cS.entries.push({id:newId(),d:i,loc:'',h:0});}cS.entries.sort((a,b)=>a.d-b.d);};
     const locOptions=cur=>{const names=[...new Set([...cS.projects.filter(p=>p&&p.status==='Live').map(p=>(p.site||'').trim()||p.name),...cS.jobs.map(j=>j&&((j.location||'').trim()||j.title))].filter(Boolean))];if(cur&&names.indexOf(cur)<0)names.unshift(cur);return '<option value="">— pick where —</option>'+names.map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('');};
     const tabsEl=$('tabs'),viewEl=$('view');
     let saveT=null,saving=false;
 
     const loadWeek=w=>sb.from('office_docs').select('data').eq('collection','crew_hours').eq('doc_id',docId(w)).maybeSingle()
       .then(r=>{const d=(r.data&&r.data.data)||{};
-        if(d.days&&d.days.length){cS.days=d.days.slice(0,7).map(x=>({loc:x.loc||'',h:num(x.h)}));while(cS.days.length<7)cS.days.push({loc:'',h:0});}
-        else if(d.rows&&d.rows.length){const days=blankWeek();d.rows.forEach(row=>{(row.h||[]).forEach((h,i)=>{const v=num(h);if(v>0){days[i].h+=v;if(!days[i].loc)days[i].loc=row.job||row.loc||'';}});});cS.days=days;}
-        else cS.days=blankWeek();});
+        if(d.entries&&d.entries.length)cS.entries=d.entries.map(e=>({id:newId(),d:+e.d||0,loc:e.loc||'',h:num(e.h)}));
+        else if(d.days&&d.days.length)cS.entries=d.days.map((x,i)=>({id:newId(),d:i,loc:x.loc||'',h:num(x.h)})).filter(e=>e.loc||e.h);
+        else if(d.rows&&d.rows.length){cS.entries=[];d.rows.forEach(row=>{(row.h||[]).forEach((h,i)=>{const v=num(h);if(v>0)cS.entries.push({id:newId(),d:i,loc:row.job||row.loc||'',h:v});});});}
+        else cS.entries=[];});
     /* crew get ONLY name/site/status of live jobs via a locked-down function —
        never prices, markup, tender, client or notes (see office-schema.sql) */
     const loadProjects=()=>sb.rpc('crew_live_projects').then(r=>{cS.projects=(r.data||[]).filter(p=>p&&p.name);}).catch(()=>{cS.projects=[];});
-    const loadSheets=()=>sb.from('sheets').select('id,project,client,sheet_no,work_date,day,grand,mode:data->>mode').order('work_date',{ascending:false}).then(r=>{cS.sheets=r.data||[];});
+    const loadSheets=()=>sb.from('sheets').select('id,project,client,sheet_no,work_date,day,mode:data->>mode').order('work_date',{ascending:false}).then(r=>{cS.sheets=r.data||[];});
     const loadJobs=()=>sb.from('jobs').select('id,title,client,location').order('created_at',{ascending:false}).then(r=>{cS.jobs=r.data||[];});
     const loadFiles=()=>sb.from('job_files').select('job_id,name,path,size').then(r=>{const m={};(r.data||[]).forEach(f=>{(m[f.job_id]=m[f.job_id]||[]).push(f);});cS.files=m;});
+    /* each lad sees ONLY their own holiday requests (RLS keeps it that way too) */
+    const loadHolidays=()=>sb.from('office_docs').select('doc_id,data').eq('collection','holidays').then(r=>{cS.holidays=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(h=>h.uid===uid).sort((a,b)=>String(b.created||0).localeCompare(String(a.created||0)));}).catch(()=>{cS.holidays=[];});
+    /* lead only — private reminders, nobody else's shown */
+    const loadReminders=()=>!lead?Promise.resolve():sb.from('office_docs').select('doc_id,data').eq('collection','lead_reminders').then(r=>{cS.reminders=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(x=>x.uid===uid);}).catch(()=>{cS.reminders=[];});
+    /* crew get ONLY material NAMES for the day-works dropdown via a locked-down
+       function — never a unit cost or any price (see office-schema.sql) */
+    const loadMaterials=()=>sb.rpc('crew_materials').then(r=>{const n=[...new Set((r.data||[]).map(m=>String((m&&(m.desc||m.name))||m||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));if(n.length)DW_CREW_MATS=n;}).catch(()=>{});
 
     const setHint=msg=>{const h=$('c-hint');if(h)h.textContent=msg!=null?msg:(saving?'Saving…':'Saved automatically');};
     function saveHours(){
       saving=true;setHint();
-      const days=cS.days.map(d=>({loc:d.loc||'',h:num(d.h)}));
-      sb.from('office_docs').upsert({collection:'crew_hours',doc_id:docId(cui.week),data:{uid,name:(profile&&profile.full_name)||'',week:cui.week,days},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
-        .then(r=>{saving=false;if(r.error){setHint('Not saved — check your connection');toast('Hours not saved. Check your connection.');}else setHint('Saved');});
+      const entries=cS.entries.filter(e=>num(e.h)>0||(e.loc||'').trim()).map(e=>({d:e.d,loc:e.loc||'',h:num(e.h)}));
+      return sb.from('office_docs').upsert({collection:'crew_hours',doc_id:docId(cui.week),data:{uid,name:(profile&&profile.full_name)||'',week:cui.week,entries},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
+        .then(r=>{saving=false;if(r.error){setHint('Not saved — check your connection');toast('Hours not saved. Check your connection.');return false;}setHint('Saved');return true;});
     }
     const queueSave=()=>{clearTimeout(saveT);saving=true;setHint();saveT=setTimeout(saveHours,700);};
+    /* Hours save as they type; this is the "I'm finished" tap. End of the week
+       (Fri/Sat) they get a thank you from the office. */
+    const WEEKEND_MSG='Thank you for a good week lads — enjoy your weekend.';
+    const isWeekend=()=>{const d=(parse(todayISO()).getUTCDay()+6)%7;return d===4||d===5;};
+    function submitHours(){
+      clearTimeout(saveT);
+      saveHours().then(ok=>{if(!ok)return;cui.sent=todayISO();toast(isWeekend()?WEEKEND_MSG:'Hours sent. Thanks.');render();});
+    }
 
     function updateTotals(){
-      let total=0;cS.days.forEach(d=>total+=num(d.h));
+      let total=0;cS.entries.forEach(e=>total+=num(e.h));
       const g=viewEl.querySelector('[data-cgrand]');if(g)g.textContent=hrs(total);
     }
 
     function hoursView(){
-      const wk=cui.week;if(cS.days.length<7)cS.days=blankWeek();
-      const total=cS.days.reduce((a,d)=>a+num(d.h),0);
+      const wk=cui.week;normEntries();
+      const total=cS.entries.reduce((a,e)=>a+num(e.h),0);
       const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-cwk="-7" aria-label="Previous week">‹</button><h2>Week commencing ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-cwk="7" aria-label="Next week">›</button>${wk!==mondayOf(todayISO())?`<button type="button" class="btn ghost sm" data-cwk="0">This week</button>`:''}</div><div class="sub" id="c-hint">Saved automatically</div></div>`;
-      const body=cS.days.map((d,i)=>`<tr><th class="dow${i>4?' we':''}">${DOW[i]}<span class="dnum">${parse(addDays(wk,i)).getUTCDate()}</span></th><td class="job"><select data-cday="${i}" data-cfield="loc" aria-label="Where on ${DOW[i]}">${locOptions(d.loc||'')}</select></td><td class="n"><input class="hr" inputmode="decimal" autocomplete="off" value="${num(d.h)?hrs(num(d.h)):''}" data-cday="${i}" data-cfield="h" aria-label="Hours ${DOW[i]}"></td></tr>`).join('');
-      const table=`<section class="panel"><div class="panel-h"><h3>Your hours, Mon–Sun</h3><span class="sub">Pick where you were each day, then your hours.</span></div><div class="scroll-x"><table class="grid ts cts"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>Weekly total</th><td></td><td class="n" data-cgrand>${hrs(total)}</td></tr></tfoot></table></div></section>`;
-      return head+table;
+      const dayBlock=i=>{
+        const es=cS.entries.filter(e=>e.d===i);
+        const rows=es.map((e,j)=>`<tr class="cday${j>0?' more':''}"><th class="dow${i>4?' we':''}">${j===0?DOW[i]+`<span class="dnum">${parse(addDays(wk,i)).getUTCDate()}</span>`:'<span class="sub">↳</span>'}</th><td class="job"><select data-eid="${e.id}" data-cfield="loc" aria-label="Where on ${DOW[i]}">${locOptions(e.loc||'')}</select></td><td class="n"><input class="hr" inputmode="decimal" autocomplete="off" value="${num(e.h)?hrs(num(e.h)):''}" data-eid="${e.id}" data-cfield="h" aria-label="Hours ${DOW[i]}"></td><td class="x">${es.length>1?`<button type="button" class="btn ghost sm" data-cdel="${e.id}" aria-label="Remove this job">×</button>`:''}</td></tr>`).join('');
+        return rows+`<tr class="addrow"><th></th><td colspan="3"><button type="button" class="btn ghost sm" data-caddday="${i}">+ Add another job</button></td></tr>`;
+      };
+      const body=Array.from({length:7},(_,i)=>dayBlock(i)).join('');
+      const table=`<section class="panel"><div class="panel-h"><h3>Your hours, Mon–Sun</h3><span class="sub">Pick where you were, then your hours. On more than one job that day? Tap “+ Add another job”.</span></div><div class="scroll-x"><table class="grid ts cts"><thead><tr><th>Day</th><th>Where</th><th class="n">Hours</th><th></th></tr></thead><tbody>${body}</tbody><tfoot><tr><th>Weekly total</th><td></td><td class="n" data-cgrand>${hrs(total)}</td><td></td></tr></tfoot></table></div></section>`;
+      const sent=cui.sent===todayISO();
+      const submit=`<section class="panel"><div class="panel-b cform"><button type="button" class="btn" data-csubmit>Submit my hours</button><span class="sub">They save as you type — tap this when you're finished.</span></div>${sent?`<div class="panel-b thanks"><strong>${esc(isWeekend()?WEEKEND_MSG:'Hours sent. Thanks.')}</strong></div>`:''}</section>`;
+      return head+table+submit;
     }
     const sheetRow=x=>`<li class="item"><div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}${x.project?' · '+esc(x.project):''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}</div></div><div class="item-act"><button type="button" class="btn sm ghost" data-copen="${esc(x.id)}">Open</button></div></li>`;
-    function dayworksView(){
-      const s=cS.sheets;
-      const items=s.length?`<ul class="items">${s.map(sheetRow).join('')}</ul>`:empty('No day works sheets yet','Tap “+ Day works” to create one — it files under its job automatically.');
-      return `<div class="head"><div><h2>Your day works</h2><p class="sub">Create and open your sheets here — no need to leave the app.</p></div><div class="item-act"><button type="button" class="btn sm" data-cnew="dayworks">+ Day works</button><button type="button" class="btn sm ghost" data-cnew="variation">+ Variation</button></div></div><section class="panel"><div class="panel-h"><h3>Your sheets</h3></div>${items}</section>`;
-    }
     function jobsView(){
       const j=cS.jobs;
       const byTitle={};cS.sheets.forEach(x=>{const k=x.project||'—';(byTitle[k]=byTitle[k]||[]).push(x);});
@@ -1257,11 +2247,42 @@ render();
       const seen={};
       let out=j.map(x=>{seen[x.title]=1;return section(x.title,[x.client,x.location].filter(Boolean).join(' · '),x.id,(byTitle[x.title]||[]),cS.files[x.id]||[]);}).join('');
       Object.keys(byTitle).forEach(t=>{if(t!=='—'&&!seen[t])out+=section(t,'','',byTitle[t],[]);});
-      const head=`<div class="head"><div><h2>Jobs</h2><p class="sub">Every job, with its day works &amp; variations filed underneath.</p></div><div class="item-act"><button type="button" class="btn sm" data-cnew="dayworks">+ Day works</button><button type="button" class="btn sm ghost" data-cnew="variation">+ Variation</button></div></div>`;
-      if(!j.length&&!Object.keys(byTitle).some(t=>t!=='—'))return head+empty('No jobs yet','Jobs added by the office appear here — tap “+ Day works” to log a sheet.');
+      const head=`<div class="head"><div><h2>Jobs</h2><p class="sub">Pick a job, then add your day works or variation under it — that way it's always filed to the right job.</p></div></div>`;
+      if(!j.length&&!Object.keys(byTitle).some(t=>t!=='—'))return head+empty('No jobs yet','Jobs added by the office appear here — then you can log a day works sheet under each one.');
       return head+out;
     }
-    function render(){viewEl.innerHTML=cui.tab==='hours'?hoursView():cui.tab==='dayworks'?dayworksView():jobsView();}
+    function holidayView(){
+      const hs=cS.holidays;
+      const span=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
+      const stpill=h=>h.status==='approved'?pill('good','Approved'):h.status==='declined'?pill('bad','Declined'):pill('warn','Pending');
+      const row=h=>`<li class="item"><div>${stpill(h)}</div><div class="item-main"><strong>${esc(span(h))}</strong> <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${h.status==='pending'?`<button type="button" class="btn sm ghost" data-hdel="${esc(h.id)}">Cancel</button>`:''}</div></li>`;
+      const today=todayISO();
+      const form=`<section class="panel"><div class="panel-h"><h3>Request time off</h3><span class="sub">Pick your dates — the office gets it straight away.</span></div><div class="panel-b form"><label class="f"><span>From</span><input type="date" id="hol-from" min="${today}"></label><label class="f"><span>To</span><input type="date" id="hol-to" min="${today}"></label><label class="f full"><span>Note (optional)</span><input id="hol-note" autocomplete="off" placeholder="e.g. family holiday"></label><div class="go"><button type="button" class="btn" data-hsubmit>Send request</button></div></div></section>`;
+      const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="items">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
+      return `<div class="head"><div><h2>Holiday</h2><p class="sub">Ask for time off and see where each request stands.</p></div></div>`+form+mine;
+    }
+    function reminderView(){
+      const open=cS.reminders.filter(r=>!r.done).sort((a,b)=>(b.created||0)-(a.created||0));
+      const done=cS.reminders.filter(r=>r.done).sort((a,b)=>(b.created||0)-(a.created||0));
+      const row=r=>`<li class="item rem${r.done?' rem-done':''}"><label class="rem-check"><input type="checkbox" data-rdone="${esc(r.id)}"${r.done?' checked':''} aria-label="Mark done"></label><div class="item-main">${esc(r.text)}</div><div class="item-act"><button type="button" class="btn sm ghost x" data-rdel="${esc(r.id)}" aria-label="Delete">×</button></div></li>`;
+      const formEl=`<div class="panel-b form rem-add"><label class="f full"><span class="vh">Add a reminder</span><input id="lrem-text" autocomplete="off" placeholder="Add a reminder…"></label><div class="go"><button type="button" class="btn sm" data-radd>Add</button></div></div>`;
+      return `<div class="head"><div><h2>Your reminders</h2><p class="sub">Private to you — jot anything you need to remember on site.</p></div></div><section class="panel"><div class="panel-h"><h3>To do <span class="sub">${open.length}</span></h3></div>${formEl}${open.length||done.length?`<ul class="items rem-list">${open.map(row).join('')}${done.length?`<li class="rem-sep">Done · ${done.length}</li>`+done.map(row).join(''):''}</ul>`:empty('Nothing yet','Type anything you need to remember — it saves straight away.')}</section>`;
+    }
+    function saveHoliday(){
+      const f=$('hol-from'),t=$('hol-to'),n=$('hol-note');
+      const from=f&&f.value,to=t&&t.value,note=((n&&n.value)||'').trim();
+      if(!from||!to){toast('Pick both dates');return;}
+      if(to<from){toast('Your “to” date is before the “from” date');return;}
+      const days=Math.round((parse(to)-parse(from))/86400000)+1;
+      const did=uid+'__'+newId();
+      sb.from('office_docs').upsert({collection:'holidays',doc_id:did,data:{uid,name:(profile&&profile.full_name)||'',from,to,days,note,status:'pending',created:Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
+        .then(r=>{if(r.error){toast('Could not send — check your connection');return;}toast('Holiday request sent');loadHolidays().then(render);});
+    }
+    function cancelHoliday(id){sb.from('office_docs').delete().eq('collection','holidays').eq('doc_id',id).then(r=>{if(r.error){toast('Could not cancel');return;}toast('Request cancelled');loadHolidays().then(render);});}
+    function addLeadRem(){const i=$('lrem-text');const t=((i&&i.value)||'').trim();if(!t)return;sb.from('office_docs').upsert({collection:'lead_reminders',doc_id:uid+'__'+newId(),data:{uid,text:t,done:false,created:Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'}).then(r=>{if(r.error){toast('Not saved — check your connection');return;}loadReminders().then(render);});}
+    function setLeadRem(id,done){const r=cS.reminders.find(x=>x.id===id);if(!r)return;sb.from('office_docs').upsert({collection:'lead_reminders',doc_id:id,data:{uid,text:r.text,done:done,created:r.created||Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'}).then(()=>loadReminders().then(render));}
+    function delLeadRem(id){sb.from('office_docs').delete().eq('collection','lead_reminders').eq('doc_id',id).then(()=>loadReminders().then(render));}
+    function render(){viewEl.innerHTML=cui.tab==='hours'?hoursView():cui.tab==='jobs'?jobsView():cui.tab==='holiday'?holidayView():cui.tab==='reminders'?reminderView():jobsView();}
     function renderTabs(){tabsEl.innerHTML=CTABS.map(([k,l])=>`<button type="button" class="tab" data-ctab="${k}" aria-current="${cui.tab===k?'page':'false'}">${l}</button>`).join('');}
 
     tabsEl.addEventListener('click',e=>{const b=e.target.closest('[data-ctab]');if(!b)return;cui.tab=b.getAttribute('data-ctab');renderTabs();render();});
@@ -1269,14 +2290,22 @@ render();
       const wk=e.target.closest('[data-cwk]');if(wk){const d=+wk.getAttribute('data-cwk');cui.week=d?mondayOf(addDays(cui.week,d)):mondayOf(todayISO());loadWeek(cui.week).then(render);return;}
       const nw=e.target.closest('[data-cnew]');if(nw){const m=nw.getAttribute('data-cnew');const jt=nw.getAttribute('data-cjob');openDW({mode:m,project:jt||''});return;}
       const op=e.target.closest('[data-copen]');if(op){openDW({id:op.getAttribute('data-copen')});return;}
+      if(e.target.closest('[data-csubmit]')){submitHours();return;}
+      if(e.target.closest('[data-hsubmit]')){saveHoliday();return;}
+      const hd=e.target.closest('[data-hdel]');if(hd){cancelHoliday(hd.getAttribute('data-hdel'));return;}
+      if(e.target.closest('[data-radd]')){addLeadRem();return;}
+      const rx=e.target.closest('[data-rdel]');if(rx){delLeadRem(rx.getAttribute('data-rdel'));return;}
+      const ad=e.target.closest('[data-caddday]');if(ad){cS.entries.push({id:newId(),d:+ad.getAttribute('data-caddday'),loc:'',h:0});render();return;}
+      const cd=e.target.closest('[data-cdel]');if(cd){cS.entries=cS.entries.filter(x=>x.id!==cd.getAttribute('data-cdel'));queueSave();render();return;}
     });
-    viewEl.addEventListener('input',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='h'&&t.hasAttribute('data-cday')){const i=+t.getAttribute('data-cday');if(cS.days[i]){cS.days[i].h=num(t.value);updateTotals();queueSave();}}});
-    viewEl.addEventListener('change',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='loc'&&t.hasAttribute('data-cday')){const i=+t.getAttribute('data-cday');if(cS.days[i]){cS.days[i].loc=t.value;queueSave();}}});
+    viewEl.addEventListener('input',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='h'&&t.hasAttribute('data-eid')){const en=cS.entries.find(x=>x.id===t.getAttribute('data-eid'));if(en){en.h=num(t.value);updateTotals();queueSave();}}});
+    viewEl.addEventListener('change',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='loc'&&t.hasAttribute('data-eid')){const en=cS.entries.find(x=>x.id===t.getAttribute('data-eid'));if(en){en.loc=t.value;queueSave();}return;}const rc=t.closest&&t.closest('[data-rdone]');if(rc){setLeadRem(rc.getAttribute('data-rdone'),rc.checked);}});
 
     dwRefresh=()=>loadSheets().then(render);
-    fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
+    fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
     renderTabs();viewEl.innerHTML='<div class="head"><h2>Loading…</h2></div>';
-    Promise.all([loadWeek(cui.week),loadProjects(),loadSheets(),loadJobs(),loadFiles()]).then(()=>{dwSetSites([...cS.jobs.map(j=>j.location),...cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.site)]);render();}).catch(render);
+    loadMaterials();
+    Promise.all([loadWeek(cui.week),loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()]).then(()=>{dwSetSites([...cS.jobs.map(j=>j.location),...cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.site)]);dwSetProjects(cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.name));dwSetClients(cS.jobs.map(j=>j&&j.client));render();}).catch(render);
   }
   /* open a job drawing (crew) via a signed URL from the job-files bucket */
   document.addEventListener('click',e=>{
@@ -1290,9 +2319,10 @@ render();
       const s=r.data.session;
       if(!s){clearWho();loginForm('');return;}
       sb.from('profiles').select('full_name,role').eq('id',s.user.id).single().then(p=>{
-        DWME={id:s.user.id,name:(p.data&&p.data.full_name)||'',role:(p.data&&p.data.role)||'crew'};
-        if(p.data&&p.data.role==='director')connect(p.data);
-        else if(!crewStarted){crewStarted=true;crewApp(p.data||{},s.user.id);}
+        const role=(p.data&&p.data.role)||'crew', email=(s.user.email||'').toLowerCase();
+        DWME={id:s.user.id,name:(p.data&&p.data.full_name)||'',role};
+        if(role==='director')connect(p.data);
+        else if(!crewStarted){crewStarted=true;crewApp(p.data||{},s.user.id,{lead:role==='lead_crew'||email===LEAD_EMAIL});}
       });
     });
   }

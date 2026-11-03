@@ -58,14 +58,37 @@ drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select
   using (id = auth.uid() or public.is_director());
 
+-- Allow the lead-hand ("top man") role the Site Office uses. The table may
+-- predate it, so widen the CHECK constraint. 'lead_crew' is NOT a director.
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add  constraint profiles_role_check check (role in ('director','crew','lead_crew'));
+
+-- SECURITY — pin the role column so NOBODY can promote themselves.
+-- RLS row-ownership does NOT restrict which columns change, so without this a
+-- signed-in crew member could use the public anon key to run
+--   update public.profiles set role='director' where id = auth.uid();
+-- and the row-owner policy below would allow it — unlocking the WHOLE
+-- directors' dashboard (pricing, quotes, invoices). Lock it at the column
+-- level. You still promote directors from the Supabase SQL editor (service
+-- role), which bypasses these grants.
+revoke update on public.profiles from authenticated, anon;
+grant  update (full_name) on public.profiles to authenticated;
+
 drop policy if exists profiles_update_self on public.profiles;
 create policy profiles_update_self on public.profiles for update
-  using (id = auth.uid()) with check (id = auth.uid());
+  using (id = auth.uid())
+  with check (id = auth.uid()
+              and role = (select p.role from public.profiles p where p.id = auth.uid()));
 
--- Sheets: crew see/edit only their own; directors see/edit everyone's.
+-- Sheets: everyone signed in can SEE and EDIT every sheet, so a sheet started by
+-- the office OR by a crew member is the ONE shared copy both sides work on (no more
+-- duplicate sheets made because the other person couldn't edit yours). The crew app
+-- shows key info only, strips money/figures on open and re-applies the office's
+-- pricing on save (and never touches the grand total), so a crew edit of an office
+-- sheet can't expose or wipe figures. Deleting stays director-only (policy below).
 drop policy if exists sheets_select on public.sheets;
 create policy sheets_select on public.sheets for select
-  using (created_by = auth.uid() or public.is_director());
+  using (auth.uid() is not null);
 
 drop policy if exists sheets_insert on public.sheets;
 create policy sheets_insert on public.sheets for insert
@@ -73,8 +96,8 @@ create policy sheets_insert on public.sheets for insert
 
 drop policy if exists sheets_update on public.sheets;
 create policy sheets_update on public.sheets for update
-  using (created_by = auth.uid() or public.is_director())
-  with check (created_by = auth.uid() or public.is_director());
+  using (auth.uid() is not null)
+  with check (auth.uid() is not null);
 
 drop policy if exists sheets_delete on public.sheets;
 create policy sheets_delete on public.sheets for delete
