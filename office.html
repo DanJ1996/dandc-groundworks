@@ -141,6 +141,11 @@ textarea{min-height:64px;resize:vertical}
 .dwpick-cb{display:flex;align-items:center;padding:0 12px 0 16px;cursor:pointer}
 .dwpick-cb input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
 .dwpick-row>.subdrop{flex:1 1 auto;border-top:0}
+.dwinv{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;white-space:nowrap}
+.dwinv input{width:17px;height:17px;accent-color:#2e9e5b;cursor:pointer}
+.dwinv.on{color:#2e9e5b;font-weight:600}
+.dwinv.wk{font-size:.88rem;font-weight:600}
+.inv-badge{display:inline-block;background:#2e9e5b;color:#fff;border-radius:999px;padding:1px 9px;font-size:.72rem;font-weight:600;vertical-align:middle}
 .addr-sug{position:absolute;z-index:3000;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);overflow:hidden;max-height:280px;overflow-y:auto}
 .addr-item{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line)}
 .addr-item:last-child{border-bottom:0}
@@ -287,7 +292,7 @@ const pill=(k,t)=>`<span class="pill ${k}">${esc(t)}</span>`;
 const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 
 const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays']];
-const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events'];
+const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced'];
 const S={};COLS.forEach(c=>S[c]={});
 const loaded={};
 let db=null, assets=null, mode='connecting';
@@ -618,11 +623,12 @@ views.dayworks=()=>{
   if(!DWDATA.loaded){dwLoad();return head+`<section class="panel">${empty('Loading day works…','')}</section>`;}
   const jobs=DWDATA.jobs,sheets=DWDATA.sheets;
   const byTitle={};sheets.forEach(x=>{const k=x.project||'—';(byTitle[k]=byTitle[k]||[]).push(x);});
+  const invOn=id=>!!(S.dw_invoiced[id]&&S.dw_invoiced[id].on);
   const sRow=x=>{const k='dwdel/'+x.id;const act=ui.confirm===k
     ?`<span class="confirm"><button type="button" class="btn sm danger" data-act="delDWSheet" data-id="${esc(x.id)}">Delete sheet</button><button type="button" class="btn sm ghost" data-act="cancel">Keep</button></span>`
     :ui.moveDW===x.id
     ?`<span class="confirm"><select class="dwmove" id="dwmove-${esc(x.id)}" aria-label="Move this sheet to another job"><option value="">Move to job…</option>${jobs.map(j=>`<option value="${esc(j.id)}"${x.project===j.title?' disabled':''}>${esc(j.title)}</option>`).join('')}</select><button type="button" class="btn sm" data-act="moveDWdo" data-id="${esc(x.id)}">Done</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></span>`
-    :`<button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button>${jobs.length?`<button type="button" class="btn sm ghost" data-act="moveDWask" data-id="${esc(x.id)}">Move</button>`:''}<button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
+    :`<label class="dwinv${invOn(x.id)?' on':''}" title="Tick once you've invoiced this day"><input type="checkbox" data-act="dwInv" data-id="${esc(x.id)}"${invOn(x.id)?' checked':''}> Invoiced</label><button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button>${jobs.length?`<button type="button" class="btn sm ghost" data-act="moveDWask" data-id="${esc(x.id)}">Move</button>`:''}<button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
     return `<li class="item"><div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}${x.creator_name?' · '+esc(x.creator_name):''}</div></div><div class="item-amt"><span class="amt">${x.grand?money(num(x.grand)):''}</span></div><div class="item-act">${act}</div></li>`;};
   // A collapsible sub-level (month / week) that reuses the dropdown styling but
   // sits inside the job panel rather than being its own panel.
@@ -636,8 +642,12 @@ views.dayworks=()=>{
     const dated=wrows.filter(x=>x.work_date).map(x=>x.work_date).sort();
     const span=dated.length?(dated[0]===dated[dated.length-1]?fmtD(dated[0]):fmtD(dated[0])+' – '+fmtD(dated[dated.length-1])):'Undated';
     const tot=wrows.reduce((s,x)=>s+num(x.grand),0);
+    const allInv=wrows.length&&wrows.every(x=>invOn(x.id));
+    const anyInv=wrows.some(x=>invOn(x.id));
+    const fig=sheetsFig(wrows,tot)+(allInv?' · <span class="inv-badge">Invoiced</span>':anyInv?' · <span class="inv-badge" style="background:#c9892b">Part-invoiced</span>':'');
+    const invWk=`<div class="dw-weeks"><label class="dwinv wk${allInv?' on':''}" title="Mark every day in this week as invoiced"><input type="checkbox" data-act="dwInvWk" data-job="${esc(title)}" data-week="${wk}"${allInv?' checked':''}> Mark whole week invoiced</label></div>`;
     const exp=wk==='—'?'':`<div class="dw-weeks"><span class="sub">Export this week to Excel:</span><button type="button" class="btn sm ghost" data-act="dwWeek" data-job="${esc(title)}" data-week="${wk}">w/e ${fmtD(addDays(wk,6))}</button></div>`;
-    const drop=subDrop('dww/'+title+'/'+wk,'week',span,sheetsFig(wrows,tot),`<ul class="items">${wrows.map(sRow).join('')}</ul>${exp}`);
+    const drop=subDrop('dww/'+title+'/'+wk,'week',span,fig,`<ul class="items">${wrows.map(sRow).join('')}</ul>${invWk}${exp}`);
     if(ui.dwPick&&ui.dwPick[title]&&wk!=='—'){
       const on=!!(ui.dwSel&&ui.dwSel[title]&&ui.dwSel[title][wk]);
       return `<div class="dwpick-row${on?' on':''}"><label class="dwpick-cb"><input type="checkbox" data-act="dwPickWk" data-job="${esc(title)}" data-week="${wk}"${on?' checked':''}></label>${drop}</div>`;
@@ -862,6 +872,8 @@ const actions={
   delDWSheet(d){ui.confirm=null;if(!d.id)return;SB.from('sheets').delete().eq('id',d.id).then(r=>{if(r.error){toast('Delete failed: '+(r.error.message||''));return;}toast('Sheet deleted');if(dwLoad)dwLoad();});},
   refreshDW(){dwLoad();},
   dwWeek(d,el){dwExportWeek(d.job,d.week,el);},
+  dwInv(d,el){const on=!!(el&&el.checked);write('dw_invoiced',d.id,'set',{on:on,at:Date.now(),by:DWME.name||''});toast(on?'Marked invoiced':'Marked not invoiced');},
+  dwInvWk(d,el){const want=!!(el&&el.checked);const ids=(DWDATA.sheets||[]).filter(x=>(x.project||'—')===d.job&&(x.work_date?mondayOf(x.work_date):'—')===d.week).map(x=>x.id);if(!ids.length)return;ids.forEach(id=>write('dw_invoiced',id,'set',{on:want,at:Date.now(),by:DWME.name||''}));toast(want?'Whole week marked invoiced':'Week marked not invoiced');},
   dwCombine(d){ui.dwPick=ui.dwPick||{};ui.dwSel=ui.dwSel||{};ui.dwPick[d.job]=true;ui.dwSel[d.job]={};},
   dwCombineCancel(d){if(ui.dwPick)ui.dwPick[d.job]=false;if(ui.dwSel)ui.dwSel[d.job]={};},
   dwPickWk(d,el){ui.dwSel=ui.dwSel||{};const m=ui.dwSel[d.job]=ui.dwSel[d.job]||{};if(el&&el.checked)m[d.week]=true;else delete m[d.week];},
@@ -1764,6 +1776,14 @@ function dwExportError(e){
   if(e&&e.message==='no-template')toast('No template saved yet — tap "Set / replace template" and choose your Dayworks .xlsx');
   else toast('Export failed: '+((e&&e.message)||'unknown'));
 }
+/* The client/main contractor for a job — from the live project, else the enquiry. */
+function dwJobClient(job){
+  var name=(job||'').trim();if(!name)return '';
+  var p=Object.values(S.projects||{}).find(function(x){return x&&(x.name||'').trim()===name;});
+  if(p&&(p.client||'').trim())return (p.client||'').trim();
+  var j=(DWDATA.jobs||[]).find(function(x){return x&&(x.title||'').trim()===name;});
+  return (j&&(j.client||'').trim())||'';
+}
 /* Export the single sheet open in the editor. */
 function dwExportExcel(ov){
   if(!SB){toast('Not connected — check your connection');return;}
@@ -1775,9 +1795,10 @@ function dwExportExcel(ov){
   var btn=ov.querySelector('[data-dwexport]');
   var reset=function(){if(btn){btn.disabled=false;btn.textContent='Export to Excel';}};
   if(btn){btn.disabled=true;btn.textContent='Building…';}
+  var project=(f.f_project||'').trim(),client=(f.f_client||'').trim()||dwJobClient(project);
   dwWithTemplate(function(JSZip,buf){
     var build=dwBuildWorkbook(JSZip,buf);
-    return build({project:(f.f_project||'').trim(),client:(f.f_client||'').trim()},
+    return build({project:project,client:client},
       [{block:block,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat,dateLabel:dwDayLabel(f.f_date||todayISO())}]);
   }).then(function(r){
     var proj=(f.f_project||'sheet').replace(/[^\w ()\-]+/g,'').trim()||'sheet';
@@ -1794,6 +1815,7 @@ function dwExportWeek(job,weekMon,btn){
   var reset=function(){if(btn){btn.disabled=false;btn.textContent=btn.dataset.label||'Export week';}};
   if(btn){btn.dataset.label=btn.textContent;btn.disabled=true;btn.textContent='Building…';}
   var weekEnd=addDays(weekMon,6);
+  var fallbackClient=dwJobClient(job);
   var mine=(DWDATA.sheets||[]).filter(function(x){
     return x.project===job && x.mode!=='variation' && x.work_date && x.work_date>=weekMon && x.work_date<=weekEnd;
   });
@@ -1802,10 +1824,11 @@ function dwExportWeek(job,weekMon,btn){
   SB.from('sheets').select('data,work_date,day,project,client').in('id',ids).then(function(res){
     if(res.error)throw new Error(res.error.message||'load failed');
     var recs=res.data||[];
-    var header=null,days=[],usedBlocks={};
+    var header={project:'',client:''},days=[],usedBlocks={};
     recs.forEach(function(rec){
       var data=rec.data||{},f=data.fields||{};
-      if(!header)header={project:(f.f_project||rec.project||job||'').trim(),client:(f.f_client||rec.client||'').trim()};
+      if(!header.project)header.project=(f.f_project||rec.project||'').trim();
+      if(!header.client)header.client=(f.f_client||rec.client||'').trim();
       var dayName=(f.f_day||rec.day||'').trim();
       if(!dayName||!DW_XL_DAYS[dayName]){var wd=rec.work_date||f.f_date;if(wd)dayName=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][(parse(wd).getUTCDay()+6)%7];}
       var block=DW_XL_DAYS[dayName];if(!block)return;
@@ -1815,6 +1838,8 @@ function dwExportWeek(job,weekMon,btn){
       if(!rows.lp.length&&!rows.mat.length)return;
       days.push({block:block,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat,dateLabel:dwDayLabel(rec.work_date||f.f_date)});
     });
+    if(!header.project)header.project=(job||'').trim();
+    if(!header.client)header.client=fallbackClient;
     if(!days.length)throw new Error('Nothing to export in that week');
     return dwWithTemplate(function(JSZip,buf){return dwBuildWorkbook(JSZip,buf)(header,days);}).then(function(r){
       var proj=(job||'sheet').replace(/[^\w ()\-]+/g,'').trim()||'sheet';
@@ -1835,6 +1860,7 @@ function dwExportWeeks(job,weekMons,btn){
   if(weekMons.length===1){dwExportWeek(job,weekMons[0],btn);return;}
   var reset=function(){if(btn){btn.disabled=false;if(btn.dataset.label)btn.textContent=btn.dataset.label;}};
   if(btn){btn.dataset.label=btn.textContent;btn.disabled=true;btn.textContent='Building…';}
+  var fallbackClient=dwJobClient(job);
   var wset={};weekMons.forEach(function(wm){wset[wm]=1;});
   var mine=(DWDATA.sheets||[]).filter(function(x){return x.project===job && x.mode!=='variation' && x.work_date && wset[mondayOf(x.work_date)];});
   if(!mine.length){toast('No day works sheets saved for those weeks');reset();return;}
@@ -1842,14 +1868,17 @@ function dwExportWeeks(job,weekMons,btn){
   SB.from('sheets').select('data,work_date,day,project,client').in('id',ids).then(function(res){
     if(res.error)throw new Error(res.error.message||'load failed');
     var recs=(res.data||[]).slice().sort(function(a,b){return String(a.work_date||'').localeCompare(String(b.work_date||''));});
-    var header=null,entries=[];
+    var header={project:'',client:''},entries=[];
     recs.forEach(function(rec){
       var data=rec.data||{},f=data.fields||{};
-      if(!header)header={project:(f.f_project||rec.project||job||'').trim(),client:(f.f_client||rec.client||'').trim()};
+      if(!header.project)header.project=(f.f_project||rec.project||'').trim();
+      if(!header.client)header.client=(f.f_client||rec.client||'').trim();
       var rows=dwExcelRows(data);
       if(!rows.lp.length&&!rows.mat.length)return;
       entries.push({wd:rec.work_date||f.f_date,desc:(f.f_desc||'').trim(),lp:rows.lp,mat:rows.mat});
     });
+    if(!header.project)header.project=(job||'').trim();
+    if(!header.client)header.client=fallbackClient;
     if(!entries.length)throw new Error('Nothing to export in those weeks');
     var cap=DW_XL_ORDER.length;
     var dropped=Math.max(0,entries.length-cap);
