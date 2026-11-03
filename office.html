@@ -1235,9 +1235,20 @@ function dwMatList(){const rb=dwMatRB().map(r=>(r.desc||'').trim());const crew=(
 /* Director cost auto-fill: match the chosen material anywhere in the rate book
    (not just the Materials category) so e.g. concrete priced elsewhere still fills. */
 function dwMatRate(name){try{if(typeof list==='function'){const n=String(name).trim().toLowerCase();const r=list('rates').find(x=>(x.desc||'').trim().toLowerCase()===n);if(r)return {rate:num(r.rate),unit:r.unit||''};}}catch(e){}return null;}
+/* Plant dropdown works the same way as materials: the Rates tab (Plant category)
+   is the master list. Directors read it straight from the rate card (and get the
+   day rate auto-filled); crew get NAMES ONLY via the locked-down crew_plant RPC
+   into DW_CREW_PLANT. The static rate-book list is always merged in as a fallback. */
+let DW_CREW_PLANT=null;
+function dwPlantRB(){try{if(typeof list==='function')return list('rates').filter(r=>/^plant/i.test(r.cat||'')&&(r.desc||'').trim());}catch(e){}return [];}
+function dwPlantList(){
+  const seen=new Set(),out=[];
+  [...dwPlantRB().map(r=>r.desc),...(DW_CREW_PLANT||[]),...DW_PLANT].forEach(v=>{v=String(v||'').trim();const k=v.toLowerCase();if(v&&!seen.has(k)&&!_DW_PLANT_HIDE.test(v)){seen.add(k);out.push(v);}});
+  return out.sort((a,b)=>a.localeCompare(b,'en',{numeric:true,sensitivity:'base'}));
+}
 const dwCfg={
   labour:[{k:'name',lab:'Operative',ph:'Select crew…',sel:DW_FIRM_CREW,wide:1},{k:'role',lab:'Role / Trade',ph:'Role / trade',list:'dw_dl_trades'},{k:'hours',lab:'Hours',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}],
-  plant:[{k:'desc',lab:'Plant / Machinery',ph:'Select plant…',sel:DW_PLANT,wide:1},{k:'hours',lab:'Days',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1},{k:'hired',lab:'Hired in?',chk:'Yes — hired'},{k:'hiredfrom',lab:'Hired from',ph:'Merchant / hire firm',hire:1}],
+  plant:[{k:'desc',lab:'Plant / Machinery',ph:'Select plant…',selFn:dwPlantList,wide:1},{k:'hours',lab:'Days',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1},{k:'hired',lab:'Hired in?',chk:'Yes — hired'},{k:'hiredfrom',lab:'Hired from',ph:'Merchant / hire firm',hire:1}],
   mat:[{k:'desc',lab:'Material',ph:'Tap to pick or type a material…',combo:1,wide:1},{k:'qty',lab:'Qty',ph:'0',num:1},{k:'unit',lab:'Unit',ph:'unit',list:'dw_dl_units'},{k:'cost',lab:'Unit Cost (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}]
 };
 /* keep the Materials datalist in sync with the rate book so the field is a
@@ -1491,6 +1502,7 @@ function dwMakeRow(ov,type,data){
   r.appendChild(del);
   r.addEventListener('input',()=>{dwRecalcRow(r);dwRecalc(ov);});
   r.addEventListener('change',()=>{dwRecalcRow(r);dwRecalc(ov);});
+  if(type==='plant'){const pd=r.querySelector('[data-k="desc"]');if(pd)pd.addEventListener('change',()=>dwFillPlantRate(ov,r,pd.value));}
   if(type==='plant'){const hc=r.querySelector('[data-k="hired"]');const sync=()=>r.classList.toggle('dw-hired',!!(hc&&hc.checked));if(hc)hc.addEventListener('change',sync);sync();}
   if(type==='mat'){const md=r.querySelector('[data-k="desc"]');if(md){dwCombo(md,dwMatList);md.addEventListener('input',()=>dwFillMatRate(ov,r,md.value));md.addEventListener('change',()=>dwFillMatRate(ov,r,md.value));}}
   if(data&&Object.keys(data).length)dwRecalcRow(r);
@@ -1504,6 +1516,13 @@ function dwFillMatRate(ov,r,name){
   const cost=r.querySelector('[data-k="cost"]'),unit=r.querySelector('[data-k="unit"]');
   if(cost&&m.rate)cost.value=m.rate;
   if(unit&&m.unit&&!unit.value)unit.value=m.unit;
+  dwRecalcRow(r);dwRecalc(ov);
+}
+/* Director only: picking plant fills its day rate from the rate card. */
+function dwFillPlantRate(ov,r,name){
+  if(DWME.role!=='director')return;
+  const m=dwMatRate(name);if(!m||!m.rate)return;
+  const rate=r.querySelector('[data-k="rate"]');if(rate)rate.value=m.rate;
   dwRecalcRow(r);dwRecalc(ov);
 }
 function dwRecalcRow(r){
@@ -2253,6 +2272,8 @@ render();
     const loadReminders=()=>!lead?Promise.resolve():sb.from('office_docs').select('doc_id,data').eq('collection','lead_reminders').then(r=>{cS.reminders=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(x=>x.uid===uid);}).catch(()=>{cS.reminders=[];});
     /* crew get ONLY material NAMES for the day-works dropdown via a locked-down
        function — never a unit cost or any price (see office-schema.sql) */
+    /* …and ONLY plant NAMES (Rates tab, Plant category) — never a rate */
+    const loadPlant=()=>sb.rpc('crew_plant').then(r=>{const n=[...new Set((r.data||[]).map(m=>String((m&&(m.desc||m.name))||m||'').trim()).filter(Boolean))];if(n.length)DW_CREW_PLANT=n;}).catch(()=>{});
     const loadMaterials=()=>sb.rpc('crew_materials').then(r=>{const n=[...new Set((r.data||[]).map(m=>String((m&&(m.desc||m.name))||m||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));if(n.length)DW_CREW_MATS=n;}).catch(()=>{});
 
     const setHint=msg=>{const h=$('c-hint');if(h)h.textContent=msg!=null?msg:(saving?'Saving…':'Saved automatically');};
@@ -2358,7 +2379,7 @@ render();
     dwRefresh=()=>loadSheets().then(render);
     fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
     renderTabs();viewEl.innerHTML='<div class="head"><h2>Loading…</h2></div>';
-    loadMaterials();
+    loadMaterials();loadPlant();
     Promise.all([loadWeek(cui.week),loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()]).then(()=>{dwSetSites([...cS.jobs.map(j=>j.location),...cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.site)]);dwSetProjects(cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.name));dwSetClients(cS.jobs.map(j=>j&&j.client));render();}).catch(render);
   }
   /* open a job drawing (crew) via a signed URL from the job-files bucket */

@@ -119,6 +119,27 @@ $$;
 revoke all on function public.crew_materials() from public;
 grant execute on function public.crew_materials() to authenticated;
 
+-- Crew day-works PLANT dropdown. Same rule as materials: ONLY the plant
+-- DESCRIPTION from the rate card (Plant category) — never the rate.
+create or replace function public.crew_plant()
+returns table (name text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select distinct trim(data->>'desc') as name
+  from public.office_docs
+  where collection = 'rates'
+    and lower(coalesce(data->>'cat','')) like 'plant%'
+    and coalesce(trim(data->>'desc'),'') <> ''
+    and auth.uid() is not null
+  order by 1
+$$;
+
+revoke all on function public.crew_plant() from public;
+grant execute on function public.crew_plant() to authenticated;
+
 -- ==================================================================
 -- 5) CREW HOLIDAY REQUESTS  +  LEAD-HAND ("top man") PRIVATE NOTES
 --    Both live in office_docs, keyed doc_id = '<their-user-id>__<id>'
