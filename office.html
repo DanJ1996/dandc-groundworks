@@ -237,6 +237,9 @@ table.grid{border-collapse:collapse;width:100%}
 .jseg.r{border-radius:0 3px 3px 0}
 .jseg.l.r{border-radius:3px}
 .jlabel{color:#fff;font-size:.82rem;font-weight:600;padding:0 8px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sched.gantt tr.jobrow .jseg{cursor:grab}
+.jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
+.jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:rgba(255,255,255,.85);box-shadow:3px 0 0 rgba(255,255,255,.85)}
 .vmark{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
 .cform{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .thanks{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top:1px solid var(--line);color:var(--ink)}
@@ -548,7 +551,8 @@ views.schedule=()=>{
     let cells=`<th class="tcol">${label||''}</th>`;
     for(let i=0;i<7;i++){const inSpan=i>=cs&&i<=ce;
       // Repeat the label in every day the bar covers so each day reads on its own, not just the colour.
-      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span></div>`:'';
+      const grip=(i===ce&&opts.jid&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
+      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${seg}</td>`;}
     return `<tr class="${opts.rowcls||''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
   };
@@ -600,7 +604,7 @@ views.schedule=()=>{
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+(h.reason?' · '+esc(h.reason):'')])));
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}</section>`;
   }
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a bar across the days to set how long it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
@@ -1067,7 +1071,7 @@ const changes={
   cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});},
   // Link (or unlink) a Xero invoice to one of our jobs. Stored on the xero_status
   // row so it survives re-syncs; clears the "invoice due" nudge on that project.
-  xlinkPick(d,v){const row=XERO.rows.find(x=>x.ref===d.ref);if(row)row.project_id=v||null;ui.xlink=null;sb.from('xero_status').update({project_id:v||null}).eq('ref',d.ref).then(r=>{if(r.error){toast('Could not link — try again');xeroLoad();return;}toast(v?'Invoice linked to '+projName(v):'Invoice unlinked');});},
+  xlinkPick(d,v){if(!SB){toast('Not connected — try again');return;}const row=XERO.rows.find(x=>x.ref===d.ref);if(row)row.project_id=v||null;ui.xlink=null;SB.from('xero_status').update({project_id:v||null}).eq('ref',d.ref).then(r=>{if(r.error){toast('Could not link — '+(r.error.message||'try again'));xeroLoad();return;}toast(v?'Invoice linked to '+projName(v):'Invoice unlinked');});},
   // Search box for finding one invoice to link — keeps the wall of historical
   // invoices hidden; only linked ones and live search matches ever show.
   xfind(d,v){ui.xfind=v;}
@@ -2291,7 +2295,11 @@ view.addEventListener('pointerdown',e=>{
   const label=((row.querySelector('.jlabel')||{}).textContent||'').replace(/^‹\s*/,'').replace(/\s*›$/,'');
   const r=(kind==='event'?S.events[jid]:S.projects[jid])||{};
   const oS=kind==='event'?r.from:r.startDate, oE=kind==='event'?(r.from?evEnd(r):''):(r.endDate||r.startDate);
-  jobDrag={jid,kind,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||''};
+  // Grabbing the right-edge grip = stretch the end (more days). Grabbing anywhere else on the
+  // bar = pick the whole job up and move it (keeps the same number of days). Tap = open.
+  const mode=e.target.closest('[data-jgrip]')?'resize':'move';
+  const grab=+td.dataset.jday;
+  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||''};
   row.classList.add('dragging');
   try{td.setPointerCapture(e.pointerId);}catch(_){}
 });
@@ -2300,20 +2308,30 @@ view.addEventListener('pointermove',e=>{
   const el=document.elementFromPoint(e.clientX,e.clientY);
   const td=el&&el.closest&&el.closest('td.jcell[data-jday]');
   if(!td||td.closest('tr.jobrow')!==jobDrag.row)return;
-  const d=+td.dataset.jday;let min,max;
-  if(d>=jobDrag.startLo){min=jobDrag.startLo;max=d;}else{min=d;max=jobDrag.startHi;}
-  if(min!==jobDrag.min||max!==jobDrag.max){jobDrag.min=min;jobDrag.max=max;jobDrag.moved=true;paintJobDrag();}
+  const d=+td.dataset.jday;let min,max,delta=0;
+  if(jobDrag.mode==='resize'){           // drag the grip: fix the start, move the end
+    min=jobDrag.startLo;max=Math.max(d,jobDrag.startLo);
+  }else{                                 // move: slide the whole bar, keeping its length
+    delta=d-jobDrag.grab;min=jobDrag.startLo+delta;max=jobDrag.startHi+delta;
+  }
+  if(min!==jobDrag.min||max!==jobDrag.max){jobDrag.min=min;jobDrag.max=max;jobDrag.delta=delta;jobDrag.moved=true;paintJobDrag();}
 });
 function endJobDrag(){
   if(!jobDrag)return;const jd=jobDrag;jobDrag=null;jd.row.classList.remove('dragging');
   if(jd.moved){
     const wk=ui.schedWeek, wkEnd=addDays(wk,6);
-    let ns=addDays(wk,jd.min), ne=addDays(wk,jd.max);
-    if(jd.origStart&&jd.origStart<wk&&jd.min===0)ns=jd.origStart;        // keep a start that began before this week
-    if(jd.origEnd&&jd.origEnd>wkEnd&&jd.max===6)ne=jd.origEnd;           // keep an end that runs past this week
+    let ns,ne;
+    if(jd.mode==='resize'){
+      ns=jd.origStart||addDays(wk,jd.startLo);        // keep the start exactly where it was
+      ne=addDays(wk,Math.max(0,Math.min(6,jd.max)));
+      if(ne<ns)ne=ns;
+    }else{                                            // move by a whole-day shift, preserving length
+      ns=addDays(jd.origStart||addDays(wk,jd.startLo),jd.delta);
+      ne=jd.origEnd?addDays(jd.origEnd,jd.delta):ns;
+    }
     if(jd.kind==='event')write('events',jd.jid,'update',{from:ns,to:ne});
     else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
-    toast('Updated '+(jd.text||'job'));
+    toast((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job'));
   }else if(jd.kind!=='event'){
     actions.openProject({id:jd.jid});
   }else if(jd.tapDay){
