@@ -794,7 +794,17 @@ views.invoices=()=>{
   const awaiting=inv.filter(i=>i.st==='awaiting'||i.st==='overdue').sort((a,b)=>addDays(a.sent,termsOf(a)).localeCompare(addDays(b.sent,termsOf(b))));
   const paid=inv.filter(i=>i.st==='paid').sort((a,b)=>String(b.paid).localeCompare(String(a.paid)));
   const overdue=awaiting.filter(i=>i.st==='overdue'), paidM=paid.filter(i=>String(i.paid).slice(0,7)===month);
-  const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM))}</span><span class="sub">${paidM.length} received</span></div></div>`;
+  // Fold in the live Xero figures so a sent Xero invoice with money still owed shows under
+  // Awaiting payment, drafts under To send, and this month's receipts under Paid. (Overdue
+  // stays app-only — Xero doesn't hand us a due date to judge it against.)
+  const xS=x=>String(x.status||'').toUpperCase();
+  const xDraft=XERO.rows.filter(x=>xS(x)==='DRAFT');
+  const xSent=XERO.rows.filter(x=>(xS(x)==='AUTHORISED'||xS(x)==='SUBMITTED')&&num(x.amount_due)>0);
+  const xPaidM=XERO.rows.filter(x=>x.paid_date&&String(x.paid_date).slice(0,7)===month);
+  const xDraftSum=xDraft.reduce((t,x)=>t+num(x.total),0);
+  const xAwaitSum=xSent.reduce((t,x)=>t+num(x.amount_due),0);
+  const xPaidSum=xPaidM.reduce((t,x)=>t+num(x.amount_paid),0);
+  const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend)+xDraftSum)}</span><span class="sub">${toSend.length+xDraft.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting)+xAwaitSum)}</span><span class="sub">${awaiting.length+xSent.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM)+xPaidSum)}</span><span class="sub">${paidM.length+xPaidM.length} received</span></div></div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
   const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
   const projOpts=selId=>[['','— not linked to a job —']].concat(list('projects').sort(byName).map(p=>[p.id,p.name])).map(([v,l])=>`<option value="${esc(v)}"${v===(selId||'')?' selected':''}>${esc(l)}</option>`).join('');
