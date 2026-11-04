@@ -13,7 +13,11 @@ const admin = () => createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE
 
 const cors = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, content-type",
+  // supabase-js adds apikey + x-client-info (and x-supabase-api-version) to every
+  // invoke, so the browser's CORS preflight asks for them. If they aren't allowed
+  // here the browser blocks the call and the office shows "Failed to send a request
+  // to the Edge Function" — which is exactly what the Refresh button was doing.
+  "access-control-allow-headers": "authorization, content-type, apikey, x-client-info, x-supabase-api-version",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const json = (b: unknown, status = 200) =>
