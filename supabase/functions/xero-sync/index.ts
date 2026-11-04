@@ -76,13 +76,32 @@ Deno.serve(async (req) => {
       },
     }).then((r) => r.json());
 
-  const res = await api("Invoices?where=Type==\"ACCREC\"&order=Date DESC&page=1");
-  const invoices = res?.Invoices ?? [];
+  // Fetch the first page of invoices and keep the sales ones (ACCREC) in code —
+  // avoids any fiddly URL-encoding of a Xero "where" filter.
+  const res = await api("Invoices?page=1");
+  if (!res || !Array.isArray(res.Invoices)) {
+    return json({ connected: true, synced: 0, fetched: 0, xero_error: res?.Message || res?.Detail || "no invoices returned" });
+  }
+  // Xero's JSON API returns dates in the legacy "/Date(1714521600000+0000)/"
+  // format (ms since epoch), NOT ISO — parse it to a YYYY-MM-DD, else null.
+  const xdate = (v: unknown): string | null => {
+    if (!v) return null;
+    const m = /\/Date\((\d+)/.exec(String(v));
+    if (m) return new Date(Number(m[1])).toISOString().slice(0, 10);
+    const s = String(v).slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+  };
+
+  // Sales invoices only, and skip ones that have been deleted or voided — they're
+  // not real money owed/paid. DRAFT / SUBMITTED / AUTHORISED / PAID all kept.
+  const invoices = res.Invoices.filter((i: { Type?: string; Status?: string }) =>
+    i.Type === "ACCREC" && i.Status !== "DELETED" && i.Status !== "VOIDED");
   let n = 0;
   for (const inv of invoices) {
     const ref = (inv.Reference && String(inv.Reference).trim()) || inv.InvoiceNumber || inv.InvoiceID;
+    // latest payment date (sort by parsed epoch, not the raw /Date(..)/ string)
     const paidDate = (inv.Payments && inv.Payments.length)
-      ? inv.Payments.map((p: { Date: string }) => p.Date).sort().pop()
+      ? inv.Payments.map((p: { Date: string }) => xdate(p.Date)).filter(Boolean).sort().pop() ?? null
       : null;
     await db.from("xero_status").upsert({
       ref,
@@ -93,10 +112,10 @@ Deno.serve(async (req) => {
       total: inv.Total ?? 0,
       amount_due: inv.AmountDue ?? 0,
       amount_paid: inv.AmountPaid ?? 0,
-      paid_date: paidDate ? String(paidDate).slice(0, 10) : null,
+      paid_date: paidDate,
       updated_at: new Date().toISOString(),
     });
     n++;
   }
-  return json({ connected: true, synced: n });
+  return json({ connected: true, synced: n, fetched: res.Invoices.length });
 });
