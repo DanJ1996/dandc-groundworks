@@ -48,17 +48,25 @@ create table if not exists public.xero_status (
   amount_due numeric,
   amount_paid numeric,
   paid_date  date,
+  project_id text,                      -- which of our jobs this invoice is linked to (set by a director)
   updated_at timestamptz not null default now()
 );
+-- Older databases won't have project_id from the create above — add it if missing.
+alter table public.xero_status add column if not exists project_id text;
 alter table public.xero_status enable row level security;
 revoke all on public.xero_status from anon, authenticated;
--- The RLS policy below only filters ROWS; the base SELECT privilege must also be
--- granted or PostgREST denies the query outright (the app then shows "Not linked to
--- Xero yet"). RLS still limits what they see to directors via the policy.
+-- The RLS policies below only filter ROWS; the base privileges must also be granted
+-- or PostgREST denies the query outright (the app then shows "Not linked to Xero
+-- yet"). RLS still limits things to directors via the policies.
 grant select on public.xero_status to authenticated;
+-- Directors may also set/clear the job link (project_id only — nothing else is writable).
+grant update (project_id) on public.xero_status to authenticated;
 drop policy if exists xero_status_read on public.xero_status;
 create policy xero_status_read on public.xero_status for select
   using (public.is_director());
+drop policy if exists xero_status_link on public.xero_status;
+create policy xero_status_link on public.xero_status for update
+  using (public.is_director()) with check (public.is_director());
 
 -- 4) Convenience: directors can trigger a manual "Refresh from Xero" safely.
 --    (The heavy lifting is in the edge function; this just lets the website ask.)
