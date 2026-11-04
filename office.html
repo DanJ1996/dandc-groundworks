@@ -661,6 +661,8 @@ views.dayworks=()=>{
   const jobs=DWDATA.jobs,sheets=DWDATA.sheets;
   const byTitle={};sheets.forEach(x=>{const k=x.project||'—';(byTitle[k]=byTitle[k]||[]).push(x);});
   const invOn=id=>!!(S.dw_invoiced[id]&&S.dw_invoiced[id].on);
+  // Green "Invoiced" if every sheet is ticked, amber "Part-invoiced" if only some are.
+  const invBadge=rows=>{const a=rows.length&&rows.every(x=>invOn(x.id)),y=rows.some(x=>invOn(x.id));return a?' · <span class="inv-badge">Invoiced</span>':y?' · <span class="inv-badge" style="background:#c9892b">Part-invoiced</span>':'';};
   const sRow=x=>{const k='dwdel/'+x.id;const act=ui.confirm===k
     ?`<span class="confirm"><button type="button" class="btn sm danger" data-act="delDWSheet" data-id="${esc(x.id)}">Delete sheet</button><button type="button" class="btn sm ghost" data-act="cancel">Keep</button></span>`
     :ui.moveDW===x.id
@@ -680,8 +682,7 @@ views.dayworks=()=>{
     const span=dated.length?(dated[0]===dated[dated.length-1]?fmtD(dated[0]):fmtD(dated[0])+' – '+fmtD(dated[dated.length-1])):'Undated';
     const tot=wrows.reduce((s,x)=>s+num(x.grand),0);
     const allInv=wrows.length&&wrows.every(x=>invOn(x.id));
-    const anyInv=wrows.some(x=>invOn(x.id));
-    const fig=sheetsFig(wrows,tot)+(allInv?' · <span class="inv-badge">Invoiced</span>':anyInv?' · <span class="inv-badge" style="background:#c9892b">Part-invoiced</span>':'');
+    const fig=sheetsFig(wrows,tot)+invBadge(wrows);
     const invWk=`<div class="dw-weeks"><label class="dwinv wk${allInv?' on':''}" title="Mark every day in this week as invoiced"><input type="checkbox" data-act="dwInvWk" data-job="${esc(title)}" data-week="${wk}"${allInv?' checked':''}> Mark whole week invoiced</label></div>`;
     const exp=wk==='—'?'':`<div class="dw-weeks"><span class="sub">Export this week to Excel:</span><button type="button" class="btn sm ghost" data-act="dwWeek" data-job="${esc(title)}" data-week="${wk}">w/e ${fmtD(addDays(wk,6))}</button></div>`;
     const drop=subDrop('dww/'+title+'/'+wk,'week',span,fig,`<ul class="items">${wrows.map(sRow).join('')}</ul>${invWk}${exp}`);
@@ -696,7 +697,7 @@ views.dayworks=()=>{
     const weeks=Object.keys(byWeek).sort((a,b)=>b.localeCompare(a));
     const tot=rows.reduce((s,x)=>s+num(x.grand),0);
     const lab=mk==='—'?'Undated':MON[+mk.slice(5,7)-1]+' '+mk.slice(0,4);
-    return subDrop('dwm/'+title+'/'+mk,'month',lab,sheetsFig(rows,tot),weeks.map(w=>weekBlock(title,w,byWeek[w])).join(''));
+    return subDrop('dwm/'+title+'/'+mk,'month',lab,sheetsFig(rows,tot)+invBadge(rows),weeks.map(w=>weekBlock(title,w,byWeek[w])).join(''));
   };
   const section=(title,client,jobid,rows)=>{const jb=`data-job="${esc(title)}"${jobid?` data-jobid="${esc(jobid)}"`:''}`;
     const byMonth={};rows.forEach(x=>{const mk=x.work_date?x.work_date.slice(0,7):'—';(byMonth[mk]=byMonth[mk]||[]).push(x);});
@@ -710,7 +711,7 @@ views.dayworks=()=>{
       :`<button type="button" class="btn sm ghost" data-act="dwCombine" data-job="${esc(title)}">Combine weeks</button>`):'';
     const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`:'';
     const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
-    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}</h3><div class="item-act">${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
+    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}</h3><div class="item-act">${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','')}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
   const seen={};
   let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
