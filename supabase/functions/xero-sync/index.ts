@@ -28,11 +28,14 @@ async function accessToken(db: ReturnType<typeof admin>) {
     return { token: t.access_token, tenant: t.tenant_id as string };
   }
   const basic = btoa(`${env("XERO_CLIENT_ID")}:${env("XERO_CLIENT_SECRET")}`);
+  // Hard 10s timeout so a slow/unreachable Xero can never hang the whole function
+  // (a hang would be killed by the platform and surface as a blank "sync failed").
   const r = await fetch("https://identity.xero.com/connect/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", authorization: `Basic ${basic}` },
     body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: t.refresh_token }),
-  }).then((x) => x.json());
+    signal: AbortSignal.timeout(10_000),
+  }).then((x) => x.json()).catch(() => ({}));
   if (!r.access_token) throw new Error("refresh-failed");
   await db.from("xero_tokens").update({
     refresh_token: r.refresh_token ?? t.refresh_token,
@@ -75,7 +78,8 @@ Deno.serve(async (req) => {
         "xero-tenant-id": at.tenant,
         accept: "application/json",
       },
-    }).then((r) => r.json()).catch(() => null); // never let a non-JSON Xero reply crash the sync
+      signal: AbortSignal.timeout(15_000), // never hang on a slow Xero page
+    }).then((r) => r.json()).catch(() => null); // never let a non-JSON/timeout Xero reply crash the sync
 
   // Xero returns invoices 100 at a time, OLDEST first. Fetching only page 1 would
   // miss every recent invoice (the book is 200+), so we page right through to the

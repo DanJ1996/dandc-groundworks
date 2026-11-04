@@ -1372,6 +1372,9 @@ async function xeroSyncNow(){
     if(r&&r.error){
       // Pull the real reason out of the error response so we don't just say "failed".
       let m='';try{const c=r.error.context;if(c&&c.json){const b=await c.json();m=b.error||b.reason||b.xero_error||'';}}catch(e){}
+      // If there was no readable JSON body, show the raw transport error (HTTP
+      // status / name) so a blank failure still tells us what actually happened.
+      if(!m){try{const c=r.error.context;const st=c&&c.status?('HTTP '+c.status):'';m=[st,r.error.name,r.error.message].filter(Boolean).join(' ');}catch(e){}}
       toast(m==='not-signed-in'?'Your session timed out — sign out and back in':m==='directors-only'?'Directors only — sign in as a director':'Xero sync failed'+(m?' — '+m:' — try again'));
       schedule();return;
     }
