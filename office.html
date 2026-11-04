@@ -1366,7 +1366,7 @@ function dwPlantList(){
 }
 const dwCfg={
   labour:[{k:'name',lab:'Operative',ph:'Select crew…',sel:DW_FIRM_CREW,wide:1},{k:'role',lab:'Role / Trade',ph:'Role / trade',list:'dw_dl_trades'},{k:'hours',lab:'Hours',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}],
-  plant:[{k:'desc',lab:'Plant / Machinery',ph:'Select plant…',selFn:dwPlantList,wide:1},{k:'hours',lab:'Days',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1},{k:'hired',lab:'Hired in?',chk:'Yes — hired'},{k:'hiredfrom',lab:'Hired from',ph:'Merchant / hire firm',hire:1}],
+  plant:[{k:'desc',lab:'Plant / Machinery',ph:'Tap to pick or type a plant / machine…',combo:1,wide:1},{k:'hours',lab:'Days',ph:'0',num:1},{k:'rate',lab:'Rate (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1},{k:'hired',lab:'Hired in?',chk:'Yes — hired'},{k:'hiredfrom',lab:'Hired from',ph:'Merchant / hire firm',hire:1}],
   mat:[{k:'desc',lab:'Material',ph:'Tap to pick or type a material…',combo:1,wide:1},{k:'qty',lab:'Qty',ph:'0',num:1},{k:'unit',lab:'Unit',ph:'unit',list:'dw_dl_units'},{k:'cost',lab:'Unit Cost (£)',ph:'0.00',num:1,m:1},{k:'total',lab:'Total (£)',out:1,m:1}]
 };
 /* keep the Materials datalist in sync with the rate book so the field is a
@@ -1620,7 +1620,7 @@ function dwMakeRow(ov,type,data){
   r.appendChild(del);
   r.addEventListener('input',()=>{dwRecalcRow(r);dwRecalc(ov);});
   r.addEventListener('change',()=>{dwRecalcRow(r);dwRecalc(ov);});
-  if(type==='plant'){const pd=r.querySelector('[data-k="desc"]');if(pd)pd.addEventListener('change',()=>dwFillPlantRate(ov,r,pd.value));}
+  if(type==='plant'){const pd=r.querySelector('[data-k="desc"]');if(pd){dwCombo(pd,dwPlantList);pd.addEventListener('change',()=>dwFillPlantRate(ov,r,pd.value));pd.addEventListener('input',()=>dwFillPlantRate(ov,r,pd.value));}}
   if(type==='plant'){const hc=r.querySelector('[data-k="hired"]');const sync=()=>r.classList.toggle('dw-hired',!!(hc&&hc.checked));if(hc)hc.addEventListener('change',sync);sync();}
   if(type==='mat'){const md=r.querySelector('[data-k="desc"]');if(md){dwCombo(md,dwMatList);md.addEventListener('input',()=>dwFillMatRate(ov,r,md.value));md.addEventListener('change',()=>dwFillMatRate(ov,r,md.value));}}
   if(data&&Object.keys(data).length)dwRecalcRow(r);
@@ -1635,6 +1635,18 @@ function dwFillMatRate(ov,r,name){
   if(cost&&m.rate)cost.value=m.rate;
   if(unit&&m.unit&&!unit.value)unit.value=m.unit;
   dwRecalcRow(r);dwRecalc(ov);
+}
+/* Remember a typed-in plant / machine (e.g. "Bench saw from Travis Perkins") so
+   it's offered next time and syncs across devices. Director only — it's saved to
+   the rate card's Plant category with no rate; crew have no rate-card write access,
+   their one-off still saves on the sheet itself. Called on save so half-typed
+   names never get stored. */
+function dwRememberPlant(name){
+  name=String(name||'').trim();
+  if(name.length<2||DWME.role!=='director'||_DW_PLANT_HIDE.test(name))return;
+  if(typeof write!=='function'||typeof uid!=='function')return;
+  if(dwPlantList().some(v=>v.toLowerCase()===name.toLowerCase()))return;
+  try{write('rates',uid(),'set',{cat:'Plant',code:'',desc:name,unit:'day',rate:0});}catch(e){}
 }
 /* Director only: picking plant fills its day rate from the rate card. */
 function dwFillPlantRate(ov,r,name){
@@ -2077,6 +2089,7 @@ function dwSave(ov){
      save can't wipe them, and leave the grand column alone (never zero it) */
   const crew=DWME.role!=='director';
   if(crew&&ov._keep)dwReapplyMoney(data,ov._keep);
+  if(!crew&&data.lines&&data.lines.plant)data.lines.plant.forEach(p=>dwRememberPlant(p.desc));
   const rec={creator_name:DWME.name,project:(f.f_project||'').trim()||null,client:(f.f_client||'').trim()||null,sheet_no:(f.f_sheet||'').trim()||null,work_date:f.f_date||null,day:(f.f_day||'').trim()||null,data,updated_at:new Date().toISOString()};
   if(!crew)rec.grand=num(ov.querySelector('[data-s="grand"]').textContent)||0;
   const btn=ov.querySelector('[data-dwsave]');btn.disabled=true;btn.textContent='Saving…';
