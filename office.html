@@ -697,6 +697,14 @@ views.dayworks=()=>{
     return subDrop('dwm/'+title+'/'+mk,'month',lab,sheetsFig(rows,tot)+invBadge(rows),weeks.map(w=>weekBlock(title,w,byWeek[w])).join(''));
   };
   const section=(title,client,jobid,rows)=>{const jb=`data-job="${esc(title)}"${jobid?` data-jobid="${esc(jobid)}"`:''}`;
+    // Inline rename editor for this folder.
+    if(jobid&&ui.dwEdit===jobid)
+      return `<section class="panel"><div class="panel-h"><h3>Rename job</h3></div><div class="panel-b form"><label class="f wide"><span>Job name</span><input id="dwr-title-${esc(jobid)}" value="${esc(title)}"></label><label class="f"><span>Client</span><input id="dwr-client-${esc(jobid)}" value="${esc(client||'')}"></label><div class="go"><button type="button" class="btn" data-act="dwRenameDo" data-id="${esc(jobid)}">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></div></section>`;
+    // "Bills into" link: which of our Projects this folder's day works roll up to.
+    const projs=list('projects').sort(byName);
+    const linkedP=projs.find(p=>p.dwJob===title);
+    const linkSel=`<select class="dwmove" data-chg="dwLinkProj" data-job="${esc(title)}" aria-label="Link this folder to a project"><option value="">Link to a project…</option>${projs.map(p=>`<option value="${esc(p.id)}"${linkedP&&linkedP.id===p.id?' selected':''}>${esc(p.name)}${p.client?' · '+esc(p.client):''}</option>`).join('')}</select>`;
+    const renameBtn=jobid?`<button type="button" class="btn sm ghost" data-act="dwRenameAsk" data-id="${esc(jobid)}">Rename</button>`:'';
     const byMonth={};rows.forEach(x=>{const mk=x.work_date?x.work_date.slice(0,7):'—';(byMonth[mk]=byMonth[mk]||[]).push(x);});
     const months=Object.keys(byMonth).sort((a,b)=>b.localeCompare(a));
     const weekSet={};rows.forEach(x=>{if(x.work_date)weekSet[mondayOf(x.work_date)]=1;});
@@ -708,7 +716,7 @@ views.dayworks=()=>{
       :`<button type="button" class="btn sm ghost" data-act="dwCombine" data-job="${esc(title)}">Combine weeks</button>`):'';
     const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`:'';
     const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
-    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}</h3><div class="item-act">${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
+    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}${linkedP?'<div class="sub">Bills into project: '+esc(linkedP.name)+'</div>':''}</h3><div class="item-act">${linkSel}${renameBtn}${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','')}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
   const seen={};
   let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
@@ -740,7 +748,7 @@ views.quotes=()=>{
     const v=quoteValue(q), linked=q.projectId&&S.projects[q.projectId];
     const contact=[q.phone,q.email].filter(Boolean).map(esc).join(' · ');
     const visitBtn=visitDue(q)?`<button type="button" class="btn sm" id="qvd-${q.id}" data-act="visitDone" data-id="${q.id}">Meeting done</button><button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Change visit</button>`:isOpenQ(q)?`<button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Book site visit</button>`:'';
-    return `<li class="item${v?' quoted':isOpenQ(q)?' unpriced':''}"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}${q.meetNotes?`<div class="meetnotes"><b>Meeting notes</b>${esc(q.meetNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked&&num(linked.tender)>0?'tender':linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
+    return `<li class="item${v?' quoted':isOpenQ(q)?' unpriced':''}"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}${q.meetNotes?`<div class="meetnotes"><b>Meeting notes</b>${esc(q.meetNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked&&num(linked.tender)>0?'tender':linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" data-act="quoteToReminder" data-id="${q.id}">Make a reminder</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
   };
   const listing=`<section class="panel"><div class="panel-h"><h3>Enquiries</h3><div class="item-act"><button type="button" class="btn sm ${ui.quoteFilter==='open'?'':'ghost'}" id="qf-open" data-act="qfilter" data-v="open">Open (${open.length})</button><button type="button" class="btn sm ${ui.quoteFilter==='all'?'':'ghost'}" id="qf-all" data-act="qfilter" data-v="all">All (${all.length})</button></div></div>${shown.length?`<ul class="items">${shown.map(row).join('')}</ul>`:empty(all.length?'No open enquiries':'No enquiries logged yet','Log each call or email as it comes in, book the site visit, then use Price it to build the quote off your rate card.')}${onTender>0?`<div class="listfoot"><span>Out on tender</span><strong>${money(onTender)} <span class="sub">${money(onTender*1.2)} inc VAT</span></strong></div>`:''}</section>`;
   return `<div class="head"><div><h2>Enquiries &amp; quotes</h2><p class="sub">From first call to site visit, price, and decision.</p></div></div><datalist id="dl-staff">${staff.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>${stats}${add}${listing}`;
@@ -1017,6 +1025,11 @@ const actions={
   // Pick a job in the select, then tap Done — reads the select value and moves the sheet.
   moveDWdo(d){const sel=document.getElementById('dwmove-'+d.id);const v=sel&&sel.value;if(!v){toast('Pick a job first');return;}const j=(DWDATA.jobs||[]).find(x=>x.id===v);if(!j)return;ui.moveDW=null;SB.from('sheets').update({project:j.title,client:j.client||null}).eq('id',d.id).then(r=>{if(r.error){toast('Move failed: '+(r.error.message||''));return;}toast('Sheet moved to '+j.title);if(dwLoad)dwLoad();});},
   delDWSheet(d){ui.confirm=null;if(!d.id)return;SB.from('sheets').delete().eq('id',d.id).then(r=>{if(r.error){toast('Delete failed: '+(r.error.message||''));return;}toast('Sheet deleted');if(dwLoad)dwLoad();});},
+  // Rename a day-works folder (job). Open the inline editor…
+  dwRenameAsk(d){ui.dwEdit=d.id;ui.confirm=null;ui.moveDW=null;},
+  // …then save it: rename the job, carry every sheet filed under the old name across to
+  // the new one, and keep any linked project pointing at it. All in the sheets/jobs tables.
+  dwRenameDo(d){const j=(DWDATA.jobs||[]).find(x=>x.id===d.id);if(!j)return;const ti=document.getElementById('dwr-title-'+d.id),ci=document.getElementById('dwr-client-'+d.id);const nt=(ti&&ti.value||'').trim(),nc=(ci&&ci.value||'').trim();if(!nt){toast('Give the job a name');return;}const old=j.title;ui.dwEdit=null;SB.from('jobs').update({title:nt,client:nc||null}).eq('id',d.id).then(r=>{if(r.error){toast('Rename failed: '+(r.error.message||''));return;}const done=()=>{list('projects').filter(p=>p.dwJob===old).forEach(p=>write('projects',p.id,'update',{dwJob:nt}));toast('Renamed to '+nt);if(dwLoad)dwLoad();};if(nt!==old){SB.from('sheets').update({project:nt}).eq('project',old).then(()=>done());}else done();});},
   refreshDW(){dwLoad();},
   dwWeek(d,el){dwExportWeek(d.job,d.week,el);},
   xeroConnect(){const u=(window.DW_CONFIG||{}).SUPABASE_URL;if(u)location.href=u+'/functions/v1/xero-oauth?start=1';},
@@ -1042,7 +1055,7 @@ const actions={
   tsAdd(d){const rows=rowsOf(ui.week,d.e);if(!rows.length)rows.push(blankRow());rows.push(blankRow());saveSheet(ui.week,d.e,rows);ui.focusNext='tsp-'+d.e+'-'+(rows.length-1);},
   tsDel(d){const rows=rowsOf(ui.week,d.e);rows.splice(+d.r,1);saveSheet(ui.week,d.e,rows);},
   ask(d){ui.confirm=d.key;ui.focusNext='cf-'+d.key;},
-  cancel(){ui.confirm=null;ui.edit=null;ui.moveDW=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;delete ui.drafts.eventEdit;},
+  cancel(){ui.confirm=null;ui.edit=null;ui.moveDW=null;ui.dwEdit=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;delete ui.drafts.eventEdit;},
   edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';if(d.key.indexOf('rem/')===0){delete ui.drafts.remEdit;ui.focusNext='remEdit-text';}if(d.key.indexOf('ev/')===0){delete ui.drafts.eventEdit;ui.focusNext='eventEdit-title';}},
   // Turn a diary item into a reminder for whichever director is signed in.
   evRemind(d){const e=S.events[d.id];if(!e)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[e.title||'Diary',e.client].filter(Boolean).join(' · ');const when=e.from?e.from+'T'+(e.time||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});if(when)askNotify();toast('Added to your reminders'+(when?' — pings '+fmtD(e.from)+(e.time?' at '+e.time:''):''));},
@@ -1073,6 +1086,9 @@ const actions={
     if(!pid){pid=uid();write('projects',pid,'set',{name:q.job||'Untitled',client:q.client||'',site:q.site||'',status:'Pricing',lines:[],markup:0,docs:[],notes:[q.notes,q.meetNotes].filter(Boolean).join('\n\n'),created:todayISO()});write('quotes',d.id,'update',{projectId:pid,status:q.status==='New'||(q.status==='Visit booked'&&q.visitDone)?'Pricing':q.status});}
     ui.tab='projects';ui.project=pid;window.scrollTo(0,0);
   },
+  // Turn an enquiry that's really just a task (e.g. "Book scaff tower") into a reminder
+  // for whoever's signed in, then drop it off the enquiries list.
+  quoteToReminder(d){const q=S.quotes[d.id];if(!q)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[q.client,q.job].filter(Boolean).join(' · ')||'Reminder';const when=q.visitDate?q.visitDate+'T'+(q.visitTime||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});write('quotes',d.id,'delete');if(when)askNotify();toast('Moved to your reminders'+(when?' — pings '+fmtD(q.visitDate):''));},
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
   findInvoice(d){ui.tab='invoices';ui.xfind=d.q||'';ui.xlink=null;window.scrollTo(0,0);},
@@ -1098,6 +1114,10 @@ const changes={
     const q=S.quotes[d.id];write('quotes',d.id,'update',{status:v});
     if(v==='Won'&&q&&q.projectId&&(S.projects[q.projectId]||{}).status==='Pricing'){write('projects',q.projectId,'update',{status:'Live'});toast('Won. The project is now Live.');}
   },
+  // Link a day-works folder to one of our projects (sets that project's dwJob to this
+  // folder, and clears it off whichever project was linked before). Also flips the
+  // project to cost-plus so its tally shows. d.job = folder title, v = project id.
+  dwLinkProj(d,v){const title=d.job;list('projects').filter(p=>p.dwJob===title&&p.id!==v).forEach(p=>write('projects',p.id,'update',{dwJob:''}));if(v){const p=S.projects[v];if(p){write('projects',v,'update',{dwJob:title,basis:p.basis||'dayworks'});toast('Linked to '+(p.name||'project'));}}else toast('Unlinked');},
   pf(d,v){write('projects',d.id,'update',{[d.k]:d.k==='markup'?num(v):v});},
   line(d,v){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{lines:(p.lines||[]).map(l=>l.id===d.l?{...l,[d.k]:(d.k==='qty'||d.k==='rate')?num(v):v}:l)});},
   rate(d,v){write('rates',d.id,'update',{[d.k]:d.k==='rate'?num(v):v});},
