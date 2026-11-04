@@ -798,13 +798,26 @@ views.invoices=()=>{
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
   const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
   const projOpts=selId=>[['','— not linked to a job —']].concat(list('projects').sort(byName).map(p=>[p.id,p.name])).map(([v,l])=>`<option value="${esc(v)}"${v===(selId||'')?' selected':''}>${esc(l)}</option>`).join('');
-  const xList=XERO.rows.length?`<ul class="items">${XERO.rows.slice(0,40).map(x=>{
+  const xHref=x=>x.xero_id?`https://go.xero.com/app/invoicing/view/${encodeURIComponent(x.xero_id)}`:'';
+  const xRow=x=>{
     const linked=x.project_id?projName(x.project_id):'';
     const editing=ui.xlink===x.ref;
+    const href=xHref(x);
     const subs=[x.date?fmtD(x.date):'',(x.ref&&x.ref!==x.number)?esc(x.ref):'',linked?'Linked to '+esc(linked):''].filter(Boolean).join(' · ');
-    return `<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.contact?' · '+esc(x.contact):''}${subs?`<div class="sub">${subs}</div>`:''}${editing?`<div class="sub"><select data-chg="xlinkPick" data-ref="${esc(x.ref)}" aria-label="Link this invoice to a job">${projOpts(x.project_id)}</select></div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroLink" data-ref="${esc(x.ref)}">${editing?'Done':x.project_id?'Change job':'Link to job'}</button></div></li>`;
-  }).join('')}</ul>`:empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
-  const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xList}</section>`;
+    return `<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.contact?' · '+esc(x.contact):''}${subs?`<div class="sub">${subs}</div>`:''}${editing?`<div class="sub"><select data-chg="xlinkPick" data-ref="${esc(x.ref)}" aria-label="Link this invoice to a job">${projOpts(x.project_id)}</select></div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroLink" data-ref="${esc(x.ref)}">${editing?'Done':x.project_id?'Change job':'Link to job'}</button>${href?`<a class="btn sm ghost" href="${href}" target="_blank" rel="noopener">Open in Xero</a>`:''}</div></li>`;
+  };
+  const xLinked=XERO.rows.filter(x=>x.project_id);
+  const xFind=String(ui.xfind||'').trim().toLowerCase();
+  const xMatches=xFind?XERO.rows.filter(x=>!x.project_id&&[x.number,x.ref,x.contact].some(f=>String(f||'').toLowerCase().includes(xFind))).slice(0,20):[];
+  let xBody;
+  if(!XERO.rows.length){
+    xBody=empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
+  }else{
+    const linkedList=xLinked.length?`<ul class="items">${xLinked.map(xRow).join('')}</ul>`:`<p class="sub" style="padding:.4rem .2rem">No invoices linked to a job yet. Search below to link one.</p>`;
+    const search=`<div class="panel-b" style="border-top:1px solid var(--line)"><label class="sub" for="xfind">Find an invoice to link <span style="opacity:.7">(by number or client)</span></label><input id="xfind" type="search" data-chg="xfind" value="${esc(ui.xfind||'')}" placeholder="e.g. INV-0042 or Smith" style="width:100%;margin-top:.3rem"${ui.xfind?' autofocus':''}>${xFind?(xMatches.length?`<ul class="items" style="margin-top:.5rem">${xMatches.map(xRow).join('')}</ul>`:`<p class="sub" style="margin-top:.5rem">No invoice matches “${esc(ui.xfind)}”.</p>`):''}</div>`;
+    xBody=linkedList+search;
+  }
+  const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xBody}</section>`;
   const row=i=>{
     const key='invoices/'+i.id;
     if(ui.edit===key)return `<li class="item editing"><form class="form" data-form="invoiceEdit">${invFields('invoiceEdit',i,true)}<div class="go"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
@@ -996,7 +1009,10 @@ const changes={
   cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});},
   // Link (or unlink) a Xero invoice to one of our jobs. Stored on the xero_status
   // row so it survives re-syncs; clears the "invoice due" nudge on that project.
-  xlinkPick(d,v){const row=XERO.rows.find(x=>x.ref===d.ref);if(row)row.project_id=v||null;ui.xlink=null;sb.from('xero_status').update({project_id:v||null}).eq('ref',d.ref).then(r=>{if(r.error){toast('Could not link — try again');xeroLoad();return;}toast(v?'Invoice linked to '+projName(v):'Invoice unlinked');});}
+  xlinkPick(d,v){const row=XERO.rows.find(x=>x.ref===d.ref);if(row)row.project_id=v||null;ui.xlink=null;sb.from('xero_status').update({project_id:v||null}).eq('ref',d.ref).then(r=>{if(r.error){toast('Could not link — try again');xeroLoad();return;}toast(v?'Invoice linked to '+projName(v):'Invoice unlinked');});},
+  // Search box for finding one invoice to link — keeps the wall of historical
+  // invoices hidden; only linked ones and live search matches ever show.
+  xfind(d,v){ui.xfind=v;}
 };
 /* ---------- schedule PHONE alerts (web push) ----------
    Each director turns alerts on once per phone. The subscription is stored in
