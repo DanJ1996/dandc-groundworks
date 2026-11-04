@@ -91,5 +91,9 @@ Deno.serve(async (req) => {
   });
   await db.from("app_secrets").delete().eq("key", "xero_oauth_state");
 
-  return page(`You're connected to <b>${org.tenantName || "your Xero organisation"}</b>. Invoice and payment status will now flow into the Site Office.`);
+  // Bounce straight back into the Site Office's Invoices tab. (A rendered HTML
+  // page would show as raw source — Supabase serves function bodies as text/plain
+  // with nosniff — so a redirect is both cleaner and seamless.) Query before the
+  // hash so the #invoices tab routing still works.
+  return Response.redirect("https://dandcgroundworks.com/office.html?xero=connected#invoices", 302);
 });
