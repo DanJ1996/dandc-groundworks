@@ -1,5 +1,6 @@
 <!doctype html><html data-theme="light"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>D&amp;C Site Office</title>
+<link rel="manifest" href="office.webmanifest"><link rel="apple-touch-icon" href="assets/logo.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Site Office"><meta name="theme-color" content="#273E57">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Poppins:wght@600;700&display=swap">
 <style>
 /* Layout: navy band with the tab rail; one working surface per tab. Each tab reads summary first, then the entry form, then the list it feeds. */
@@ -529,7 +530,7 @@ views.overview=()=>{
 
 views.schedule=()=>{
   const today=todayISO(), wk=ui.schedWeek, thisWk=mondayOf(today), wkEnd=addDays(wk,6);
-  const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="-7" aria-label="Previous week">‹</button><h2>Week of ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="7" aria-label="Next week">›</button>${wk!==thisWk?`<button type="button" class="btn ghost sm" data-act="schedWeek" data-d="0">This week</button>`:''}</div></div>`;
+  const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="-7" aria-label="Previous week">‹</button><h2>Week of ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="7" aria-label="Next week">›</button>${wk!==thisWk?`<button type="button" class="btn ghost sm" data-act="schedWeek" data-d="0">This week</button>`:''}</div><div class="item-act">${pushCtl()}</div></div>`;
   const days=[];for(let i=0;i<7;i++){const day=addDays(wk,i);days.push({day,i,we:i>4,isT:day===today});}
   const cls=d=>`day${d.we?' we':''}${d.isT?' today':''}`;
   const col=iso=>Math.max(0,Math.min(6,dayDiff(iso,wk)));
@@ -953,6 +954,9 @@ const actions={
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
   remPin(d){write('reminders',d.id,'update',{pri:d.pin==='1'?Date.now():0});},
   notifyOn(){askNotify(true);},
+  pushOn(){pushOn();},
+  pushOff(){pushOff();},
+  pushTest(){pushTest();},
   ics(d){const col=d.vkind==='p'?'projects':'quotes';const r=S[col][d.id];if(!r||!r.visitDate)return;const v=asVisit(d.vkind==='p'?'p':'q',r);const txt=icsForVisit(v);if(!txt)return;const nm='site-visit-'+((v.client||'visit').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'visit')+'.ics';dwDownload(new Blob([txt],{type:'text/calendar;charset=utf-8'}),nm);toast('Opening in Calendar…');}
 };
 const changes={
@@ -975,6 +979,61 @@ const changes={
   cwl(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].loc=v;write('crew_hours',d.key,'update',{entries:ents});},
   cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});}
 };
+/* ---------- schedule PHONE alerts (web push) ----------
+   Each director turns alerts on once per phone. The subscription is stored in
+   push_subs; a database trigger (office-push.sql) + edge function
+   (supabase/functions/schedule-notify) then ping every director's phone when
+   anything is added to the schedule — even with the app closed. On an iPhone
+   this only works from the home-screen app (Share → Add to Home Screen). */
+const PUSH={state:'',reg:null};
+const pushIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const pushStandalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}};
+function pushKey(){const b=((window.DW_CONFIG||{}).VAPID_PUBLIC_KEY||'').replace(/-/g,'+').replace(/_/g,'/');const r=atob(b+'='.repeat((4-b.length%4)%4));return Uint8Array.from(r,c=>c.charCodeAt(0));}
+function pushSave(sub){
+  if(!SB||!DWME.id)return Promise.resolve(false);
+  return SB.from('push_subs').upsert({endpoint:sub.endpoint,user_id:DWME.id,sub:sub.toJSON(),device:(pushIOS?'iPhone/iPad':navigator.userAgent).slice(0,120)},{onConflict:'endpoint'}).then(r=>!r.error);
+}
+async function pushInit(){
+  try{
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){PUSH.state=pushIOS&&!pushStandalone()?'ios-install':'unsupported';schedule();return;}
+    PUSH.reg=await navigator.serviceWorker.register('office-sw.js',{scope:'office.html'});
+    const sub=await PUSH.reg.pushManager.getSubscription();
+    PUSH.state=Notification.permission==='denied'?'denied':sub?'on':'off';
+    if(sub)pushSave(sub);   // keep the server copy fresh
+  }catch(e){PUSH.state='unsupported';}
+  schedule();
+}
+async function pushOn(){
+  if(PUSH.state==='ios-install'){toast('On iPhone: tap Share → Add to Home Screen, open Site Office from your home screen, then turn alerts on there.');return;}
+  if(!PUSH.reg){toast('This browser cannot do phone alerts');return;}
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){PUSH.state=perm==='denied'?'denied':'off';schedule();toast('Alerts were not allowed. You can switch them on in your phone settings for Site Office.');return;}
+  PUSH.state='busy';schedule();
+  try{
+    const sub=(await PUSH.reg.pushManager.getSubscription())||await PUSH.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey()});
+    const ok=await pushSave(sub);
+    PUSH.state='on';schedule();
+    toast(ok?'Phone alerts on — you will get a ping when anything is added to the schedule':'Alerts on here, but the server is not set up yet (run office-push.sql)');
+  }catch(e){PUSH.state='off';schedule();toast('Could not turn alerts on: '+((e&&e.message)||'unknown error'));}
+}
+async function pushOff(){
+  try{const sub=PUSH.reg&&await PUSH.reg.pushManager.getSubscription();if(sub){if(SB)await SB.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe();}}catch(e){}
+  PUSH.state='off';schedule();toast('Phone alerts off on this device');
+}
+function pushTest(){
+  if(!SB)return;
+  SB.rpc('push_test').then(r=>toast(r.error?'Test failed — the server side is not set up yet':'Test sent — it should pop up in a few seconds'));
+}
+function pushCtl(){
+  const s=PUSH.state;
+  if(s==='on')return `${pill('good','Phone alerts on')} <button type="button" class="btn ghost sm" data-act="pushTest">Send test</button> <button type="button" class="btn ghost sm" data-act="pushOff">Turn off</button>`;
+  if(s==='off')return `<button type="button" class="btn sm" data-act="pushOn">🔔 Turn on phone alerts</button>`;
+  if(s==='busy')return pill('info','Turning on…');
+  if(s==='ios-install')return `<button type="button" class="btn ghost sm" data-act="pushOn">🔔 Phone alerts: add to Home Screen first</button>`;
+  if(s==='denied')return `<span class="sub">Alerts are blocked — allow notifications for Site Office in your phone settings.</span>`;
+  return '';
+}
+
 /* Dated reminders ping whoever has the Site Office open — both directors see every
    reminder, so you both get the nudge. Browser alerts need permission once, and only
    fire while the app is open (on an iPhone, add the app to your home screen). */
@@ -2437,7 +2496,7 @@ render();
       sb.from('profiles').select('full_name,role').eq('id',s.user.id).single().then(p=>{
         const role=(p.data&&p.data.role)||'crew', email=(s.user.email||'').toLowerCase();
         DWME={id:s.user.id,name:(p.data&&p.data.full_name)||'',role};
-        if(role==='director')connect(p.data);
+        if(role==='director'){connect(p.data);if(!PUSH.state){PUSH.state='checking';pushInit();}}
         else if(!crewStarted){crewStarted=true;crewApp(p.data||{},s.user.id,{lead:role==='lead_crew'||email===LEAD_EMAIL});}
       });
     });
