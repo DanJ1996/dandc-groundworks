@@ -74,12 +74,13 @@ Deno.serve(async (req) => {
         "xero-tenant-id": at.tenant,
         accept: "application/json",
       },
-    }).then((r) => r.json());
+    }).then((r) => r.json()).catch(() => null); // never let a non-JSON Xero reply crash the sync
 
-  // Fetch the newest invoices first (order by Date descending) and keep the sales
-  // ones (ACCREC) in code. page=1 alone comes back OLDEST-first (INV-0001 onwards),
-  // which is not what the office wants to see — most recent is what matters.
-  const res = await api(`Invoices?page=1&order=${encodeURIComponent("Date DESC")}`);
+  // Fetch the first page of invoices and keep the sales ones (ACCREC) in code. We
+  // store each invoice's Date and sort newest-first in the app, so we don't ask
+  // Xero to order (its "order" query 400s and would wipe the whole pull). A single
+  // page of 100 covers the firm's whole book; paginate here if it ever grows past.
+  const res = await api(`Invoices?page=1`);
   if (!res || !Array.isArray(res.Invoices)) {
     return json({ connected: true, synced: 0, fetched: 0, xero_error: res?.Message || res?.Detail || "no invoices returned" });
   }
