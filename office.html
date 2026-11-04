@@ -240,12 +240,10 @@ table.grid{border-collapse:collapse;width:100%}
 .vmark{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
 .cform{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .thanks{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top:1px solid var(--line);color:var(--ink)}
-.sched.gantt td.hcell{height:34px;vertical-align:top;padding:2px}
-.tev{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:1px 0;font-size:.76rem;line-height:1.18;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.sched.gantt td.vcell{vertical-align:top;padding:3px}
+.tev{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 0;font-size:.76rem;line-height:1.18;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
 .tev strong{font-weight:600;display:block}
 .tev .tsub{color:rgba(255,255,255,.85);display:block;font-size:.7rem}
-tr.hourrow{display:none}
-@media(min-width:900px){tr.hourrow{display:table-row}tr.phonevisits{display:none}}
 .slegend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .skey{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
 .skey i{width:14px;height:14px;border-radius:4px;background:var(--c)}
@@ -557,7 +555,7 @@ views.schedule=()=>{
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
-  const visitRow=dayVisits.some(a=>a.length)?`<tr class="phonevisits"><th class="tcol">Visits</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayVisits[i].map(q=>`<div class="vmark" style="--c:var(--info)">${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'')}${q.visitBy?' · '+esc(q.visitBy):''}</div>`).join('')}</td>`).join('')}</tr>`:'';
+  const visitRow=dayVisits.some(a=>a.length)?`<tr><th class="tcol">Visits</th>${days.map((d,i)=>`<td class="jcell vcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayVisits[i].slice().sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).map(q=>`<div class="tev" style="--c:var(--info)"><strong>${esc(q.client||'Visit')}</strong><span class="tsub">${q.visitTime?esc(q.visitTime):''}${q.visitBy?(q.visitTime?' · ':'')+esc(q.visitBy):''}</span>${q.phone?`<span class="tsub"><a href="${esc(telHref(q.phone))}">${esc(q.phone)}</a></span>`:''}${q.site?`<span class="tsub">${esc(q.site)}${mapLink(q.site)}</span>`:''}</div>`).join('')}</td>`).join('')}</tr>`:'';
   // Quote-due deadlines (still unpriced) — markers on the due day.
   const dayDues=days.map(d=>list('quotes').filter(q=>q.due===d.day&&needsPrice(q)));
   const dueRow=dayDues.some(a=>a.length)?`<tr><th class="tcol">Quotes due</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayDues[i].map(q=>`<div class="vmark" style="--c:var(--warn)">${esc(q.client||'')}</div>`).join('')}</td>`).join('')}</tr>`:'';
@@ -567,17 +565,6 @@ views.schedule=()=>{
   // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
   const evs=list('events').filter(e=>e.from&&evEnd(e)>=wk&&e.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))||String(a.title||'').localeCompare(String(b.title||'')));
   const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:'--good',{text:(g?g.name+' · ':'')+evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
-  // Desktop only: a Google-Calendar hour grid. Timed site visits sit at their hour;
-  // jobs, diary, holidays and quote-dues stay in the all-day band above. On a phone
-  // these hour rows are hidden (they'd be cramped) and visits show as the compact row.
-  const H0=7,H1=18, hourLab=h=>h===12?'12pm':h<12?h+'am':(h-12)+'pm';
-  const hourBody=(()=>{let out='';for(let h=H0;h<=H1;h++){
-    const cells=days.map((d,i)=>{
-      const vs=dayVisits[i].filter(q=>{const t=parseInt(String(q.visitTime||'').slice(0,2),10);const hh=isNaN(t)?H0:Math.min(H1,Math.max(H0,t));return hh===h;});
-      return `<td class="hcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${vs.map(q=>`<div class="tev" style="--c:var(--info)"><strong>${esc(q.client||'Visit')}</strong><span class="tsub">${q.visitTime?esc(q.visitTime):''}${q.visitBy?(q.visitTime?' · ':'')+esc(q.visitBy):''}</span>${q.phone?`<span class="tsub"><a href="${esc(telHref(q.phone))}">${esc(q.phone)}</a></span>`:''}${q.site?`<span class="tsub">${esc(q.site)}${mapLink(q.site)}</span>`:''}</div>`).join('')}</td>`;
-    }).join('');
-    out+=`<tr class="hourrow"><th class="tcol">${hourLab(h)}</th>${cells}</tr>`;}
-    return out;})();
   const usedGangs=[...new Set(jobs.map(j=>j.p.gang).concat(evs.map(e=>e.gang)).filter(k=>gangOf(k)))];
   const gangKeys=usedGangs.map(k=>{const g=gangOf(k);return `<span class="skey"><i style="--c:var(${g.c})"></i>${esc(g.name)}</span>`;}).join('')+(!jobs.length||jobs.some(j=>!gangOf(j.p.gang))?`<span class="skey"><i style="--c:var(--accent)"></i>Job</span>`:'');
   const legend=`<div class="slegend">${gangKeys}<span class="skey"><i style="--c:var(--info)"></i>Site visit</span><span class="skey"><i style="--c:var(--warn)"></i>Quote due</span><span class="skey"><i style="--c:var(--good)"></i>Diary</span><span class="skey"><i style="--c:var(--muted)"></i>Off</span></div>`;
@@ -607,7 +594,7 @@ views.schedule=()=>{
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+(h.reason?' · '+esc(h.reason):'')])));
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}</section>`;
   }
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}${hourBody}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a bar across the days to set how long it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a bar across the days to set how long it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
