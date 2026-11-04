@@ -1386,7 +1386,9 @@ let SB=null;                              // Supabase client, set once connected
    which only directors can see (RLS). "Connect to Xero" is a plain navigation to
    the start endpoint, which bounces the director to Xero to approve the link. */
 let XERO={rows:[],loaded:false,busy:false};
-function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>String(b.date||b.updated_at||'').localeCompare(String(a.date||a.updated_at||'')));XERO.loaded=true;schedule();}});}
+// Sort by the invoice date, newest first, with undated invoices LAST — never fall back to
+// updated_at, or old undated invoices (freshly re-synced) would leapfrog the recent dated ones.
+function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>{const da=a.date||'',db=b.date||'';if(da&&db)return db.localeCompare(da);if(da)return -1;if(db)return 1;return 0;});XERO.loaded=true;schedule();}});}
 async function xeroSyncNow(){
   if(!SB||XERO.busy)return;XERO.busy=true;schedule();
   try{
