@@ -221,6 +221,11 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt thead th.picked{box-shadow:inset 0 -4px 0 var(--warn)}
 .sched.gantt tr:not(.jobrow) td[data-sday]{cursor:pointer}
 .sdpanel{border:2px solid var(--accent)}
+.mdov{position:fixed;inset:0;z-index:40;background:rgba(15,24,34,.55);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
+.mdbox{width:100%;max-width:560px;margin:0;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.mdbox textarea{width:100%;min-height:150px;font:inherit}
+.meetnotes{margin-top:6px;padding:8px 10px;border-left:3px solid var(--info);background:color-mix(in srgb,var(--info) 10%,var(--surface));border-radius:4px;font-size:.88rem;white-space:pre-wrap}
+.meetnotes b{display:block;font-size:.72rem;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
 .sdpanel .panel-h .week h3{margin:0 4px}
 .sdsec{font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);padding:12px 16px 2px}
 .sdot{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);margin-top:4px}
@@ -496,7 +501,7 @@ views.overview=()=>{
   list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices']);});
   list('reminders').filter(r=>r.when&&!r.done).forEach(r=>{const d=dayDiff(r.when.slice(0,10),today);if(d<=0)att.push([d,'warn','Reminder · '+(r.owner==='chris'?'Chris':'Dan'),`${r.text} · ${d===0?'today':fmtD(r.when.slice(0,10))} ${r.when.slice(11,16)}`,'reminders']);});
   att.sort((a,b)=>a[0]-b[0]);
-  const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Visit done</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
+  const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Meeting done</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
   const upcoming=visits.filter(q=>q.visitDate>=today);
   // Book a site visit straight from the Overview — against an open enquiry OR an existing job.
   const staffOv=['Dan','Chris'].concat(list('employees').filter(e=>e.active!==false).map(e=>e.name)).filter((x,i,a)=>x&&a.indexOf(x)===i);
@@ -510,7 +515,7 @@ views.overview=()=>{
   const bookForm=(openEnq.length||openJobs.length)
     ?`<form class="panel-b form" data-form="bookVisit">${pickSel}${fld('bookVisit','visitDate','Date',today,{type:'date',attrs:'required'})}${fld('bookVisit','visitTime','Time','',{type:'time'})}${fld('bookVisit','visitBy','Who is going','',{attrs:'list="dl-staff-ov"'})}${fld('bookVisit','visitNotes','Access, what to measure','',{cls:'wide'})}<div class="go"><button class="btn">Book site visit</button></div></form><datalist id="dl-staff-ov">${staffOv.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>`
     :`<div class="panel-b sub">Log an enquiry or add a job first, then you can book a site visit here.</div>`;
-  const diary=dropSec('diary','Site visit diary',upcoming.length?upcoming.length+' booked':'None booked',(upcoming.length?`<ul class="items">${upcoming.map(q=>`<li class="item"><div>${pill(q.visitDate===today?'warn':'good',dayLabel(q.visitDate,today)+(q.visitTime?' '+q.visitTime:''))}</div><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.site||'No site address yet')}${mapLink(q.site)}${q.phone?' · '+esc(q.phone):''}</div>${q.visitNotes?`<div class="sub">${esc(q.visitNotes)}</div>`:''}</div><div class="sub">${esc(q.visitBy||'Unassigned')}</div><div class="item-act"><button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Visit done</button><button type="button" class="btn sm ghost" data-act="ics" data-id="${q.id}" data-vkind="${q.vkind}">Add to calendar</button></div></li>`).join('')}</ul>`:empty('No site visits booked','Book a visit from any open enquiry or job below and it shows here in date order.'))+bookForm+`<div class="panel-b">${goBtn('quotes','Enquiries')}</div>`);
+  const diary=dropSec('diary','Site visit diary',upcoming.length?upcoming.length+' booked':'None booked',(upcoming.length?`<ul class="items">${upcoming.map(q=>`<li class="item"><div>${pill(q.visitDate===today?'warn':'good',dayLabel(q.visitDate,today)+(q.visitTime?' '+q.visitTime:''))}</div><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.site||'No site address yet')}${mapLink(q.site)}${q.phone?' · '+esc(q.phone):''}</div>${q.visitNotes?`<div class="sub">${esc(q.visitNotes)}</div>`:''}</div><div class="sub">${esc(q.visitBy||'Unassigned')}</div><div class="item-act"><button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button><button type="button" class="btn sm ghost" data-act="ics" data-id="${q.id}" data-vkind="${q.vkind}">Add to calendar</button></div></li>`).join('')}</ul>`:empty('No site visits booked','Book a visit from any open enquiry or job below and it shows here in date order.'))+bookForm+`<div class="panel-b">${goBtn('quotes','Enquiries')}</div>`);
   const hb=hoursByProject();
   // An enquiry being priced lives as a "project" record (created by Price it) linked from an
   // open quote — those belong in Enquiries, not Projects. Only show it here once the enquiry is
@@ -597,7 +602,7 @@ views.schedule=()=>{
     const body=
       sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--accent',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}">Open job</button>`);}))+
       sec('Diary',dEvs.map(e=>{const g=gangOf(e.gang);return li(g?g.c:'--good',`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],del('events/'+e.id,'×'));}))+
-      sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':''])))+
+      sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':''],q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+(h.reason?' · '+esc(h.reason):'')])));
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}</section>`;
@@ -736,8 +741,8 @@ views.quotes=()=>{
     const due=!q.due||quoteValue(q)?'':needsPrice(q)?pill(d<0?'bad':d<=7?'warn':'neutral',d<0?'Quote overdue '+(-d)+' days':d===0?'Quote due today':'Quote due '+fmtD(q.due)):`<span class="sub">Quote due ${fmtD(q.due)}</span>`;
     const v=quoteValue(q), linked=q.projectId&&S.projects[q.projectId];
     const contact=[q.phone,q.email].filter(Boolean).map(esc).join(' · ');
-    const visitBtn=visitDue(q)?`<button type="button" class="btn sm" id="qvd-${q.id}" data-act="visitDone" data-id="${q.id}">Visit done</button><button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Change visit</button>`:isOpenQ(q)?`<button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Book site visit</button>`:'';
-    return `<li class="item${v?' quoted':isOpenQ(q)?' unpriced':''}"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked&&num(linked.tender)>0?'tender':linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
+    const visitBtn=visitDue(q)?`<button type="button" class="btn sm" id="qvd-${q.id}" data-act="visitDone" data-id="${q.id}">Meeting done</button><button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Change visit</button>`:isOpenQ(q)?`<button type="button" class="btn sm ghost" id="qv-${q.id}" data-act="edit" data-key="${vkey}">Book site visit</button>`:'';
+    return `<li class="item${v?' quoted':isOpenQ(q)?' unpriced':''}"><div class="item-main"><strong>${esc(q.client)}</strong> · ${esc(q.job)}<div class="sub">${esc(q.workType||'')}${q.site?(q.workType?' · ':'')+esc(q.site)+mapLink(q.site):''}</div><div class="sub">${contact?contact+' · ':''}${esc(q.source||'Enquiry')} ${fmtD(q.received)}</div>${q.notes?`<div class="sub">${esc(q.notes)}</div>`:''}${q.visitDate&&q.visitNotes?`<div class="sub">Visit: ${esc(q.visitNotes)}</div>`:''}${q.meetNotes?`<div class="meetnotes"><b>Meeting notes</b>${esc(q.meetNotes)}</div>`:''}</div><div class="item-act">${visitPill(q,today)}${due}</div>${v?`<div class="item-amt"><span class="amt">${money(v)}</span><span class="sub">${linked&&num(linked.tender)>0?'tender':linked?'from pricing':'estimate'}</span></div>`:''}<div class="item-act"><select id="qs-${q.id}" data-chg="qstatus" data-id="${q.id}" aria-label="Status">${QSTATUS.map(s=>`<option${s===q.status?' selected':''}>${s}</option>`).join('')}</select>${visitBtn}<button type="button" class="btn sm${visitDue(q)?' ghost':''}" id="qp-${q.id}" data-act="priceQuote" data-id="${q.id}">${linked?'Open pricing':'Price it'}</button><button type="button" class="btn sm ghost" id="qe-${q.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
   };
   const listing=`<section class="panel"><div class="panel-h"><h3>Enquiries</h3><div class="item-act"><button type="button" class="btn sm ${ui.quoteFilter==='open'?'':'ghost'}" id="qf-open" data-act="qfilter" data-v="open">Open (${open.length})</button><button type="button" class="btn sm ${ui.quoteFilter==='all'?'':'ghost'}" id="qf-all" data-act="qfilter" data-v="all">All (${all.length})</button></div></div>${shown.length?`<ul class="items">${shown.map(row).join('')}</ul>`:empty(all.length?'No open enquiries':'No enquiries logged yet','Log each call or email as it comes in, book the site visit, then use Price it to build the quote off your rate card.')}${onTender>0?`<div class="listfoot"><span>Out on tender</span><strong>${money(onTender)} <span class="sub">${money(onTender*1.2)} inc VAT</span></strong></div>`:''}</section>`;
   return `<div class="head"><div><h2>Enquiries &amp; quotes</h2><p class="sub">From first call to site visit, price, and decision.</p></div></div><datalist id="dl-staff">${staff.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>${stats}${add}${listing}`;
@@ -927,7 +932,9 @@ const actions={
   ask(d){ui.confirm=d.key;ui.focusNext='cf-'+d.key;},
   cancel(){ui.confirm=null;ui.edit=null;ui.moveDW=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;},
   edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';if(d.key.indexOf('rem/')===0){delete ui.drafts.remEdit;ui.focusNext='remEdit-text';}},
-  visitDone(d){if(d.vkind==='p'){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{visitDone:true});toast('Site visit marked done.');return;}const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDone:true,status:q.status==='Visit booked'?'Pricing':q.status});toast('Visit done. Ready to price.');},
+  visitDone(d){ui.meetDone={kind:d.vkind==='p'?'p':'q',id:d.id};ui.focusNext='meetDone-notes';},
+  meetCancel(){ui.meetDone=null;delete ui.drafts.meetDone;},
+  _visitDoneNow(d){if(d.vkind==='p'){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{visitDone:true});toast('Site visit marked done.');return;}const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDone:true,status:q.status==='Visit booked'?'Pricing':q.status});toast('Visit done. Ready to price.');},
   clearVisit(d){const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,status:q.status==='Visit booked'?'New':q.status});ui.edit=null;delete ui.drafts.visit;},
   del(d){
     const [kind,a,b]=d.key.split('/');ui.confirm=null;
@@ -945,7 +952,7 @@ const actions={
   priceQuote(d){
     const q=S.quotes[d.id];if(!q)return;
     let pid=q.projectId&&S.projects[q.projectId]?q.projectId:'';
-    if(!pid){pid=uid();write('projects',pid,'set',{name:q.job||'Untitled',client:q.client||'',site:q.site||'',status:'Pricing',lines:[],markup:0,docs:[],notes:'',created:todayISO()});write('quotes',d.id,'update',{projectId:pid,status:q.status==='New'||(q.status==='Visit booked'&&q.visitDone)?'Pricing':q.status});}
+    if(!pid){pid=uid();write('projects',pid,'set',{name:q.job||'Untitled',client:q.client||'',site:q.site||'',status:'Pricing',lines:[],markup:0,docs:[],notes:[q.notes,q.meetNotes].filter(Boolean).join('\n\n'),created:todayISO()});write('quotes',d.id,'update',{projectId:pid,status:q.status==='New'||(q.status==='Visit booked'&&q.visitDone)?'Pricing':q.status});}
     ui.tab='projects';ui.project=pid;window.scrollTo(0,0);
   },
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
@@ -1083,6 +1090,24 @@ const forms={
   },
   quote(f){write('quotes',uid(),'set',{...enqBody(f),received:f.received||todayISO(),status:'New',projectId:'',visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,created:todayISO()});toast('Enquiry logged');ui.focusNext='quote-client';return true;},
   quoteEdit(f){const id=ui.edit.split('/')[1];write('quotes',id,'update',enqBody(f));ui.edit=null;return true;},
+  /* "Meeting done" pop-up: stamp the notes onto the enquiry (or job) so they're there when pricing. */
+  meetDone(f){
+    const m=ui.meetDone;if(!m)return true;
+    const notes=String(f.notes||'').trim(), stamp=fmtD(todayISO());
+    const add=(old,t)=>t?((old?old.trim()+'\n\n':'')+'Site meeting '+stamp+': '+t):(old||'');
+    if(m.kind==='p'){
+      const p=S.projects[m.id];if(!p){ui.meetDone=null;return true;}
+      write('projects',m.id,'update',{visitDone:true,notes:add(p.notes,notes)});
+      toast(notes?'Meeting done — notes added to the job':'Meeting marked done');
+    }else{
+      const q=S.quotes[m.id];if(!q){ui.meetDone=null;return true;}
+      write('quotes',m.id,'update',{visitDone:true,meetNotes:add(q.meetNotes,notes),status:q.status==='Visit booked'||q.status==='New'?'Pricing':q.status});
+      const pj=q.projectId&&S.projects[q.projectId];
+      if(pj&&notes)write('projects',q.projectId,'update',{notes:add(pj.notes,notes)});
+      toast(notes?'Meeting done — notes saved on the enquiry, ready to price':'Meeting done. Ready to price.');
+    }
+    ui.meetDone=null;return true;
+  },
   visit(f){const id=ui.edit.split('/')[1],q=S.quotes[id];if(!q||!f.visitDate)return false;write('quotes',id,'update',{visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:f.visitBy.trim(),visitNotes:f.visitNotes.trim(),visitDone:false,status:q.status==='New'?'Visit booked':q.status});ui.edit=null;toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
   bookVisit(f){const ref=f.ref||'',kind=ref.slice(0,1),id=ref.slice(2);if(kind!=='q'&&kind!=='p'){toast('Pick an enquiry or job first');return false;}if(!f.visitDate){toast('Add a date');return false;}const patch={visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:(f.visitBy||'').trim(),visitNotes:(f.visitNotes||'').trim(),visitDone:false};if(kind==='q'){const q=S.quotes[id];if(!q){toast('Pick an enquiry or job first');return false;}write('quotes',id,'update',{...patch,status:q.status==='New'?'Visit booked':q.status});}else{const p=S.projects[id];if(!p){toast('Pick an enquiry or job first');return false;}write('projects',id,'update',patch);}toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
   invoice(f){write('invoices',uid(),'set',invBody(f,false));toast('Invoice added to send');return true;},
@@ -2080,6 +2105,12 @@ function openDW(opts){
   window.scrollTo(0,0);
 }
 function closeDW(){const ov=$('dw-ov');if(!ov)return;ov.classList.remove('show');document.documentElement.style.overflow='';if(dwRefresh)dwRefresh();}
+function meetDoneModal(){
+  const m=ui.meetDone;if(!m)return '';
+  const r=m.kind==='p'?S.projects[m.id]:S.quotes[m.id];if(!r)return '';
+  const who=m.kind==='p'?(r.name||'Job'):(r.client||'Enquiry')+(r.job?' · '+r.job:'');
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="md-h"><div class="panel-h"><h3 id="md-h">Meeting done</h3></div><form class="panel-b form" data-form="meetDone"><p class="sub full" style="margin:0">${esc(who)}${r.site?' · '+esc(r.site):''}</p><label class="f full"><span>Notes from the meeting</span><textarea id="meetDone-notes" name="notes" rows="7" placeholder="What they want, measurements, levels, access, spoil, drainage, anything to price against…">${esc(dv('meetDone','notes',''))}</textarea></label><p class="sub full" style="margin:0">${m.kind==='p'?'Saved onto the job notes.':'Saved onto the enquiry, ready for you to price.'} Leave it blank to just mark it done.</p><div class="go"><button class="btn">Save &amp; mark done</button><button type="button" class="btn ghost" data-act="meetCancel">Cancel</button></div></form></section></div>`;
+}
 function render(){
   const ae=document.activeElement;let keep=null;
   if(ae&&ae.id&&(view.contains(ae)||tabsEl.contains(ae)))keep={id:ae.id,value:ae.value,s:null,e:null,text:/^(INPUT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=='checkbox'&&ae.type!=='file'};
@@ -2089,7 +2120,7 @@ function render(){
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
-  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]();
+  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal();
   sx.forEach(([id,l])=>{const el=$(id);if(el)el.scrollLeft=l;});
   if(ui.focusNext){const el=$(ui.focusNext);ui.focusNext=null;if(el){el.focus({preventScroll:el.id==='sd-close'});if(el.id==='sd-close'){const pn=$('sd-panel');if(pn)pn.scrollIntoView({block:'start',behavior:'smooth'});}ui.skipKeep=null;return;}}
   if(keep){const el=$(keep.id);if(el){if(keep.text&&ui.skipKeep!==keep.id)el.value=keep.value;el.focus({preventScroll:true});if(keep.text&&keep.s!=null){try{el.setSelectionRange(keep.s,keep.e);}catch(e){}}}}
@@ -2157,6 +2188,9 @@ function endJobDrag(){
   schedule();
 }
 view.addEventListener('pointerup',endJobDrag);
+/* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
+view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;schedule();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.meetDone){ui.meetDone=null;schedule();}});
 /* tap an empty / visit / quote / off / hour cell on the schedule → open that day in full */
 view.addEventListener('click',e=>{
   if(e.target.closest('a,button,tr.jobrow'))return;
