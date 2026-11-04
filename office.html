@@ -746,6 +746,26 @@ views.quotes=()=>{
   return `<div class="head"><div><h2>Enquiries &amp; quotes</h2><p class="sub">From first call to site visit, price, and decision.</p></div></div><datalist id="dl-staff">${staff.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>${stats}${add}${listing}`;
 };
 
+// ---- Cost-plus / day-works running totals -----------------------------------
+// A project marked basis='dayworks' is billed from the day-works sheets rather than
+// a fixed tender. Day-works sheets are filed by JOB NAME (sheet.project), the same
+// string the Dayworks tab uses, so we tie them to a project by matching its name.
+// Returns £ logged on sheets, or null if the Dayworks data hasn't loaded yet.
+function dwLoggedFor(p){
+  if(!DWDATA.loaded)return null;
+  const nm=(p.name||'').trim().toLowerCase();if(!nm)return 0;
+  return DWDATA.sheets.reduce((s,x)=>s+(String(x.project||'').trim().toLowerCase()===nm?num(x.grand):0),0);
+}
+// £ invoiced against a job = total of the Xero invoices linked to it (ex VAT).
+function xeroInvoicedFor(pid){return XERO.rows.filter(x=>x.project_id===pid).reduce((s,x)=>s+num(x.total),0);}
+// One compact "£X invoiced · £Y logged · £Z to bill" tally for a cost-plus job.
+function costPlusTally(p){
+  const logged=dwLoggedFor(p),inv=xeroInvoicedFor(p.id);
+  const toBill=logged==null?null:logged-inv;
+  const sub=(logged==null?'day works loading…':money(logged)+' logged')+(toBill!=null&&toBill>0.5?' · '+money(toBill)+' to bill':(logged!=null?' · all billed':''));
+  return `<span class="amt">${money(inv)} invoiced</span><span class="sub">${sub}</span>`;
+}
+
 views.projects=()=>{
   const p=ui.project&&S.projects[ui.project];
   if(p)return vProject({...p,id:ui.project});
@@ -762,6 +782,9 @@ views.projects=()=>{
   const hasInv=q=>!!xByProj[q.id]||(invBy[q.id]||0)>0;
   // Three sections: live jobs still running, jobs part-billed on interim/valuation (still on site),
   // and finished jobs. Interim and Completed live in their own collapsible dropdowns.
+  // If any job is on a day-works basis, make sure the Dayworks figures are loaded so
+  // its running "logged vs invoiced" tally can show (dwLoad sets loaded + re-renders).
+  if(!DWDATA.loaded&&typeof dwLoad==='function'&&all.some(p=>p.basis==='dayworks'))dwLoad();
   const done=all.filter(p=>p.status==='Complete').sort(byName);
   const interim=all.filter(p=>p.status!=='Complete'&&p.interim).sort(byName);
   const active=all.filter(p=>p.status!=='Complete'&&!p.interim);
@@ -772,7 +795,10 @@ views.projects=()=>{
     if(sec==='done')acts=`<button type="button" class="btn sm ghost" data-act="projReopen" data-id="${q.id}">Reopen</button>`;
     else if(sec==='interim')acts=`<button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button><button type="button" class="btn sm ghost" data-act="projActive" data-id="${q.id}">Back to current</button>`;
     else if(hasInv(q))acts=`<button type="button" class="btn sm ghost" data-act="projInterim" data-id="${q.id}">Interim</button><button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button>`;
-    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt"><span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span></div><div class="item-amt"><span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span></div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
+    const isDW=q.basis==='dayworks';
+    const amtMain=isDW?`<span class="amt">Day works</span><span class="sub">cost-plus · ${hrs(h.h)} h · ${money(h.cost)} labour</span>`:`<span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span>`;
+    const amtRight=isDW?costPlusTally(q):`<span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
+    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
   const activeRows=active.map(q=>projRow(q,'active')).join('');
   const interimSec=interim.length?dropSec('interimProjects','Interim — part invoiced','<span class="sub">'+interim.length+' on the go</span>',`<ul class="items">${interim.map(q=>projRow(q,'interim')).join('')}</ul>`):'';
   const doneSec=done.length?dropSec('doneProjects','Completed','<span class="sub">'+done.length+' finished</span>',`<ul class="items">${done.map(q=>projRow(q,'done')).join('')}</ul>`):'';
@@ -782,8 +808,17 @@ views.projects=()=>{
 function vProject(p){
   const t=projTotals(p), h=hoursByProject()[p.id]||{h:0,cost:0};
   const inv=list('invoices').filter(i=>i.projectId===p.id), invNet=sum(inv.map(i=>i.net)), paid=sum(inv.filter(i=>i.paid).map(i=>i.net));
+  // Cost-plus job: pull in the day-works figures (lazy-load if needed) and the Xero
+  // invoiced/paid totals so the whole money picture sits on the job itself.
+  const isDW=p.basis==='dayworks';
+  if(isDW&&!DWDATA.loaded&&typeof dwLoad==='function')dwLoad();
+  const dwLogged=isDW?dwLoggedFor(p):null;
+  const xInv=isDW?xeroInvoicedFor(p.id):0;
+  const xPaid=isDW?XERO.rows.filter(x=>x.project_id===p.id).reduce((s,x)=>s+num(x.amount_paid),0):0;
+  const cpToBill=dwLogged==null?null:dwLogged-xInv;
+  const cpKv=isDW?`<div><span class="sub">Day works logged</span><strong>${dwLogged==null?'…':money(dwLogged)}</strong></div><div><span class="sub">Invoiced (Xero)</span><strong>${money(xInv)}</strong></div><div><span class="sub">Still to bill</span><strong>${cpToBill==null?'…':money(Math.max(0,cpToBill))}</strong></div><div><span class="sub">Paid (Xero)</span><strong>${money(xPaid)}</strong></div>`:'';
   const pf=(k,label,o={})=>`<label class="f ${o.cls||''}"><span>${label}</span><input id="pf-${k}" value="${esc(p[k]??'')}" data-chg="pf" data-id="${p.id}" data-k="${k}" ${o.attrs||''}></label>`;
-  const details=`<section class="panel"><div class="panel-h"><h3>Details</h3><div class="item-act">${p.site?mapLink(p.site):''}${del('projects/'+p.id,'Delete project')}</div></div><div class="panel-b form">${pf('name','Project',{cls:'wide'})}${pf('client','Client')}${pf('site','Site',{attrs:'data-addr autocomplete="off"'})}<label class="f"><span>Stage</span><select id="pf-status" data-chg="pf" data-id="${p.id}" data-k="status">${PSTATUS.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}</select></label><label class="f"><span>Start date</span><input id="pf-startDate" type="date" value="${esc(p.startDate||'')}" data-chg="pf" data-id="${p.id}" data-k="startDate"></label><label class="f"><span>End date</span><input id="pf-endDate" type="date" value="${esc(p.endDate||'')}" data-chg="pf" data-id="${p.id}" data-k="endDate"></label><label class="f"><span>Gang on this job</span><select id="pf-gang" data-chg="pf" data-id="${p.id}" data-k="gang"><option value="">Unassigned</option>${GANGS.map(g=>`<option value="${g.k}"${p.gang===g.k?' selected':''}>${esc(g.name)}</option>`).join('')}</select></label><label class="f full"><span>Notes</span><textarea id="pf-notes" data-chg="pf" data-id="${p.id}" data-k="notes">${esc(p.notes||'')}</textarea></label></div><div class="panel-b kv"><div><span class="sub">Priced</span><strong>${money(t.total)}</strong></div><div><span class="sub">Tender</span><strong>${p.tender?money(num(p.tender)):'—'}</strong></div><div><span class="sub">Invoiced</span><strong>${money(invNet)}</strong></div><div><span class="sub">Paid</span><strong>${money(paid)}</strong></div><div><span class="sub">Labour to date</span><strong>${money(h.cost)}</strong></div><div><span class="sub">Hours booked</span><strong>${hrs(h.h)}</strong></div></div></section>`;
+  const details=`<section class="panel"><div class="panel-h"><h3>Details</h3><div class="item-act">${p.site?mapLink(p.site):''}${del('projects/'+p.id,'Delete project')}</div></div><div class="panel-b form">${pf('name','Project',{cls:'wide'})}${pf('client','Client')}${pf('site','Site',{attrs:'data-addr autocomplete="off"'})}<label class="f"><span>Stage</span><select id="pf-status" data-chg="pf" data-id="${p.id}" data-k="status">${PSTATUS.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('')}</select></label><label class="f"><span>Billing basis</span><select id="pf-basis" data-chg="pf" data-id="${p.id}" data-k="basis"><option value=""${!p.basis?' selected':''}>Fixed price / tender</option><option value="dayworks"${p.basis==='dayworks'?' selected':''}>Day works / cost-plus</option></select></label><label class="f"><span>Start date</span><input id="pf-startDate" type="date" value="${esc(p.startDate||'')}" data-chg="pf" data-id="${p.id}" data-k="startDate"></label><label class="f"><span>End date</span><input id="pf-endDate" type="date" value="${esc(p.endDate||'')}" data-chg="pf" data-id="${p.id}" data-k="endDate"></label><label class="f"><span>Gang on this job</span><select id="pf-gang" data-chg="pf" data-id="${p.id}" data-k="gang"><option value="">Unassigned</option>${GANGS.map(g=>`<option value="${g.k}"${p.gang===g.k?' selected':''}>${esc(g.name)}</option>`).join('')}</select></label><label class="f full"><span>Notes</span><textarea id="pf-notes" data-chg="pf" data-id="${p.id}" data-k="notes">${esc(p.notes||'')}</textarea></label></div><div class="panel-b kv">${isDW?cpKv:`<div><span class="sub">Priced</span><strong>${money(t.total)}</strong></div><div><span class="sub">Tender</span><strong>${p.tender?money(num(p.tender)):'—'}</strong></div><div><span class="sub">Invoiced</span><strong>${money(invNet)}</strong></div><div><span class="sub">Paid</span><strong>${money(paid)}</strong></div>`}<div><span class="sub">Labour to date</span><strong>${money(h.cost)}</strong></div><div><span class="sub">Hours booked</span><strong>${hrs(h.h)}</strong></div></div></section>`;
   const rates=list('rates'), cats=[...new Set(rates.map(r=>r.cat||'Other'))].sort();
   const lines=p.lines||[];
   const ln=(l,k,cls,extra='')=>`<input id="ln-${l.id}-${k}" class="${cls}" value="${esc(nf(l[k]))}" data-chg="line" data-id="${p.id}" data-l="${l.id}" data-k="${k}" aria-label="${k}" ${extra}>`;
