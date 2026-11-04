@@ -52,6 +52,10 @@ create table if not exists public.xero_status (
 );
 alter table public.xero_status enable row level security;
 revoke all on public.xero_status from anon, authenticated;
+-- The RLS policy below only filters ROWS; the base SELECT privilege must also be
+-- granted or PostgREST denies the query outright (the app then shows "Not linked to
+-- Xero yet"). RLS still limits what they see to directors via the policy.
+grant select on public.xero_status to authenticated;
 drop policy if exists xero_status_read on public.xero_status;
 create policy xero_status_read on public.xero_status for select
   using (public.is_director());
