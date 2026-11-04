@@ -2447,10 +2447,12 @@ render();
     const loadMaterials=()=>sb.rpc('crew_materials').then(r=>{const n=[...new Set((r.data||[]).map(m=>String((m&&(m.desc||m.name))||m||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));if(n.length)DW_CREW_MATS=n;}).catch(()=>{});
 
     const setHint=msg=>{const h=$('c-hint');if(h)h.textContent=msg!=null?msg:(saving?'Saving…':'Saved automatically');};
-    function saveHours(){
+    function saveHours(submit){
       saving=true;setHint();
       const entries=cS.entries.filter(e=>num(e.h)>0||(e.loc||'').trim()).map(e=>({d:e.d,loc:e.loc||'',h:num(e.h)}));
-      return sb.from('office_docs').upsert({collection:'crew_hours',doc_id:docId(cui.week),data:{uid,name:(profile&&profile.full_name)||'',week:cui.week,entries},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
+      const data={uid,name:(profile&&profile.full_name)||'',week:cui.week,entries};
+      if(submit)data.submittedAt=new Date().toISOString();/* flags the office's "hours submitted" phone alert */
+      return sb.from('office_docs').upsert({collection:'crew_hours',doc_id:docId(cui.week),data,updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
         .then(r=>{saving=false;if(r.error){setHint('Not saved — check your connection');toast('Hours not saved. Check your connection.');return false;}setHint('Saved');return true;});
     }
     const queueSave=()=>{clearTimeout(saveT);saving=true;setHint();saveT=setTimeout(saveHours,700);};
@@ -2460,7 +2462,7 @@ render();
     const isWeekend=()=>{const d=(parse(todayISO()).getUTCDay()+6)%7;return d===4||d===5;};
     function submitHours(){
       clearTimeout(saveT);
-      saveHours().then(ok=>{if(!ok)return;cui.sent=todayISO();toast(isWeekend()?WEEKEND_MSG:'Hours sent. Thanks.');render();});
+      saveHours(true).then(ok=>{if(!ok)return;cui.sent=todayISO();toast(isWeekend()?WEEKEND_MSG:'Hours sent. Thanks.');render();});
     }
 
     function updateTotals(){

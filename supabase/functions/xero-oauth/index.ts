@@ -12,10 +12,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const REDIRECT = `${env("SUPABASE_URL")}/functions/v1/xero-oauth`;
-// Access to invoices, plus offline_access for a refresh token. (Xero rejected the
-// granular ".read" scope for this app, so we use the standard accounting.transactions
-// scope — our code only ever READS invoices, it never writes anything to Xero.)
-const SCOPES = "offline_access accounting.transactions";
+// Read-only access to invoices + their payments, plus offline_access for a refresh
+// token. This app was created after 2 Mar 2026, so Xero NO LONGER allows the old broad
+// "accounting.transactions" scope — new apps must use the granular scopes. We only ever
+// READ, so we use the ".read" variants (never writes anything to Xero).
+const SCOPES = "offline_access accounting.invoices.read accounting.payments.read";
 const BACK = "https://dandcgroundworks.com/office.html#invoices";
 
 const sb = () => createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
