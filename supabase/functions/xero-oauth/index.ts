@@ -12,8 +12,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
 const REDIRECT = `${env("SUPABASE_URL")}/functions/v1/xero-oauth`;
-// Read-only access to invoices + contacts, plus offline_access for a refresh token.
-const SCOPES = "openid profile email accounting.transactions.read accounting.contacts.read offline_access";
+// Read-only access to invoices, plus offline_access for a refresh token. (The
+// invoice payload already carries the contact name, so no contacts scope needed.)
+const SCOPES = "offline_access accounting.transactions.read";
 const BACK = "https://dandcgroundworks.com/office.html#invoices";
 
 const sb = () => createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
