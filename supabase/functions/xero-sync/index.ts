@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
+  try {
   const db = admin();
 
   // Only a logged-in director may sync. The user's JWT arrives in Authorization.
@@ -105,7 +106,7 @@ Deno.serve(async (req) => {
     const paidDate = (inv.Payments && inv.Payments.length)
       ? inv.Payments.map((p: { Date: string }) => xdate(p.Date)).filter(Boolean).sort().pop() ?? null
       : null;
-    await db.from("xero_status").upsert({
+    const { error: upErr } = await db.from("xero_status").upsert({
       ref,
       kind: "invoice",
       xero_id: inv.InvoiceID,
@@ -119,7 +120,14 @@ Deno.serve(async (req) => {
       paid_date: paidDate,
       updated_at: new Date().toISOString(),
     });
+    // Surface a save problem (e.g. a missing column / stale schema cache) instead
+    // of silently reporting success — the office can then show the real reason.
+    if (upErr) return json({ connected: true, synced: n, fetched: res.Invoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
     n++;
   }
   return json({ connected: true, synced: n, fetched: res.Invoices.length });
+  } catch (e) {
+    // Never 500 — hand the real message back so the office can show what broke.
+    return json({ connected: true, synced: 0, fetched: 0, xero_error: "crash: " + ((e as Error)?.message || String(e)) });
+  }
 });

@@ -1348,15 +1348,23 @@ let SB=null;                              // Supabase client, set once connected
    the start endpoint, which bounces the director to Xero to approve the link. */
 let XERO={rows:[],loaded:false,busy:false};
 function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>String(b.date||b.updated_at||'').localeCompare(String(a.date||a.updated_at||'')));XERO.loaded=true;schedule();}});}
-function xeroSyncNow(){
+async function xeroSyncNow(){
   if(!SB||XERO.busy)return;XERO.busy=true;schedule();
-  SB.functions.invoke('xero-sync',{body:{}}).then(r=>{
-    XERO.busy=false;const d=r&&r.data;
-    if(r&&r.error){toast('Xero sync failed — try again');schedule();return;}
+  try{
+    const r=await SB.functions.invoke('xero-sync',{body:{}});
+    XERO.busy=false;
+    if(r&&r.error){
+      // Pull the real reason out of the error response so we don't just say "failed".
+      let m='';try{const c=r.error.context;if(c&&c.json){const b=await c.json();m=b.error||b.reason||b.xero_error||'';}}catch(e){}
+      toast(m==='not-signed-in'?'Your session timed out — sign out and back in':m==='directors-only'?'Directors only — sign in as a director':'Xero sync failed'+(m?' — '+m:' — try again'));
+      schedule();return;
+    }
+    const d=r&&r.data;
     if(d&&d.connected===false){toast(d.reason==='not-connected'?'Connect to Xero first':'Xero needs reconnecting — tap Connect');schedule();return;}
+    if(d&&d.xero_error){toast('Xero: '+d.xero_error);xeroLoad();return;}
     toast('Synced '+((d&&d.synced)||0)+' invoice'+(((d&&d.synced)===1)?'':'s')+' from Xero');
     xeroLoad();
-  }).catch(()=>{XERO.busy=false;toast('Xero sync failed — try again');schedule();});
+  }catch(e){XERO.busy=false;toast('Xero sync failed — '+((e&&e.message)||'try again'));schedule();}
 }
 let DWME={id:'',name:'',role:'crew'};     // signed-in user (for created_by / £ gating)
 let dwRefresh=null;                        // reload the sheet list for whichever view is open
