@@ -807,7 +807,9 @@ views.invoices=()=>{
   const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend)+xDraftSum)}</span><span class="sub">${toSend.length+xDraft.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting)+xAwaitSum)}</span><span class="sub">${awaiting.length+xSent.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM)+xPaidSum)}</span><span class="sub">${paidM.length+xPaidM.length} received</span></div></div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
   const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
-  const projOpts=selId=>[['','— not linked to a job —']].concat(list('projects').sort(byName).map(p=>[p.id,p.name])).map(([v,l])=>`<option value="${esc(v)}"${v===(selId||'')?' selected':''}>${esc(l)}</option>`).join('');
+  // Show the client alongside the job so near-identical descriptions (two "Patio works",
+  // two "Full External Works") can be told apart when linking an invoice.
+  const projOpts=selId=>[['','— not linked to a job —']].concat(list('projects').sort(byName).map(p=>[p.id,p.name+(p.client?' · '+p.client:'')])).map(([v,l])=>`<option value="${esc(v)}"${v===(selId||'')?' selected':''}>${esc(l)}</option>`).join('');
   const xHref=x=>x.xero_id?`https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(x.xero_id)}`:'';
   const xRow=x=>{
     const linked=x.project_id?projName(x.project_id):'';
@@ -823,19 +825,23 @@ views.invoices=()=>{
   // the full phrase OR any distinctive word of it.
   const xStop=new Set(['developments','development','ltd','limited','the','and','group','services','construction','builders','building']);
   const xTokens=xFind?xFind.split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!xStop.has(t)):[];
-  const xMatches=xFind?XERO.rows.filter(x=>{if(x.project_id)return false;const hay=[x.number,x.ref,x.contact].map(f=>String(f||'').toLowerCase()).join(' ');return hay.includes(xFind)||xTokens.some(t=>hay.includes(t));}).slice(0,20):[];
+  // Search shows matches whether or not they're linked, so an invoice you just linked stays
+  // on screen (now marked "Linked to …") instead of vanishing the moment you tie it to a job.
+  const xMatches=xFind?XERO.rows.filter(x=>{const hay=[x.number,x.ref,x.contact].map(f=>String(f||'').toLowerCase()).join(' ');return hay.includes(xFind)||xTokens.some(t=>hay.includes(t));}).slice(0,20):[];
   let xBody;
   if(!XERO.rows.length){
     xBody=empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
   }else{
-    const linkedList=xLinked.length?`<ul class="items">${xLinked.map(xRow).join('')}</ul>`:'';
-    // When not searching, show the most recent invoices so the list is never blank;
-    // searching narrows to matches. Linked ones are shown above and excluded here.
+    // Not searching: show the invoices already tied to jobs up top (their own clear section),
+    // then the search box, then the most recent unlinked invoices so the list is never blank.
+    // Searching: show ONLY the matches (linked or not) so nothing is shown twice and a freshly
+    // linked invoice stays put with its "Linked to …" label rather than disappearing.
     const xRecent=XERO.rows.filter(x=>!x.project_id).slice(0,15);
     const results=xFind
       ?(xMatches.length?`<ul class="items" style="margin-top:.5rem">${xMatches.map(xRow).join('')}</ul>`:`<p class="sub" style="margin-top:.5rem">No invoice matches “${esc(ui.xfind)}”.</p>`)
-      :`<p class="sub" style="margin:.6rem 0 .2rem">${xLinked.length?'Other recent invoices':'Your recent invoices'} — newest first. Tap Link to job to tie one to a project.</p><ul class="items">${xRecent.map(xRow).join('')}</ul>`;
+      :`<p class="sub" style="margin:.6rem 0 .2rem">Recent invoices — newest first. Tap Link to job to tie one to a project.</p><ul class="items">${xRecent.map(xRow).join('')}</ul>`;
     const search=`<div class="panel-b" style="border-top:1px solid var(--line)"><label class="sub" for="xfind">Find an invoice to link <span style="opacity:.7">(by number or client)</span></label><input id="xfind" type="search" data-chg="xfind" value="${esc(ui.xfind||'')}" placeholder="e.g. INV-0042 or Smith" style="width:100%;margin-top:.3rem"${ui.xfind?' autofocus':''}>${results}</div>`;
+    const linkedList=(!xFind&&xLinked.length)?`<div class="panel-b"><p class="sub" style="margin:.2rem 0 .4rem"><strong>Linked to jobs</strong> — ${xLinked.length} invoice${xLinked.length>1?'s':''}</p><ul class="items">${xLinked.map(xRow).join('')}</ul></div>`:'';
     xBody=linkedList+search;
   }
   const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xBody}</section>`;
