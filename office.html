@@ -497,10 +497,10 @@ views.overview=()=>{
   // remind to raise the invoice. Skips pricing stubs (an enquiry still being priced) and clears
   // once any invoice is linked to the project or it's marked Complete.
   const xeroLinked=pid=>XERO.rows.some(x=>x.project_id===pid);
-  list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id)&&!xeroLinked(p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices']);});
+  list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id)&&!xeroLinked(p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices',null,null,p.client||p.name]);});
   list('reminders').filter(r=>r.when&&!r.done).forEach(r=>{const d=dayDiff(r.when.slice(0,10),today);if(d<=0)att.push([d,'warn','Reminder · '+(r.owner==='chris'?'Chris':'Dan'),`${r.text} · ${d===0?'today':fmtD(r.when.slice(0,10))} ${r.when.slice(11,16)}`,'reminders']);});
   att.sort((a,b)=>a[0]-b[0]);
-  const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Meeting done</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
+  const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Meeting done</button>`:''}${a[7]?`<button type="button" class="btn sm" data-act="findInvoice" data-q="${esc(a[7])}">Find invoice</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
   const upcoming=visits.filter(q=>q.visitDate>=today);
   // Book a site visit straight from the Overview — against an open enquiry OR an existing job.
   const staffOv=['Dan','Chris'].concat(list('employees').filter(e=>e.active!==false).map(e=>e.name)).filter((x,i,a)=>x&&a.indexOf(x)===i);
@@ -808,7 +808,12 @@ views.invoices=()=>{
   };
   const xLinked=XERO.rows.filter(x=>x.project_id);
   const xFind=String(ui.xfind||'').trim().toLowerCase();
-  const xMatches=xFind?XERO.rows.filter(x=>!x.project_id&&[x.number,x.ref,x.contact].some(f=>String(f||'').toLowerCase().includes(xFind))).slice(0,20):[];
+  // Ignore generic company words so pasting a whole client name ("Atlantis Developments/
+  // Bayview Developments Ltd") still matches a "Bayview Developments Ltd" contact. We match
+  // the full phrase OR any distinctive word of it.
+  const xStop=new Set(['developments','development','ltd','limited','the','and','group','services','construction','builders','building']);
+  const xTokens=xFind?xFind.split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!xStop.has(t)):[];
+  const xMatches=xFind?XERO.rows.filter(x=>{if(x.project_id)return false;const hay=[x.number,x.ref,x.contact].map(f=>String(f||'').toLowerCase()).join(' ');return hay.includes(xFind)||xTokens.some(t=>hay.includes(t));}).slice(0,20):[];
   let xBody;
   if(!XERO.rows.length){
     xBody=empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
@@ -984,6 +989,8 @@ const actions={
     ui.tab='projects';ui.project=pid;window.scrollTo(0,0);
   },
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
+  // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
+  findInvoice(d){ui.tab='invoices';ui.xfind=d.q||'';ui.xlink=null;window.scrollTo(0,0);},
   useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
   closeProject(){ui.project=null;ui.confirm=null;},
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
