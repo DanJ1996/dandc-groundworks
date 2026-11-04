@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
       kind: "invoice",
       xero_id: inv.InvoiceID,
       number: inv.InvoiceNumber || "",
+      contact: (inv.Contact && inv.Contact.Name) || "",
       status: inv.Status || "",
       total: inv.Total ?? 0,
       amount_due: inv.AmountDue ?? 0,

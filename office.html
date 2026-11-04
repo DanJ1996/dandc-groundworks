@@ -322,7 +322,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true},tsGridOpen:false};
+const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -496,7 +496,8 @@ views.overview=()=>{
   // A job's schedule has run out (end date reached) but nothing's been invoiced against it yet —
   // remind to raise the invoice. Skips pricing stubs (an enquiry still being priced) and clears
   // once any invoice is linked to the project or it's marked Complete.
-  list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices']);});
+  const xeroLinked=pid=>XERO.rows.some(x=>x.project_id===pid);
+  list('projects').filter(p=>{if(p.status==='Complete'||!p.endDate||p.endDate>today)return false;const q=qByProj[p.id];if(q&&q.status!=='Won')return false;return !inv.some(i=>i.projectId===p.id)&&!xeroLinked(p.id);}).forEach(p=>{const d=dayDiff(p.endDate,today);att.push([d,d<-3?'bad':'warn','Invoice due — job finished',`${p.name}${p.client?' · '+p.client:''} · finished ${fmtD(p.endDate)}`,'invoices']);});
   list('reminders').filter(r=>r.when&&!r.done).forEach(r=>{const d=dayDiff(r.when.slice(0,10),today);if(d<=0)att.push([d,'warn','Reminder · '+(r.owner==='chris'?'Chris':'Dan'),`${r.text} · ${d===0?'today':fmtD(r.when.slice(0,10))} ${r.when.slice(11,16)}`,'reminders']);});
   att.sort((a,b)=>a[0]-b[0]);
   const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Meeting done</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','New enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
@@ -520,6 +521,8 @@ views.overview=()=>{
   // Won, matching the Projects tab.
   const live=list('projects').filter(p=>{if(p.status==='Complete')return false;const q=qByProj[p.id];return !q||q.status==='Won';}).sort(byName);
   const invBy={};inv.forEach(i=>{if(i.projectId)invBy[i.projectId]=(invBy[i.projectId]||0)+num(i.net);});
+  // Xero invoices linked to a job count toward that job's invoiced total too.
+  XERO.rows.forEach(x=>{if(x.project_id)invBy[x.project_id]=(invBy[x.project_id]||0)+num(x.total);});
   const ovTot=live.reduce((t,p)=>{const h=hb[p.id]||{h:0,cost:0};t.priced+=num(p.tender)||projTotals(p).total;t.inv+=invBy[p.id]||0;t.cost+=h.cost;t.h+=h.h;return t;},{priced:0,inv:0,cost:0,h:0});
   const projBody=live.length?`<div class="scroll-x" id="sx-ov"><table class="grid" style="min-width:620px"><thead><tr><th>Project</th><th>Stage</th><th class="n">Priced</th><th class="n">Invoiced</th><th class="n">Labour to date</th><th class="n">Hours</th></tr></thead><tbody>${live.map(p=>{const h=hb[p.id]||{h:0,cost:0};return `<tr><td><button type="button" class="link" data-act="openProject" data-id="${p.id}">${esc(p.name)}</button><div class="sub">${esc(p.client||'')}</div></td><td>${pill(projPill(p.status),p.status||'Pricing')}${p.status==='Ready to start'?`<div class="startrow">${p.startDate?pill('good','Starts '+fmtD(p.startDate)):pill('warn','Set start date')}</div>`:''}</td><td class="n">${p.tender?money(num(p.tender)):money(projTotals(p).total)}</td><td class="n">${money(invBy[p.id]||0)}</td><td class="n">${money(h.cost)}</td><td class="n">${hrs(h.h)}</td></tr>`;}).join('')}</tbody><tfoot><tr class="tot"><th>Total</th><td></td><td class="n">${money(ovTot.priced)}</td><td class="n">${money(ovTot.inv)}</td><td class="n">${money(ovTot.cost)}</td><td class="n">${hrs(ovTot.h)}</td></tr></tfoot></table></div><div class="panel-b">${goBtn('projects','All projects')}</div>`:empty('No projects yet','Add a project to price it off the rate card and attach its drawings.',goBtn('projects','Add a project'));
   const projects=dropSec('projects','Current projects'+(live.length?' <span class="sub">'+live.length+' on</span>':''),`Priced <strong>${money(ovTot.priced)}</strong> · Invoiced <strong>${money(ovTot.inv)}</strong>`,projBody);
@@ -791,7 +794,13 @@ views.invoices=()=>{
   const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM))}</span><span class="sub">${paidM.length} received</span></div></div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
   const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
-  const xList=XERO.rows.length?`<ul class="items">${XERO.rows.slice(0,40).map(x=>`<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.ref&&x.ref!==x.number?`<div class="sub">${esc(x.ref)}</div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div></li>`).join('')}</ul>`:empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
+  const projOpts=selId=>[['','— not linked to a job —']].concat(list('projects').sort(byName).map(p=>[p.id,p.name])).map(([v,l])=>`<option value="${esc(v)}"${v===(selId||'')?' selected':''}>${esc(l)}</option>`).join('');
+  const xList=XERO.rows.length?`<ul class="items">${XERO.rows.slice(0,40).map(x=>{
+    const linked=x.project_id?projName(x.project_id):'';
+    const editing=ui.xlink===x.ref;
+    const subs=[(x.ref&&x.ref!==x.number)?esc(x.ref):'',linked?'Linked to '+esc(linked):''].filter(Boolean).join(' · ');
+    return `<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.contact?' · '+esc(x.contact):''}${subs?`<div class="sub">${subs}</div>`:''}${editing?`<div class="sub"><select data-chg="xlinkPick" data-ref="${esc(x.ref)}" aria-label="Link this invoice to a job">${projOpts(x.project_id)}</select></div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroLink" data-ref="${esc(x.ref)}">${editing?'Done':x.project_id?'Change job':'Link to job'}</button></div></li>`;
+  }).join('')}</ul>`:empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
   const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xList}</section>`;
   const row=i=>{
     const key='invoices/'+i.id;
@@ -904,6 +913,8 @@ const actions={
   dwWeek(d,el){dwExportWeek(d.job,d.week,el);},
   xeroConnect(){const u=(window.DW_CONFIG||{}).SUPABASE_URL;if(u)location.href=u+'/functions/v1/xero-oauth?start=1';},
   xeroSync(){xeroSyncNow();},
+  // Open/close the little "link this invoice to a job" picker on a Xero row.
+  xeroLink(d){ui.xlink=ui.xlink===d.ref?null:d.ref;},
   dwInv(d,el){const on=!!(el&&el.checked);write('dw_invoiced',d.id,'set',{on:on,at:Date.now(),by:DWME.name||''});toast(on?'Marked invoiced':'Marked not invoiced');},
   dwInvWk(d,el){const want=!!(el&&el.checked);const ids=(DWDATA.sheets||[]).filter(x=>(x.project||'—')===d.job&&(x.work_date?mondayOf(x.work_date):'—')===d.week).map(x=>x.id);if(!ids.length)return;ids.forEach(id=>write('dw_invoiced',id,'set',{on:want,at:Date.now(),by:DWME.name||''}));toast(want?'Whole week marked invoiced':'Week marked not invoiced');},
   dwCombine(d){ui.dwPick=ui.dwPick||{};ui.dwSel=ui.dwSel||{};ui.dwPick[d.job]=true;ui.dwSel[d.job]={};},
@@ -977,7 +988,10 @@ const changes={
   remDone(d,v,el){write('reminders',d.id,'update',{done:el.checked});},
   cwh(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].h=Math.max(0,Math.min(24,num(v)));write('crew_hours',d.key,'update',{entries:ents});},
   cwl(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].loc=v;write('crew_hours',d.key,'update',{entries:ents});},
-  cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});}
+  cwd(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].d=+v;write('crew_hours',d.key,'update',{entries:ents});},
+  // Link (or unlink) a Xero invoice to one of our jobs. Stored on the xero_status
+  // row so it survives re-syncs; clears the "invoice due" nudge on that project.
+  xlinkPick(d,v){const row=XERO.rows.find(x=>x.ref===d.ref);if(row)row.project_id=v||null;ui.xlink=null;sb.from('xero_status').update({project_id:v||null}).eq('ref',d.ref).then(r=>{if(r.error){toast('Could not link — try again');xeroLoad();return;}toast(v?'Invoice linked to '+projName(v):'Invoice unlinked');});}
 };
 /* ---------- schedule PHONE alerts (web push) ----------
    Each director turns alerts on once per phone. The subscription is stored in
