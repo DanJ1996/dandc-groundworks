@@ -81,20 +81,22 @@ Deno.serve(async (req) => {
       signal: AbortSignal.timeout(15_000), // never hang on a slow Xero page
     }).then((r) => r.json()).catch(() => null); // never let a non-JSON/timeout Xero reply crash the sync
 
-  // Xero returns invoices 100 at a time, OLDEST first. Fetching only page 1 would
-  // miss every recent invoice (the book is 200+), so we page right through to the
-  // end and collect them all, then the app sorts newest-first by the stored date.
-  // (We don't ask Xero to order — its "order" query 400s and wipes the whole pull.)
+  // The whole Xero ledger is thousands of invoices (incl. supplier bills), so we
+  // DON'T page through it all. We ask Xero for SALES invoices only (ACCREC),
+  // NEWEST first, which is a handful of pages and always reaches the current work.
+  // Xero's where/order ARE accepted here — the values just have to be URL-encoded.
+  const where = encodeURIComponent('Type=="ACCREC"');
+  const order = encodeURIComponent("Date DESC");
   const allInvoices: Array<Record<string, unknown>> = [];
   let firstError: string | null = null;
-  for (let page = 1; page <= 30; page++) {
-    const res = await api(`Invoices?page=${page}`);
+  for (let page = 1; page <= 4; page++) {   // 4 pages = up to 400 most-recent sales invoices
+    const res = await api(`Invoices?where=${where}&order=${order}&page=${page}`);
     if (!res || !Array.isArray(res.Invoices)) {
       if (page === 1) firstError = res?.Message || res?.Detail || "no invoices returned";
       break;
     }
     allInvoices.push(...res.Invoices);
-    if (res.Invoices.length < 100) break; // last page reached
+    if (res.Invoices.length < 100) break; // reached the end of the sales invoices
   }
   if (!allInvoices.length) {
     return json({ connected: true, synced: 0, fetched: 0, xero_error: firstError || "no invoices returned" });
@@ -109,18 +111,23 @@ Deno.serve(async (req) => {
     return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
   };
 
-  // Sales invoices only, and skip ones that have been deleted or voided — they're
-  // not real money owed/paid. DRAFT / SUBMITTED / AUTHORISED / PAID all kept.
+  // Skip deleted/voided — not real money owed/paid. DRAFT / SUBMITTED / AUTHORISED
+  // / PAID all kept. Build ONE batch and save it in a single round-trip: hundreds
+  // of one-by-one upserts would be slow enough to time the whole function out.
   const invoices = allInvoices.filter((i: { Type?: string; Status?: string }) =>
     i.Type === "ACCREC" && i.Status !== "DELETED" && i.Status !== "VOIDED");
-  let n = 0;
+  const seen = new Set<string>();
+  const rows: Array<Record<string, unknown>> = [];
   for (const inv of invoices) {
-    const ref = (inv.Reference && String(inv.Reference).trim()) || inv.InvoiceNumber || inv.InvoiceID;
-    // latest payment date (sort by parsed epoch, not the raw /Date(..)/ string)
+    // Key each row by its UNIQUE invoice number so two invoices can never collide
+    // in the batch (a shared Reference text could, which would drop the save).
+    const ref = String(inv.InvoiceNumber || inv.InvoiceID);
+    if (seen.has(ref)) continue;
+    seen.add(ref);
     const paidDate = (inv.Payments && inv.Payments.length)
       ? inv.Payments.map((p: { Date: string }) => xdate(p.Date)).filter(Boolean).sort().pop() ?? null
       : null;
-    const { error: upErr } = await db.from("xero_status").upsert({
+    rows.push({
       ref,
       kind: "invoice",
       xero_id: inv.InvoiceID,
@@ -134,12 +141,12 @@ Deno.serve(async (req) => {
       paid_date: paidDate,
       updated_at: new Date().toISOString(),
     });
-    // Surface a save problem (e.g. a missing column / stale schema cache) instead
-    // of silently reporting success — the office can then show the real reason.
-    if (upErr) return json({ connected: true, synced: n, fetched: allInvoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
-    n++;
   }
-  return json({ connected: true, synced: n, fetched: allInvoices.length });
+  const { error: upErr } = await db.from("xero_status").upsert(rows, { onConflict: "ref" });
+  // Surface a save problem (e.g. a missing column / stale schema cache) instead of
+  // silently reporting success — the office can then show the real reason.
+  if (upErr) return json({ connected: true, synced: 0, fetched: allInvoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
+  return json({ connected: true, synced: rows.length, fetched: allInvoices.length });
   } catch (e) {
     // Never 500 — hand the real message back so the office can show what broke.
     return json({ connected: true, synced: 0, fetched: 0, xero_error: "crash: " + ((e as Error)?.message || String(e)) });
