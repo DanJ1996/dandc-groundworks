@@ -77,13 +77,23 @@ Deno.serve(async (req) => {
       },
     }).then((r) => r.json()).catch(() => null); // never let a non-JSON Xero reply crash the sync
 
-  // Fetch the first page of invoices and keep the sales ones (ACCREC) in code. We
-  // store each invoice's Date and sort newest-first in the app, so we don't ask
-  // Xero to order (its "order" query 400s and would wipe the whole pull). A single
-  // page of 100 covers the firm's whole book; paginate here if it ever grows past.
-  const res = await api(`Invoices?page=1`);
-  if (!res || !Array.isArray(res.Invoices)) {
-    return json({ connected: true, synced: 0, fetched: 0, xero_error: res?.Message || res?.Detail || "no invoices returned" });
+  // Xero returns invoices 100 at a time, OLDEST first. Fetching only page 1 would
+  // miss every recent invoice (the book is 200+), so we page right through to the
+  // end and collect them all, then the app sorts newest-first by the stored date.
+  // (We don't ask Xero to order — its "order" query 400s and wipes the whole pull.)
+  const allInvoices: Array<Record<string, unknown>> = [];
+  let firstError: string | null = null;
+  for (let page = 1; page <= 30; page++) {
+    const res = await api(`Invoices?page=${page}`);
+    if (!res || !Array.isArray(res.Invoices)) {
+      if (page === 1) firstError = res?.Message || res?.Detail || "no invoices returned";
+      break;
+    }
+    allInvoices.push(...res.Invoices);
+    if (res.Invoices.length < 100) break; // last page reached
+  }
+  if (!allInvoices.length) {
+    return json({ connected: true, synced: 0, fetched: 0, xero_error: firstError || "no invoices returned" });
   }
   // Xero's JSON API returns dates in the legacy "/Date(1714521600000+0000)/"
   // format (ms since epoch), NOT ISO — parse it to a YYYY-MM-DD, else null.
@@ -97,7 +107,7 @@ Deno.serve(async (req) => {
 
   // Sales invoices only, and skip ones that have been deleted or voided — they're
   // not real money owed/paid. DRAFT / SUBMITTED / AUTHORISED / PAID all kept.
-  const invoices = res.Invoices.filter((i: { Type?: string; Status?: string }) =>
+  const invoices = allInvoices.filter((i: { Type?: string; Status?: string }) =>
     i.Type === "ACCREC" && i.Status !== "DELETED" && i.Status !== "VOIDED");
   let n = 0;
   for (const inv of invoices) {
@@ -113,7 +123,7 @@ Deno.serve(async (req) => {
       number: inv.InvoiceNumber || "",
       contact: (inv.Contact && inv.Contact.Name) || "",
       status: inv.Status || "",
-      date: xdate(inv.Date),
+      date: xdate(inv.DateString || inv.Date),
       total: inv.Total ?? 0,
       amount_due: inv.AmountDue ?? 0,
       amount_paid: inv.AmountPaid ?? 0,
@@ -122,10 +132,10 @@ Deno.serve(async (req) => {
     });
     // Surface a save problem (e.g. a missing column / stale schema cache) instead
     // of silently reporting success — the office can then show the real reason.
-    if (upErr) return json({ connected: true, synced: n, fetched: res.Invoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
+    if (upErr) return json({ connected: true, synced: n, fetched: allInvoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
     n++;
   }
-  return json({ connected: true, synced: n, fetched: res.Invoices.length });
+  return json({ connected: true, synced: n, fetched: allInvoices.length });
   } catch (e) {
     // Never 500 — hand the real message back so the office can show what broke.
     return json({ connected: true, synced: 0, fetched: 0, xero_error: "crash: " + ((e as Error)?.message || String(e)) });
