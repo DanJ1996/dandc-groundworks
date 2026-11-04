@@ -1,0 +1,47 @@
+name: Deploy to Netlify
+
+# Any push to main (from the phone or the laptop) rebuilds the live site
+# automatically, so GitHub, both devices, and dandcgroundworks.com stay in sync.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli@17
+
+      - name: Upload a draft deploy
+        id: draft
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          netlify deploy --dir=. --json > deploy.json
+          DEPLOY_ID=$(python3 -c 'import json;print(json.load(open("deploy.json"))["deploy_id"])')
+          echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+          echo "Draft deploy id: $DEPLOY_ID"
+
+      - name: Publish it to production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          DEPLOY_ID: ${{ steps.draft.outputs.deploy_id }}
+        run: |
+          netlify api restoreSiteDeploy --data "{\"site_id\":\"$NETLIFY_SITE_ID\",\"deploy_id\":\"$DEPLOY_ID\"}" > published.json
+          python3 -c 'import json;d=json.load(open("published.json"));print("state:",d.get("state"),"url:",d.get("url"))'
