@@ -803,6 +803,9 @@ views.invoices=()=>{
   const overdue=awaiting.filter(i=>i.st==='overdue'), paidM=paid.filter(i=>String(i.paid).slice(0,7)===month);
   const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM))}</span><span class="sub">${paidM.length} received</span></div></div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
+  const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
+  const xList=XERO.rows.length?`<ul class="items">${XERO.rows.slice(0,40).map(x=>`<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.ref&&x.ref!==x.number?`<div class="sub">${esc(x.ref)}</div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div></li>`).join('')}</ul>`:empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
+  const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xList}</section>`;
   const row=i=>{
     const key='invoices/'+i.id;
     if(ui.edit===key)return `<li class="item editing"><form class="form" data-form="invoiceEdit">${invFields('invoiceEdit',i,true)}<div class="go"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
@@ -812,7 +815,7 @@ views.invoices=()=>{
     return `<li class="item"><div class="item-main"><strong>${esc(i.number||'No number')}</strong> · ${esc(i.client||'No client')}<div class="sub">${[projName(i.projectId),i.desc].filter(Boolean).map(esc).join(' · ')}</div></div><div>${invPill(i,i.st,today)}</div><div class="item-amt"><span class="amt">${money(num(i.net))}</span><span class="sub">${i.vat==='std'?money(gross(i))+' inc VAT':VAT[i.vat]||''}</span></div><div class="item-act">${act}<button type="button" class="btn sm ghost" id="ie-${i.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
   };
   const sec=(title,rows,emptyT,emptyD)=>`<section class="panel"><div class="panel-h"><h3>${title}</h3><span class="sub">${rows.length?money(rows.reduce((t,i)=>t+num(i.net),0))+' net':''}</span></div>${rows.length?`<ul class="items">${rows.map(row).join('')}</ul>`:empty(emptyT,emptyD)}</section>`;
-  return `<div class="head"><div><h2>Invoices</h2><p class="sub">What needs sending, what has been sent, and what has been paid.</p></div></div>${stats}${add}${sec('To send',toSend,'Nothing waiting to go out','Add an invoice above with the date it should be sent.')}${sec('Sent, awaiting payment',awaiting,'Nothing awaiting payment','Invoices move here when you mark them sent.')}${paid.length?sec('Paid',paid.slice(0,25),'',''):''}`;
+  return `<div class="head"><div><h2>Invoices</h2><p class="sub">What needs sending, what has been sent, and what has been paid.</p></div></div>${stats}${xero}${add}${sec('To send',toSend,'Nothing waiting to go out','Add an invoice above with the date it should be sent.')}${sec('Sent, awaiting payment',awaiting,'Nothing awaiting payment','Invoices move here when you mark them sent.')}${paid.length?sec('Paid',paid.slice(0,25),'',''):''}`;
 };
 
 const UNITS=['hr','day','week','m','m²','m³','t','nr','item','load','sum'];
@@ -912,6 +915,8 @@ const actions={
   delDWSheet(d){ui.confirm=null;if(!d.id)return;SB.from('sheets').delete().eq('id',d.id).then(r=>{if(r.error){toast('Delete failed: '+(r.error.message||''));return;}toast('Sheet deleted');if(dwLoad)dwLoad();});},
   refreshDW(){dwLoad();},
   dwWeek(d,el){dwExportWeek(d.job,d.week,el);},
+  xeroConnect(){const u=(window.DW_CONFIG||{}).SUPABASE_URL;if(u)location.href=u+'/functions/v1/xero-oauth?start=1';},
+  xeroSync(){xeroSyncNow();},
   dwInv(d,el){const on=!!(el&&el.checked);write('dw_invoiced',d.id,'set',{on:on,at:Date.now(),by:DWME.name||''});toast(on?'Marked invoiced':'Marked not invoiced');},
   dwInvWk(d,el){const want=!!(el&&el.checked);const ids=(DWDATA.sheets||[]).filter(x=>(x.project||'—')===d.job&&(x.work_date?mondayOf(x.work_date):'—')===d.week).map(x=>x.id);if(!ids.length)return;ids.forEach(id=>write('dw_invoiced',id,'set',{on:want,at:Date.now(),by:DWME.name||''}));toast(want?'Whole week marked invoiced':'Week marked not invoiced');},
   dwCombine(d){ui.dwPick=ui.dwPick||{};ui.dwSel=ui.dwSel||{};ui.dwPick[d.job]=true;ui.dwSel[d.job]={};},
@@ -1325,6 +1330,23 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTim
    but in the Office look and saving straight to the shared `sheets` table.
    No iframe, no separate app. Shared by directors and crew. */
 let SB=null;                              // Supabase client, set once connected
+/* ---------- Xero link (invoiced / paid status, read-only from Xero) ----------
+   The two edge functions (xero-oauth, xero-sync) do the OAuth + the fetching;
+   here we just kick off a sync and read the result back out of xero_status,
+   which only directors can see (RLS). "Connect to Xero" is a plain navigation to
+   the start endpoint, which bounces the director to Xero to approve the link. */
+let XERO={rows:[],loaded:false,busy:false};
+function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||'')));XERO.loaded=true;schedule();}});}
+function xeroSyncNow(){
+  if(!SB||XERO.busy)return;XERO.busy=true;schedule();
+  SB.functions.invoke('xero-sync',{body:{}}).then(r=>{
+    XERO.busy=false;const d=r&&r.data;
+    if(r&&r.error){toast('Xero sync failed — try again');schedule();return;}
+    if(d&&d.connected===false){toast(d.reason==='not-connected'?'Connect to Xero first':'Xero needs reconnecting — tap Connect');schedule();return;}
+    toast('Synced '+((d&&d.synced)||0)+' invoice'+(((d&&d.synced)===1)?'':'s')+' from Xero');
+    xeroLoad();
+  }).catch(()=>{XERO.busy=false;toast('Xero sync failed — try again');schedule();});
+}
 let DWME={id:'',name:'',role:'crew'};     // signed-in user (for created_by / £ gating)
 let dwRefresh=null;                        // reload the sheet list for whichever view is open
 let DWDATA={jobs:[],sheets:[],loaded:false};
@@ -2371,7 +2393,7 @@ render();
 
   /* --- auth flow --- */
   const loadPeople=()=>sb.from('profiles').select('id,full_name,role').then(r=>{if(!r.error){PEOPLE=r.data||[];schedule();}});
-  const connect=profile=>{hideGate();setWho(profile);loadPeople();
+  const connect=profile=>{hideGate();setWho(profile);loadPeople();if(profile&&profile.role==='director')xeroLoad();
     dwLoad=()=>Promise.all([
       sb.from('jobs').select('id,title,client,location').order('created_at',{ascending:false}),
       sb.from('sheets').select('id,project,client,sheet_no,work_date,day,grand,creator_name,mode:data->>mode').order('work_date',{ascending:false})

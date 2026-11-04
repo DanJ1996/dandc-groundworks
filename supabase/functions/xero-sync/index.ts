@@ -1,0 +1,102 @@
+// D&C Site Office — Xero sync (Supabase Edge Function "xero-sync").
+// Pulls the sales invoices (ACCREC) out of the connected Xero organisation and
+// records each one's status — DRAFT / AUTHORISED (sent) / PAID — into xero_status,
+// so the Site Office can show invoiced (green) / paid against every job without
+// anyone ticking a box. Called on demand by the "Refresh from Xero" button.
+//
+// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, XERO_CLIENT_ID, XERO_CLIENT_SECRET set.
+// Deploy with "Verify JWT" turned ON — only a logged-in director may trigger it.
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+
+const env = (k: string) => Deno.env.get(k) ?? "";
+const admin = () => createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
+
+const cors = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, content-type",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...cors, "content-type": "application/json" } });
+
+// Give us a valid access token, refreshing it from the stored refresh token if the
+// cached one has expired. Keeps the fresh refresh token (Xero rotates it each time).
+async function accessToken(db: ReturnType<typeof admin>) {
+  const { data: t } = await db.from("xero_tokens").select("*").eq("id", 1).maybeSingle();
+  if (!t || !t.refresh_token) throw new Error("not-connected");
+  if (t.access_token && t.expires_at && new Date(t.expires_at).getTime() - 60_000 > Date.now()) {
+    return { token: t.access_token, tenant: t.tenant_id as string };
+  }
+  const basic = btoa(`${env("XERO_CLIENT_ID")}:${env("XERO_CLIENT_SECRET")}`);
+  const r = await fetch("https://identity.xero.com/connect/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", authorization: `Basic ${basic}` },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: t.refresh_token }),
+  }).then((x) => x.json());
+  if (!r.access_token) throw new Error("refresh-failed");
+  await db.from("xero_tokens").update({
+    refresh_token: r.refresh_token ?? t.refresh_token,
+    access_token: r.access_token,
+    expires_at: new Date(Date.now() + (r.expires_in ?? 1800) * 1000).toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", 1);
+  return { token: r.access_token as string, tenant: t.tenant_id as string };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+
+  const db = admin();
+
+  // Only a logged-in director may sync. The user's JWT arrives in Authorization.
+  const jwt = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const { data: u } = await db.auth.getUser(jwt);
+  if (!u?.user) return json({ error: "not-signed-in" }, 401);
+  const { data: prof } = await db.from("profiles").select("role").eq("id", u.user.id).maybeSingle();
+  if (prof?.role !== "director") return json({ error: "directors-only" }, 403);
+
+  // "Not connected" / "needs reconnecting" are normal states, not errors — return
+  // 200 so the Site Office can read them and show "Connect to Xero" cleanly.
+  let at;
+  try {
+    at = await accessToken(db);
+  } catch (e) {
+    return json({ connected: false, reason: (e as Error).message });
+  }
+
+  // Pull sales invoices (newest first). One page of 100 is plenty for a small firm;
+  // paginate if it ever grows past that.
+  const api = (path: string) =>
+    fetch(`https://api.xero.com/api.xro/2.0/${path}`, {
+      headers: {
+        authorization: `Bearer ${at.token}`,
+        "xero-tenant-id": at.tenant,
+        accept: "application/json",
+      },
+    }).then((r) => r.json());
+
+  const res = await api("Invoices?where=Type==\"ACCREC\"&order=Date DESC&page=1");
+  const invoices = res?.Invoices ?? [];
+  let n = 0;
+  for (const inv of invoices) {
+    const ref = (inv.Reference && String(inv.Reference).trim()) || inv.InvoiceNumber || inv.InvoiceID;
+    const paidDate = (inv.Payments && inv.Payments.length)
+      ? inv.Payments.map((p: { Date: string }) => p.Date).sort().pop()
+      : null;
+    await db.from("xero_status").upsert({
+      ref,
+      kind: "invoice",
+      xero_id: inv.InvoiceID,
+      number: inv.InvoiceNumber || "",
+      status: inv.Status || "",
+      total: inv.Total ?? 0,
+      amount_due: inv.AmountDue ?? 0,
+      amount_paid: inv.AmountPaid ?? 0,
+      paid_date: paidDate ? String(paidDate).slice(0, 10) : null,
+      updated_at: new Date().toISOString(),
+    });
+    n++;
+  }
+  return json({ connected: true, synced: n });
+});
