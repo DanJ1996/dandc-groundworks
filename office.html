@@ -752,15 +752,27 @@ views.projects=()=>{
   // the enquiry is Won.
   const qByProj={};list('quotes').forEach(q=>{if(q.projectId)qByProj[q.projectId]=q;});
   const all=list('projects').filter(p=>{const q=qByProj[p.id];return !q||q.status==='Won';}).sort((a,b)=>PSTATUS.indexOf(a.status)-PSTATUS.indexOf(b.status)||byName(a,b));
-  // Finished jobs drop out of the active list into their own collapsible "Completed" section
-  // (set a job's Stage to Complete to move it there), keeping the working list clean.
-  const active=all.filter(p=>p.status!=='Complete'), done=all.filter(p=>p.status==='Complete').sort(byName);
+  // A job counts as "has an invoice" once a Xero invoice is linked to it or an app invoice is
+  // raised against it — that's when the Interim / Complete buttons appear on its row.
+  const xByProj={};XERO.rows.forEach(x=>{if(x.project_id)xByProj[x.project_id]=true;});
+  const hasInv=q=>!!xByProj[q.id]||(invBy[q.id]||0)>0;
+  // Three sections: live jobs still running, jobs part-billed on interim/valuation (still on site),
+  // and finished jobs. Interim and Completed live in their own collapsible dropdowns.
+  const done=all.filter(p=>p.status==='Complete').sort(byName);
+  const interim=all.filter(p=>p.status!=='Complete'&&p.interim).sort(byName);
+  const active=all.filter(p=>p.status!=='Complete'&&!p.interim);
   const projTotal=active.reduce((s,p)=>s+(num(p.tender)||projTotals(p).total),0);
   const add=`<section class="panel"><div class="panel-h"><h3>New project</h3></div><form class="panel-b form" data-form="project">${fld('project','name','Project',"",{attrs:'required',cls:'wide'})}${fld('project','client','Client','')}${fld('project','site','Site','',{attrs:'data-addr autocomplete="off"'})}${sel('project','status','Stage','Pricing',PSTATUS.map(s=>[s,s]))}<div class="go"><button class="btn">Add and open</button></div></form></section>`;
-  const projRow=q=>{const h=hb[q.id]||{h:0,cost:0};return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt"><span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span></div><div class="item-amt"><span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span></div></li>`;};
-  const activeRows=active.map(projRow).join('');
-  const doneSec=done.length?dropSec('doneProjects','Completed','<span class="sub">'+done.length+' finished</span>',`<ul class="items">${done.map(projRow).join('')}</ul>`):'';
-  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}<section class="panel"><div class="panel-h"><h3>Current projects${active.length?' <span class="sub">'+active.length+'</span>':''}</h3></div>${active.length?`<ul class="items">${activeRows}</ul>`:empty('No active projects','Add one above, or use Price it on a quote request.')}${projTotal>0?`<div class="listfoot"><span>Total</span><strong>${money(projTotal)} <span class="sub">${money(projTotal*1.2)} inc VAT</span></strong></div>`:''}</section>${doneSec}`;
+  const projRow=(q,sec)=>{const h=hb[q.id]||{h:0,cost:0};
+    let acts='';
+    if(sec==='done')acts=`<button type="button" class="btn sm ghost" data-act="projReopen" data-id="${q.id}">Reopen</button>`;
+    else if(sec==='interim')acts=`<button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button><button type="button" class="btn sm ghost" data-act="projActive" data-id="${q.id}">Back to current</button>`;
+    else if(hasInv(q))acts=`<button type="button" class="btn sm ghost" data-act="projInterim" data-id="${q.id}">Interim</button><button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button>`;
+    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt"><span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span></div><div class="item-amt"><span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span></div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
+  const activeRows=active.map(q=>projRow(q,'active')).join('');
+  const interimSec=interim.length?dropSec('interimProjects','Interim — part invoiced','<span class="sub">'+interim.length+' on the go</span>',`<ul class="items">${interim.map(q=>projRow(q,'interim')).join('')}</ul>`):'';
+  const doneSec=done.length?dropSec('doneProjects','Completed','<span class="sub">'+done.length+' finished</span>',`<ul class="items">${done.map(q=>projRow(q,'done')).join('')}</ul>`):'';
+  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}<section class="panel"><div class="panel-h"><h3>Current projects${active.length?' <span class="sub">'+active.length+'</span>':''}</h3></div>${active.length?`<ul class="items">${activeRows}</ul>`:empty('No active projects','Add one above, or use Price it on a quote request.')}${projTotal>0?`<div class="listfoot"><span>Total</span><strong>${money(projTotal)} <span class="sub">${money(projTotal*1.2)} inc VAT</span></strong></div>`:''}</section>${interimSec}${doneSec}`;
 };
 
 function vProject(p){
@@ -1019,6 +1031,11 @@ const actions={
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
   findInvoice(d){ui.tab='invoices';ui.xfind=d.q||'';ui.xlink=null;window.scrollTo(0,0);},
+  // Move a job between the Current / Interim (part-billed, still on site) / Completed sections.
+  projComplete(d){write('projects',d.id,'update',{status:'Complete',interim:false});toast('Marked complete');},
+  projInterim(d){write('projects',d.id,'update',{interim:true});toast('Marked interim — still on site');},
+  projActive(d){write('projects',d.id,'update',{interim:false});toast('Back in current jobs');},
+  projReopen(d){write('projects',d.id,'update',{status:'Live',interim:false});toast('Reopened');},
   useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
   closeProject(){ui.project=null;ui.confirm=null;},
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
