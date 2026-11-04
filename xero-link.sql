@@ -48,11 +48,13 @@ create table if not exists public.xero_status (
   amount_due numeric,
   amount_paid numeric,
   paid_date  date,
+  date       date,                      -- the invoice date (so the office can show newest first)
   project_id text,                      -- which of our jobs this invoice is linked to (set by a director)
   updated_at timestamptz not null default now()
 );
--- Older databases won't have project_id from the create above — add it if missing.
+-- Older databases won't have these columns from the create above — add if missing.
 alter table public.xero_status add column if not exists project_id text;
+alter table public.xero_status add column if not exists date date;
 alter table public.xero_status enable row level security;
 revoke all on public.xero_status from anon, authenticated;
 -- The RLS policies below only filter ROWS; the base privileges must also be granted

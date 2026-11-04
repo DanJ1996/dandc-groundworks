@@ -76,9 +76,10 @@ Deno.serve(async (req) => {
       },
     }).then((r) => r.json());
 
-  // Fetch the first page of invoices and keep the sales ones (ACCREC) in code —
-  // avoids any fiddly URL-encoding of a Xero "where" filter.
-  const res = await api("Invoices?page=1");
+  // Fetch the newest invoices first (order by Date descending) and keep the sales
+  // ones (ACCREC) in code. page=1 alone comes back OLDEST-first (INV-0001 onwards),
+  // which is not what the office wants to see — most recent is what matters.
+  const res = await api(`Invoices?page=1&order=${encodeURIComponent("Date DESC")}`);
   if (!res || !Array.isArray(res.Invoices)) {
     return json({ connected: true, synced: 0, fetched: 0, xero_error: res?.Message || res?.Detail || "no invoices returned" });
   }
@@ -110,6 +111,7 @@ Deno.serve(async (req) => {
       number: inv.InvoiceNumber || "",
       contact: (inv.Contact && inv.Contact.Name) || "",
       status: inv.Status || "",
+      date: xdate(inv.Date),
       total: inv.Total ?? 0,
       amount_due: inv.AmountDue ?? 0,
       amount_paid: inv.AmountPaid ?? 0,

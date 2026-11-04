@@ -801,7 +801,7 @@ views.invoices=()=>{
   const xList=XERO.rows.length?`<ul class="items">${XERO.rows.slice(0,40).map(x=>{
     const linked=x.project_id?projName(x.project_id):'';
     const editing=ui.xlink===x.ref;
-    const subs=[(x.ref&&x.ref!==x.number)?esc(x.ref):'',linked?'Linked to '+esc(linked):''].filter(Boolean).join(' · ');
+    const subs=[x.date?fmtD(x.date):'',(x.ref&&x.ref!==x.number)?esc(x.ref):'',linked?'Linked to '+esc(linked):''].filter(Boolean).join(' · ');
     return `<li class="item"><div class="item-main"><strong>${esc(x.number||x.ref||'—')}</strong>${x.contact?' · '+esc(x.contact):''}${subs?`<div class="sub">${subs}</div>`:''}${editing?`<div class="sub"><select data-chg="xlinkPick" data-ref="${esc(x.ref)}" aria-label="Link this invoice to a job">${projOpts(x.project_id)}</select></div>`:''}</div><div>${xPill(x.status)}</div><div class="item-amt"><span class="amt">${money(num(x.total))}</span>${x.paid_date?`<span class="sub">Paid ${fmtD(x.paid_date)}</span>`:num(x.amount_due)?`<span class="sub">${money(num(x.amount_due))} due</span>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroLink" data-ref="${esc(x.ref)}">${editing?'Done':x.project_id?'Change job':'Link to job'}</button></div></li>`;
   }).join('')}</ul>`:empty(XERO.loaded?'Nothing synced yet':'Not linked to Xero yet','Tap Connect to Xero, approve it once, then Refresh to pull your invoices and payments.');
   const xero=`<section class="panel"><div class="panel-h"><h3>Xero <span class="sub">invoiced &amp; paid, straight from your books</span></h3><div class="item-act"><button type="button" class="btn sm ghost" data-act="xeroConnect">Connect to Xero</button><button type="button" class="btn sm" data-act="xeroSync"${XERO.busy?' disabled':''}>${XERO.busy?'Refreshing…':'Refresh from Xero'}</button></div></div>${xList}</section>`;
@@ -1347,7 +1347,7 @@ let SB=null;                              // Supabase client, set once connected
    which only directors can see (RLS). "Connect to Xero" is a plain navigation to
    the start endpoint, which bounces the director to Xero to approve the link. */
 let XERO={rows:[],loaded:false,busy:false};
-function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>String(b.updated_at||'').localeCompare(String(a.updated_at||'')));XERO.loaded=true;schedule();}});}
+function xeroLoad(){if(!SB)return;SB.from('xero_status').select('*').then(r=>{if(!r.error){XERO.rows=(r.data||[]).sort((a,b)=>String(b.date||b.updated_at||'').localeCompare(String(a.date||a.updated_at||'')));XERO.loaded=true;schedule();}});}
 function xeroSyncNow(){
   if(!SB||XERO.busy)return;XERO.busy=true;schedule();
   SB.functions.invoke('xero-sync',{body:{}}).then(r=>{
