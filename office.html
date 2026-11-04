@@ -1501,7 +1501,7 @@ function dwRefreshMatList(){const dl=document.getElementById('dw_dl_mat');if(dl)
    NOT render inside the installed (standalone / home-screen) app on iOS, so every
    prompt dropdown in the day-works sheet uses this instead. getOpts() is read live
    each time so the list reflects whatever's loaded (rate book / live projects). */
-function dwCombo(inp,getOpts,onPick){
+function dwCombo(inp,getOpts,onPick,onDelete){
   if(!inp||inp._combo)return;inp._combo=true;
   inp.removeAttribute('list');inp.setAttribute('autocomplete','off');inp.setAttribute('autocorrect','off');inp.setAttribute('autocapitalize','off');
   /* pop lives on <body>, NOT in the card — the day-works section cards use
@@ -1513,7 +1513,7 @@ function dwCombo(inp,getOpts,onPick){
     const all=(getOpts()||[]).filter(Boolean);
     const f=(inp.value||'').trim().toLowerCase();
     const list=f?all.filter(v=>String(v).toLowerCase().includes(f)):all;
-    pop.innerHTML=list.length?list.slice(0,120).map(v=>`<div class="dw-copt" role="option">${esc(v)}</div>`).join(''):`<div class="dw-copt none">${all.length?'No match — type your own and it still saves':'Type the material — it will save'}</div>`;
+    pop.innerHTML=list.length?list.slice(0,120).map(v=>`<div class="dw-copt" role="option" data-val="${esc(v)}">${esc(v)}${onDelete?`<button type="button" class="dw-del-opt" data-del="${esc(v)}" aria-label="Remove ${esc(v)} from the list">×</button>`:''}</div>`).join(''):`<div class="dw-copt none">${all.length?'No match — type your own and it still saves':'Type the material — it will save'}</div>`;
     place();pop.hidden=false;
   };
   const reposition=()=>{if(!pop.hidden)place();};
@@ -1525,7 +1525,11 @@ function dwCombo(inp,getOpts,onPick){
   inp.addEventListener('blur',()=>setTimeout(()=>{pop.hidden=true;},260));
   window.addEventListener('scroll',reposition,true);
   window.addEventListener('resize',reposition);
-  pop.addEventListener('click',e=>{const o=e.target.closest('.dw-copt');if(!o||o.classList.contains('none'))return;inp.value=o.textContent;pop.hidden=true;if(onPick)onPick(inp.value);inp.dispatchEvent(new Event('change',{bubbles:true}));inp.dispatchEvent(new Event('input',{bubbles:true}));});
+  pop.addEventListener('click',e=>{
+    const del=e.target.closest('.dw-del-opt');
+    if(del){e.stopPropagation();if(onDelete)onDelete(del.getAttribute('data-del'));paint();inp.focus();return;}
+    const o=e.target.closest('.dw-copt');if(!o||o.classList.contains('none'))return;
+    inp.value=o.getAttribute('data-val')||o.textContent;pop.hidden=true;if(onPick)onPick(inp.value);inp.dispatchEvent(new Event('change',{bubbles:true}));inp.dispatchEvent(new Event('input',{bubbles:true}));});
 }
 
 function dwDatalist(id,arr){if($(id))return;const dl=document.createElement('datalist');dl.id=id;dl.innerHTML=arr.map(v=>`<option value="${esc(v)}">`).join('');document.body.appendChild(dl);}
@@ -1540,6 +1544,19 @@ function dwSetProjects(arr){DW_PROJECTS=[...new Set((arr||[]).map(s=>(s||'').tri
    the Client prompt. Director: from project + job clients. Crew: from job clients. */
 let DW_CLIENTS=[];
 function dwSetClients(arr){DW_CLIENTS=[...new Set((arr||[]).map(s=>(s||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));}
+/* Directors can tidy the Client list — hide a duplicate ("Court End Developments" vs
+   "…Ltd") or a dead client so it stops cluttering the day-works dropdown. Kept in one
+   office_docs row so the choice follows the director across phone and desktop. Hiding
+   only trims the suggestion list; any name can still be typed straight onto a sheet. */
+let DW_HIDDEN=new Set();
+function dwLoadHidden(){if(!SB)return Promise.resolve();return SB.from('office_docs').select('data').eq('collection','settings').eq('doc_id','dw_hidden_clients').maybeSingle().then(r=>{DW_HIDDEN=new Set(((r&&r.data&&r.data.data&&r.data.data.list)||[]).map(s=>(s||'').trim()).filter(Boolean));schedule();}).catch(()=>{});}
+function dwHideClient(name){
+  if(DWME.role!=='director')return;
+  name=(name||'').trim();if(!name)return;
+  DW_HIDDEN.add(name);
+  if(SB)SB.from('office_docs').upsert({collection:'settings',doc_id:'dw_hidden_clients',data:{list:[...DW_HIDDEN]},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'}).then(r=>{if(r&&r.error)toast('Could not remove — '+(r.error.message||'try again'));});
+  toast('Removed “'+name+'” from the list');
+}
 
 let dwBuilt=false;
 function dwBuild(){
@@ -1578,8 +1595,10 @@ function dwBuild(){
     #dw-ov .dw-del{position:absolute;top:8px;right:0;background:none;border:none;color:#b6523f;font-size:1.3rem;line-height:1;cursor:pointer;padding:0 4px}
     #dw-ov .dw-add{margin-top:10px}
     .dw-cpop{position:fixed;z-index:9999;background:#fff;color:#222831;color-scheme:light;border:1px solid #cfc8bc;border-radius:10px;max-height:min(300px,48vh);overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);-webkit-overflow-scrolling:touch}
-    .dw-copt{padding:11px 12px;cursor:pointer;font-size:.95rem;color:#222831;border-top:1px solid #f0ece4}
+    .dw-copt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;cursor:pointer;font-size:.95rem;color:#222831;border-top:1px solid #f0ece4}
     .dw-copt:first-child{border-top:0}
+    .dw-del-opt{flex:none;background:none;border:none;color:#b6523f;font-size:1.2rem;line-height:1;cursor:pointer;padding:0 6px;border-radius:6px}
+    .dw-del-opt:hover{background:#f6e3df}
     .dw-copt:hover,.dw-copt.active{background:#eef3f8}
     .dw-copt.none{color:#8a909b;cursor:default;font-style:italic}
     #dw-ov .dw-sum{margin-top:14px;border-top:2px solid var(--band,#273E57)}
@@ -1684,7 +1703,7 @@ function dwBuild(){
     </div>`;
   document.body.appendChild(ov);
   dwCombo(ov.querySelector('[data-f="f_project"]'),()=>DW_PROJECTS);
-  dwCombo(ov.querySelector('[data-f="f_client"]'),()=>DW_CLIENTS);
+  dwCombo(ov.querySelector('[data-f="f_client"]'),()=>DW_CLIENTS.filter(c=>!DW_HIDDEN.has(c)),null,DWME.role==='director'?dwHideClient:null);
   dwCombo(ov.querySelector('[data-f="f_site"]'),()=>DW_SITES);
   ov.querySelector('[data-dwclose]').addEventListener('click',closeDW);
   ov.querySelector('[data-dwsave]').addEventListener('click',()=>dwSave(ov));
@@ -2509,7 +2528,7 @@ render();
 
   /* --- auth flow --- */
   const loadPeople=()=>sb.from('profiles').select('id,full_name,role').then(r=>{if(!r.error){PEOPLE=r.data||[];schedule();}});
-  const connect=profile=>{hideGate();setWho(profile);loadPeople();if(profile&&profile.role==='director')xeroLoad();
+  const connect=profile=>{hideGate();setWho(profile);loadPeople();dwLoadHidden();if(profile&&profile.role==='director')xeroLoad();
     dwLoad=()=>Promise.all([
       sb.from('jobs').select('id,title,client,location').order('created_at',{ascending:false}),
       sb.from('sheets').select('id,project,client,sheet_no,work_date,day,grand,creator_name,mode:data->>mode').order('work_date',{ascending:false})
