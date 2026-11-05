@@ -48,6 +48,18 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
 .head > div{min-width:0}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+/* "What's new" pop-up — shows the latest changes once after each update */
+.wn-wrap{position:fixed;inset:0;z-index:70;background:rgba(10,16,24,.5);display:flex;align-items:flex-start;justify-content:center;padding:12vh 16px 16px}
+.wn-card{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;max-width:430px;width:100%;max-height:74vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.wn-hd{background:var(--band);color:var(--on-band);display:flex;align-items:center;gap:8px;padding:14px 16px}
+.wn-ttl{font:700 1.15rem var(--display,inherit)}
+.wn-x{margin-left:auto;background:transparent;border:0;color:var(--on-band);font-size:1.7rem;line-height:1;cursor:pointer;padding:0 6px;border-radius:8px}
+.wn-x:hover{background:rgba(255,255,255,.12)}
+.wn-bd{padding:14px 18px;overflow:auto}
+.wn-bd h4{margin:0 0 4px;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+.wn-bd ul{margin:0 0 12px;padding-left:18px}
+.wn-bd li{margin:5px 0}
+.wn-rel+.wn-rel{border-top:1px solid var(--line);margin-top:4px;padding-top:12px}
 .panel-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px}
 .panel-b{padding:14px 16px;border-top:1px solid var(--line)}
 .dropdown-h{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;width:100%;padding:12px 16px;background:none;border:0;cursor:pointer;text-align:left;color:inherit;font:inherit}
@@ -438,6 +450,9 @@ const GANGS=[{k:'g1',name:'Gang 1 - Chris',c:'--gang1'},{k:'g2',name:'Gang 2 - M
 const gangOf=k=>GANGS.find(g=>g.k===k);
 const projPill=s=>s==='Live'?'good':s==='Ready to start'?'info':s==='Complete'?'neutral':'warn';
 const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
+/* Duration label — a single day with a time is a PART day (e.g. a morning doctor's
+   appt), shown as "part day · 08:00" instead of "1 day" so it doesn't read as a full day off. */
+const holDur=h=>{const t=(h.time||'').trim();if(t&&h.from===h.to)return 'part day · '+t;const n=num(h.days)||1;return n+' day'+(n>1?'s':'');};
 const evEnd=e=>(e.to&&e.to>=e.from)?e.to:e.from;
 /* Reminder due times are plain local 'YYYY-MM-DDTHH:MM' strings, so they sort and compare as text. */
 const nowLocal=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());};
@@ -504,7 +519,7 @@ views.overview=()=>{
   list('reminders').filter(r=>r.when&&!r.done).forEach(r=>{const d=dayDiff(r.when.slice(0,10),today);if(d<=0)att.push([d,'warn','Reminder · '+(r.owner==='chris'?'Chris':'Dan'),`${r.text} · ${d===0?'today':fmtD(r.when.slice(0,10))} ${r.when.slice(11,16)}`,'reminders']);});
   // Crew holiday requests waiting on a decision — pinned to the top so they're seen first,
   // with Approve / Decline right here (no need to go to the Holidays tab).
-  list('holidays').filter(h=>h.status==='pending').sort((a,b)=>num(a.created)-num(b.created)).forEach(h=>{const n=num(h.days)||1;att.push([-1e6+num(h.created)/1e12,'warn','Holiday request',`${h.name||'Crew'} · ${holSpan(h)} (${n} day${n>1?'s':''})${h.note?' · '+h.note:''}`,'crew',null,null,null,h.id]);});
+  list('holidays').filter(h=>h.status==='pending').sort((a,b)=>num(a.created)-num(b.created)).forEach(h=>{att.push([-1e6+num(h.created)/1e12,'warn','Holiday request',`${h.name||'Crew'} · ${holSpan(h)} (${holDur(h)})${h.note?' · '+h.note:''}`,'crew',null,null,null,h.id]);});
   att.sort((a,b)=>a[0]-b[0]);
   const attention=dropSec('attention','Needs attention',att.length?att.length+' to sort':'All clear',att.length?`<ul class="items">${att.map(a=>`<li class="item"><div>${pill(a[1],a[2])}</div><div class="item-main">${esc(a[3])}</div><div class="item-act">${a[8]?`<button type="button" class="btn sm" data-act="holSet" data-id="${esc(a[8])}" data-v="approved">Approve</button><button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(a[8])}" data-v="declined">Decline</button>`:''}${a[5]?`<button type="button" class="btn sm" data-act="visitDone" data-id="${a[5]}" data-vkind="${a[6]||'q'}">Meeting done</button>`:''}${a[7]?`<button type="button" class="btn sm" data-act="findInvoice" data-q="${esc(a[7])}">Find invoice</button>`:''}<button type="button" class="btn sm ghost" data-act="tab" data-tab="${a[4]}">Open</button></div></li>`).join('')}</ul>`:empty('Nothing pressing','Holiday requests, new enquiries, quote deadlines within a week, finished jobs to invoice, unsent invoices and late payments show here.'));
   const upcoming=visits.filter(q=>q.visitDate>=today);
@@ -535,7 +550,7 @@ views.overview=()=>{
   const steps=[[list('employees').length,'Add your team and their hourly rates','team'],[list('rates').length,'Load the rate card','rates'],[list('projects').length,'Add your projects','projects'],[Object.keys(S.timesheets).length,"Enter this week's timesheets",'timesheets']];
   const setup=steps.every(s=>s[0])?'':dropSec('setup','Getting set up',steps.filter(s=>s[0]).length+' of '+steps.length+' done',`<div class="panel-b"><ol class="steps">${steps.map(s=>`<li class="${s[0]?'done':''}">${s[0]?esc(s[1]):`<button type="button" class="link" data-act="tab" data-tab="${s[2]}">${esc(s[1])}</button>`}</li>`).join('')}</ol></div>`);
   const offs=list('holidays').filter(h=>h.status==='approved'&&h.to>=today).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
-  const timeoff=dropSec('timeoff',"Who's off",offs.length?offs.length+' booked':'Nobody booked',(offs.length?`<ul class="items">${offs.map(h=>{const nowOff=h.from<=today&&today<=h.to;return `<li class="item"><div>${pill(nowOff?'warn':'info',nowOff?'Off now':'Booked')}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(holSpan(h))} <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span></div></li>`;}).join('')}</ul>`:empty('No booked time off','Approved holiday requests show here and on the schedule automatically.'))+`<div class="panel-b">${goBtn('schedule','Schedule')}</div>`);
+  const timeoff=dropSec('timeoff',"Who's off",offs.length?offs.length+' booked':'Nobody booked',(offs.length?`<ul class="items">${offs.map(h=>{const nowOff=h.from<=today&&today<=h.to;return `<li class="item"><div>${pill(nowOff?'warn':'info',nowOff?'Off now':'Booked')}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(holSpan(h))} <span class="sub">(${esc(holDur(h))})</span></div></li>`;}).join('')}</ul>`:empty('No booked time off','Approved holiday requests show here and on the schedule automatically.'))+`<div class="panel-b">${goBtn('schedule','Schedule')}</div>`);
   const statsSec=`<section class="panel"><div class="panel-h"><h3>This week in numbers</h3></div><div class="panel-b">${stats}</div></section>`;
   return `<div class="head"><div><h2>This week at a glance</h2><p class="sub">${fmtD(today,true)}</p></div></div>${statsSec}${setup}${attention}${diary}${timeoff}${projects}`;
 };
@@ -571,7 +586,7 @@ views.schedule=()=>{
   const dueRow=dayDues.some(a=>a.length)?`<tr><th class="tcol">Quotes due</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayDues[i].map(q=>`<div class="vmark" style="--c:var(--warn)">${esc(q.client||'')}</div>`).join('')}</td>`).join('')}</tr>`:'';
   // Approved holidays — static spanning bars.
   const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.to>=wk&&h.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
-  const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off',rowcls:'offrow'})).join('');
+  const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off'+((h.time&&h.from===h.to)?' '+h.time:''),rowcls:'offrow'})).join('');
   // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
   const evs=list('events').filter(e=>e.from&&evEnd(e)>=wk&&e.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))||String(a.title||'').localeCompare(String(b.title||'')));
   const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:'--good',{text:(g?g.name+' · ':'')+evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
@@ -604,7 +619,7 @@ views.schedule=()=>{
       sec('Diary',dEvs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);return li(g?g.c:'--good',`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],evActs(e));}))+
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':''],q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
-      sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+(h.reason?' · '+esc(h.reason):'')])));
+      sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}</section>`;
   }
   return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
@@ -1001,12 +1016,12 @@ views.crew=()=>{
     const act=h.status==='pending'
       ?`<button type="button" class="btn sm" data-act="holSet" data-id="${esc(h.id)}" data-v="approved">Approve</button><button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="declined">Decline</button>`
       :`<button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="pending">Reopen</button>`;
-    return `<li class="item"><div>${st}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(span(h))} <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${act}</div></li>`;
+    return `<li class="item"><div>${st}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(span(h))} <span class="sub">(${esc(holDur(h))})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${act}</div></li>`;
   };
   const sec=(title,rows,emptyTxt)=>`<section class="panel"><div class="panel-h"><h3>${title}${rows.length?' <span class="sub">'+rows.length+'</span>':''}</h3></div>${rows.length?`<ul class="items">${rows.map(row).join('')}</ul>`:empty(emptyTxt,'')}</section>`;
   // Directors book their own time off — no approval, straight onto the schedule.
   const who=[...new Set([(DWME.name||'').trim(),...list('employees').filter(e=>e.active!==false).map(e=>(e.name||'').trim())].filter(Boolean))];
-  const book=`<section class="panel"><div class="panel-h"><h3>Book time off</h3><span class="sub">Goes straight on the schedule — no approval needed.</span></div><form class="panel-b form" data-form="timeoff">${who.length?sel('timeoff','who','Who',who[0],who.map(n=>[n,n])):fld('timeoff','who','Who',DWME.name||'')}${fld('timeoff','from','From','',{type:'date',attrs:'required'})}${fld('timeoff','to','To (optional)','',{type:'date'})}${fld('timeoff','note','Note (optional)','',{cls:'wide'})}<div class="go"><button class="btn">Book it</button></div></form></section>`;
+  const book=`<section class="panel"><div class="panel-h"><h3>Book time off</h3><span class="sub">Goes straight on the schedule — no approval needed.</span></div><form class="panel-b form" data-form="timeoff">${who.length?sel('timeoff','who','Who',who[0],who.map(n=>[n,n])):fld('timeoff','who','Who',DWME.name||'')}${fld('timeoff','from','From','',{type:'date',attrs:'required'})}${fld('timeoff','to','To (optional)','',{type:'date'})}${fld('timeoff','time','Time (if not all day)','',{type:'time'})}${fld('timeoff','note','Note (optional)','',{cls:'wide'})}<div class="go"><button class="btn">Book it</button></div></form></section>`;
   return `<div class="head"><div><h2>Holidays</h2><p class="sub">Holiday requests from the lads — approve or decline and they'll see it straight away.</p></div></div>`
     +book
     +sec('Awaiting your decision',pending,'No requests waiting')
@@ -1232,7 +1247,7 @@ const forms={
     if(!f.from)return false;
     const to=(f.to&&f.to>=f.from)?f.to:f.from;
     const days=Math.round((parse(to)-parse(f.from))/86400000)+1;
-    write('holidays',uid(),'set',{uid:'',name:(f.who||'').trim()||DWME.name||'Office',from:f.from,to,days,note:(f.note||'').trim(),status:'approved',decidedBy:DWME.name||'Director',decidedAt:Date.now(),created:Date.now()});
+    write('holidays',uid(),'set',{uid:'',name:(f.who||'').trim()||DWME.name||'Office',from:f.from,to,days,time:(f.time||'').trim(),note:(f.note||'').trim(),status:'approved',decidedBy:DWME.name||'Director',decidedAt:Date.now(),created:Date.now()});
     toast('Booked — it is on the schedule');return true;
   },
   remEdit(f){if(!ui.edit)return true;const id=ui.edit.split('/')[1];const t=(f.text||'').trim();if(t)write('reminders',id,'update',{text:t,when:f.when||''});if(f.when)askNotify();ui.edit=null;return true;},
@@ -1476,6 +1491,48 @@ async function scanTenderPdf(pid,file){
 let pending=false, toastT=0;
 function schedule(){if(pending)return;pending=true;setTimeout(()=>{pending=false;render();},0);}
 function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},4200);}
+
+/* ---------- "What's new" pop-up ----------
+   Newest entry first. Bump the top entry's v each time you ship and add its
+   bullets. Each bullet is tagged for an audience so crew and directors each see
+   only what changed in THEIR app:
+     who:'crew'      — only the lads (field app) see it
+     who:'director'  — only directors (this Site Office) see it
+     who:'all'       — everyone sees it (a change that touches both apps)
+   A plain string is treated as 'all'. Everyone sees any entries newer than the
+   version their device last acknowledged; the X / tap-away marks them seen. */
+const WHATSNEW=[
+  {v:2,d:'5 Nov 2026',items:[
+    {who:'director',t:'Holiday requests now ping your phone the moment a lad asks for time off — and sit at the top of Overview → Needs attention with Approve / Decline right there.'},
+    {who:'all',t:'Asking for time off now has a Time box — for a morning appointment, pop the time in and it shows as a part day, not a full day off.'},
+    {who:'all',t:'This “What’s new” note pops up after each update so you can see what changed.'}
+  ]},
+  {v:1,d:'Early Nov 2026',items:[
+    {who:'director',t:'Cost-plus / day-works jobs: see logged vs invoiced vs still-to-bill in one place, and link a day-works folder to a project by hand.'},
+    {who:'director',t:'Turn an enquiry into a reminder, or a diary item into a site visit, in one tap.'},
+    {who:'director',t:'Refresh from Xero fixed.'}
+  ]}
+];
+const APP_VER=WHATSNEW.reduce((m,x)=>Math.max(m,x.v),0);
+let _wnShown=false;
+function showWhatsNew(role){
+  if(_wnShown)return;_wnShown=true;
+  const aud=role==='director'?'director':'crew';   // anyone not a director = crew/lead
+  let seen=0;try{seen=parseInt(localStorage.getItem('dc-whatsnew')||'0',10)||0;}catch(e){}
+  // Keep only the releases newer than last seen, and within each only the bullets for this person.
+  const rel=WHATSNEW.filter(x=>x.v>seen).map(x=>({d:x.d,items:x.items
+      .map(i=>typeof i==='string'?{who:'all',t:i}:i)
+      .filter(i=>i.who==='all'||i.who===aud)})).filter(x=>x.items.length);
+  if(!rel.length)return;   // nothing new for this person — leave their seen marker as-is
+  const wrap=document.createElement('div');wrap.className='wn-wrap';
+  wrap.innerHTML='<div class="wn-card" role="dialog" aria-label="What’s new">'
+    +'<div class="wn-hd"><span class="wn-ttl">What’s new</span><button type="button" class="wn-x" aria-label="Close">&times;</button></div>'
+    +'<div class="wn-bd">'+rel.map(x=>'<div class="wn-rel"><h4>'+esc(x.d)+'</h4><ul>'
+        +x.items.map(i=>'<li>'+esc(i.t)+'</li>').join('')+'</ul></div>').join('')+'</div></div>';
+  const close=()=>{try{localStorage.setItem('dc-whatsnew',String(APP_VER));}catch(e){}wrap.remove();};
+  wrap.addEventListener('click',e=>{if(e.target===wrap||e.target.closest('.wn-x'))close();});
+  document.body.appendChild(wrap);
+}
 
 /* ---------- Native Day Works editor ----------
    The day works / variation sheet is rebuilt NATIVELY in the Site Office — same
@@ -2588,6 +2645,7 @@ render();
     const first=nm.split(' ')[0]||'there';
     if(w)w.textContent='Welcome '+first+(profile&&profile.role==='director'?' · Director':'');
     if(o){o.style.display='';o.onclick=()=>sb.auth.signOut();}
+    showWhatsNew(profile&&profile.role);   // once-per-update note; crew & directors each see only their app's changes
   }
 
   /* --- auth flow --- */
@@ -2701,9 +2759,9 @@ render();
       const hs=cS.holidays;
       const span=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
       const stpill=h=>h.status==='approved'?pill('good','Approved'):h.status==='declined'?pill('bad','Declined'):pill('warn','Pending');
-      const row=h=>`<li class="item"><div>${stpill(h)}</div><div class="item-main"><strong>${esc(span(h))}</strong> <span class="sub">(${num(h.days)||1} day${(num(h.days)||1)>1?'s':''})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${h.status==='pending'?`<button type="button" class="btn sm ghost" data-hdel="${esc(h.id)}">Cancel</button>`:''}</div></li>`;
+      const row=h=>`<li class="item"><div>${stpill(h)}</div><div class="item-main"><strong>${esc(span(h))}</strong> <span class="sub">(${esc(holDur(h))})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${h.status==='pending'?`<button type="button" class="btn sm ghost" data-hdel="${esc(h.id)}">Cancel</button>`:''}</div></li>`;
       const today=todayISO();
-      const form=`<section class="panel"><div class="panel-h"><h3>Request time off</h3><span class="sub">Pick your dates — the office gets it straight away.</span></div><div class="panel-b form"><label class="f"><span>From</span><input type="date" id="hol-from" min="${today}"></label><label class="f"><span>To</span><input type="date" id="hol-to" min="${today}"></label><label class="f full"><span>Note (optional)</span><input id="hol-note" autocomplete="off" placeholder="e.g. family holiday"></label><div class="go"><button type="button" class="btn" data-hsubmit>Send request</button></div></div></section>`;
+      const form=`<section class="panel"><div class="panel-h"><h3>Request time off</h3><span class="sub">Pick your dates — the office gets it straight away.</span></div><div class="panel-b form"><label class="f"><span>From</span><input type="date" id="hol-from" min="${today}"></label><label class="f"><span>To</span><input type="date" id="hol-to" min="${today}"></label><label class="f"><span>Time (if not all day)</span><input type="time" id="hol-time"></label><label class="f full"><span>Note (optional)</span><input id="hol-note" autocomplete="off" placeholder="e.g. family holiday, or dentist 8am"></label><div class="go"><button type="button" class="btn" data-hsubmit>Send request</button></div></div></section>`;
       const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="items">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
       return `<div class="head"><div><h2>Holiday</h2><p class="sub">Ask for time off and see where each request stands.</p></div></div>`+form+mine;
     }
@@ -2715,13 +2773,13 @@ render();
       return `<div class="head"><div><h2>Your reminders</h2><p class="sub">Private to you — jot anything you need to remember on site.</p></div></div><section class="panel"><div class="panel-h"><h3>To do <span class="sub">${open.length}</span></h3></div>${formEl}${open.length||done.length?`<ul class="items rem-list">${open.map(row).join('')}${done.length?`<li class="rem-sep">Done · ${done.length}</li>`+done.map(row).join(''):''}</ul>`:empty('Nothing yet','Type anything you need to remember — it saves straight away.')}</section>`;
     }
     function saveHoliday(){
-      const f=$('hol-from'),t=$('hol-to'),n=$('hol-note');
-      const from=f&&f.value,to=t&&t.value,note=((n&&n.value)||'').trim();
+      const f=$('hol-from'),t=$('hol-to'),n=$('hol-note'),tm=$('hol-time');
+      const from=f&&f.value,to=t&&t.value,note=((n&&n.value)||'').trim(),time=((tm&&tm.value)||'').trim();
       if(!from||!to){toast('Pick both dates');return;}
       if(to<from){toast('Your “to” date is before the “from” date');return;}
       const days=Math.round((parse(to)-parse(from))/86400000)+1;
       const did=uid+'__'+newId();
-      sb.from('office_docs').upsert({collection:'holidays',doc_id:did,data:{uid,name:(profile&&profile.full_name)||'',from,to,days,note,status:'pending',created:Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
+      sb.from('office_docs').upsert({collection:'holidays',doc_id:did,data:{uid,name:(profile&&profile.full_name)||'',from,to,days,time,note,status:'pending',created:Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'})
         .then(r=>{if(r.error){toast('Could not send — check your connection');return;}toast('Holiday request sent');loadHolidays().then(render);});
     }
     function cancelHoliday(id){sb.from('office_docs').delete().eq('collection','holidays').eq('doc_id',id).then(r=>{if(r.error){toast('Could not cancel');return;}toast('Request cancelled');loadHolidays().then(render);});}
