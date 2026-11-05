@@ -7,7 +7,8 @@
 -- What it does: pings every director's phone (that has alerts on) when a
 -- crew member
 --   1) taps "Send / I'm finished" on their end-of-week hours, and
---   2) submits a new day works sheet (or variation).
+--   2) submits a new day works sheet (or variation), and
+--   3) sends in a holiday request (tapping it opens the Holidays tab).
 -- The person who did it isn't pinged (handled by push_send's actor check).
 -- ==================================================================
 
@@ -108,3 +109,43 @@ create trigger sheets_push
   after insert on public.sheets
   for each row
   execute function public.push_on_sheet();
+
+-- 4) Holiday request sent in from the crew app. Fires once when a NEW
+--    pending request lands (not when a director reopens an old one, and not
+--    for directors booking their own time off, which goes in as approved).
+create or replace function public.push_on_holiday_request()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n   jsonb := new.data;
+  o   jsonb := case when tg_op = 'UPDATE' then old.data else '{}'::jsonb end;
+  nm  text  := coalesce(nullif(n->>'name',''),'A crew member');
+  f   text;
+  d   int   := coalesce(nullif(regexp_replace(coalesce(n->>'days',''),'[^0-9]','','g'),'')::int,1);
+begin
+  if coalesce(n->>'status','') = 'pending' and coalesce(o->>'status','') = '' then
+    f := public.push_sched_fmt(n->>'from');
+    if coalesce(n->>'to','') > coalesce(n->>'from','') then
+      f := f||' – '||public.push_sched_fmt(n->>'to');
+    end if;
+    perform public.push_send(
+      'Holiday request — '||nm,
+      f||' ('||d||' day'||case when d > 1 then 's' else '' end||')'
+        ||coalesce(E'\n'||nullif(n->>'note',''),'')||E'\nTap to approve or decline',
+      'holreq-'||new.doc_id, null, 'office.html#crew');
+  end if;
+  return new;
+exception when others then
+  raise warning 'push_on_holiday_request failed: %', sqlerrm;
+  return new;
+end $$;
+
+drop trigger if exists office_docs_holiday_request_push on public.office_docs;
+create trigger office_docs_holiday_request_push
+  after insert or update on public.office_docs
+  for each row
+  when (new.collection = 'holidays')
+  execute function public.push_on_holiday_request();
