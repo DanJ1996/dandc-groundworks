@@ -1116,7 +1116,7 @@ const actions={
   },
   // Turn an enquiry that's really just a task (e.g. "Book scaff tower") into a reminder
   // for whoever's signed in, then drop it off the enquiries list.
-  async emailQuote(d){const q=S.quotes[d.id];if(!q)return;const p=q.projectId&&S.projects[q.projectId];const v=quoteValue(q);const to='office@dandcgroundworks.co.uk';const subj='Quote — '+[q.client,q.job].filter(Boolean).join(' — ');const L=[];if(q.client)L.push('Client: '+q.client);if(q.job)L.push('Job: '+q.job);if(q.workType)L.push('Type: '+q.workType);if(q.site)L.push('Site: '+q.site);const c=[q.phone,q.email].filter(Boolean).join(' · ');if(c)L.push('Contact: '+c);if(v>0){L.push('');L.push('Price (ex VAT): '+money(v));L.push('Total (inc VAT): '+money(v*1.2));}if(p&&p.notes)L.push('','Notes: '+p.notes);if(q.notes)L.push('','Enquiry notes: '+q.notes);const body=L.join('\n');
+  async emailQuote(d){const q=S.quotes[d.id];if(!q)return;const p=q.projectId&&S.projects[q.projectId];const v=quoteValue(q);const to='office@dandcgroundworks.co.uk';const subj='Quote — '+[q.client,q.job].filter(Boolean).join(' — ');const L=[];const hdr=[q.client,q.job].filter(Boolean).join(' — ');if(hdr)L.push(hdr);if(v>0)L.push(money(v)+' ex VAT ('+money(v*1.2)+' inc VAT)');const body=L.join('\n');
     // The quote PDF = the latest PDF filed on the linked project. Share it via the device
     // share sheet (the only way to attach a file into an email from the browser); pick Mail,
     // add yourself as the recipient, send. mailto can't carry an attachment, so with no PDF
