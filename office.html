@@ -337,7 +337,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true},tsGridOpen:false};
+const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -827,10 +827,18 @@ views.projects=()=>{
     const amtMain=isDW?`<span class="amt">Day works</span><span class="sub">cost-plus · ${hrs(h.h)} h · ${money(h.cost)} labour</span>`:`<span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span>`;
     const amtRight=isDW?costPlusTally(q):`<span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
     return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
-  const activeRows=active.map(q=>projRow(q,'active')).join('');
+  // Current jobs split into their own collapsible dropdowns by stage, so the live jobs are
+  // clearly apart from ones still being priced (a "Pricing" job is still a tender, not on site).
+  const liveP=active.filter(p=>p.status==='Live');
+  const readyP=active.filter(p=>p.status==='Ready to start');
+  const priceP=active.filter(p=>p.status!=='Live'&&p.status!=='Ready to start');
+  const projSec=(key,title,arr)=>{if(!arr.length)return '';const tot=arr.reduce((s,p)=>s+(num(p.tender)||projTotals(p).total),0);return dropSec(key,title+' <span class="sub">'+arr.length+'</span>',tot>0?'<span class="sub">'+money(tot)+'</span>':'',`<ul class="items">${arr.map(q=>projRow(q,'active')).join('')}</ul>`);};
+  const liveSec=projSec('projLive','Live projects',liveP);
+  const readySec=projSec('projReady','Ready to start',readyP);
+  const priceSec=projSec('projPrice','Pricing &amp; tenders',priceP);
   const interimSec=interim.length?dropSec('interimProjects','Interim — part invoiced','<span class="sub">'+interim.length+' on the go</span>',`<ul class="items">${interim.map(q=>projRow(q,'interim')).join('')}</ul>`):'';
   const doneSec=done.length?dropSec('doneProjects','Completed','<span class="sub">'+done.length+' finished</span>',`<ul class="items">${done.map(q=>projRow(q,'done')).join('')}</ul>`):'';
-  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}<section class="panel"><div class="panel-h"><h3>Current projects${active.length?' <span class="sub">'+active.length+'</span>':''}</h3></div>${active.length?`<ul class="items">${activeRows}</ul>`:empty('No active projects','Add one above, or use Price it on a quote request.')}${projTotal>0?`<div class="listfoot"><span>Total</span><strong>${money(projTotal)} <span class="sub">${money(projTotal*1.2)} inc VAT</span></strong></div>`:''}</section>${interimSec}${doneSec}`;
+  return `<div class="head"><div><h2>Projects</h2><p class="sub">Open a project to price it off the rate card and attach its documents.</p></div></div>${add}${active.length?liveSec+readySec+priceSec:`<section class="panel"><div class="panel-h"><h3>Current projects</h3></div>${empty('No active projects','Add one above, or use Price it on a quote request.')}</section>`}${projTotal>0?`<section class="panel"><div class="listfoot"><span>Total — all current jobs</span><strong>${money(projTotal)} <span class="sub">${money(projTotal*1.2)} inc VAT</span></strong></div></section>`:''}${interimSec}${doneSec}`;
 };
 
 function vProject(p){
