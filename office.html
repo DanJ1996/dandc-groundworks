@@ -1037,6 +1037,8 @@ views.crew=()=>{
 };
 
 /* ---------- actions ---------- */
+// Set by connect() once Supabase is up, so an action can fetch a stored PDF to share.
+let signDocUrl=null;
 const actions={
   tab(d){ui.tab=d.tab;ui.edit=null;ui.confirm=null;if(d.tab==='projects')ui.project=null;try{localStorage.setItem('dc-tab',d.tab);}catch(e){}try{history.replaceState(null,'','#'+d.tab);}catch(e){}window.scrollTo(0,0);},
   week(d){ui.week=+d.d?addDays(ui.week,+d.d):mondayOf(todayISO());},
@@ -1114,7 +1116,20 @@ const actions={
   },
   // Turn an enquiry that's really just a task (e.g. "Book scaff tower") into a reminder
   // for whoever's signed in, then drop it off the enquiries list.
-  emailQuote(d){const q=S.quotes[d.id];if(!q)return;const p=q.projectId&&S.projects[q.projectId];const v=quoteValue(q);const to='office@dandcgroundworks.co.uk';const subj='Quote — '+[q.client,q.job].filter(Boolean).join(' — ');const L=[];if(q.client)L.push('Client: '+q.client);if(q.job)L.push('Job: '+q.job);if(q.workType)L.push('Type: '+q.workType);if(q.site)L.push('Site: '+q.site);const c=[q.phone,q.email].filter(Boolean).join(' · ');if(c)L.push('Contact: '+c);if(v>0){L.push('');L.push('Price (ex VAT): '+money(v));L.push('Total (inc VAT): '+money(v*1.2));}if(p&&p.notes)L.push('','Notes: '+p.notes);if(q.notes)L.push('','Enquiry notes: '+q.notes);location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(L.join('\n'));toast('Opening an email to you…');},
+  async emailQuote(d){const q=S.quotes[d.id];if(!q)return;const p=q.projectId&&S.projects[q.projectId];const v=quoteValue(q);const to='office@dandcgroundworks.co.uk';const subj='Quote — '+[q.client,q.job].filter(Boolean).join(' — ');const L=[];if(q.client)L.push('Client: '+q.client);if(q.job)L.push('Job: '+q.job);if(q.workType)L.push('Type: '+q.workType);if(q.site)L.push('Site: '+q.site);const c=[q.phone,q.email].filter(Boolean).join(' · ');if(c)L.push('Contact: '+c);if(v>0){L.push('');L.push('Price (ex VAT): '+money(v));L.push('Total (inc VAT): '+money(v*1.2));}if(p&&p.notes)L.push('','Notes: '+p.notes);if(q.notes)L.push('','Enquiry notes: '+q.notes);const body=L.join('\n');
+    // The quote PDF = the latest PDF filed on the linked project. Share it via the device
+    // share sheet (the only way to attach a file into an email from the browser); pick Mail,
+    // add yourself as the recipient, send. mailto can't carry an attachment, so with no PDF
+    // (or no share support) we fall back to a pre-filled email you top up by hand.
+    const doc=p&&(p.docs||[]).filter(x=>/\.pdf$/i.test(x.name||'')).pop();
+    if(doc&&typeof signDocUrl==='function'&&navigator.canShare){
+      try{const r=await signDocUrl(doc.id);const url=r&&r.data&&r.data.signedUrl;
+        if(url){const blob=await(await fetch(url)).blob();const file=new File([blob],doc.name||'quote.pdf',{type:'application/pdf'});
+          if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:subj,text:body});return;}}
+      }catch(err){if(err&&err.name==='AbortError')return;}
+    }
+    location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
+    toast(doc?'Opened an email — attach the PDF from the project (your device can\u2019t auto-attach here)':(p&&(p.docs||[]).length?'Opened an email — add the quote PDF yourself':'Opened an email — no PDF is filed on this quote yet'));},
   quoteToReminder(d){const q=S.quotes[d.id];if(!q)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[q.client,q.job].filter(Boolean).join(' · ')||'Reminder';const when=q.visitDate?q.visitDate+'T'+(q.visitTime||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});write('quotes',d.id,'delete');if(when)askNotify();toast('Moved to your reminders'+(when?' — pings '+fmtD(q.visitDate):''));},
   openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
@@ -2640,6 +2655,7 @@ render();
     },
     delete:id=>sb.storage.from(BUCKET).remove([id])
   };
+  signDocUrl=path=>sb.storage.from(BUCKET).createSignedUrl(path,3600);
   document.addEventListener('click',e=>{
     const a=e.target.closest&&e.target.closest('a[href^="/_blob/"]');if(!a)return;e.preventDefault();
     const path=decodeURIComponent(a.getAttribute('href').slice(7));
