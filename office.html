@@ -749,7 +749,10 @@ const visitPill=(q,today)=>!q.visitDate?'':pill(q.visitDone?'neutral':q.visitDat
 views.quotes=()=>{
   const today=todayISO();
   const all=list('quotes');
-  const shown=all.filter(q=>ui.quoteFilter==='all'||isOpenQ(q)).sort((a,b)=>(isOpenQ(b)-isOpenQ(a))||String(a.due||'9999').localeCompare(String(b.due||'9999'))||String(b.received||'').localeCompare(String(a.received||'')));
+  // Order: new/unpriced enquiries (red) at the top, priced ones (green) below, decided (Won/Lost)
+  // at the very bottom — newest received first inside each band, then by quote-due as a tiebreak.
+  const qRank=q=>!isOpenQ(q)?2:(quoteValue(q)?1:0);
+  const shown=all.filter(q=>ui.quoteFilter==='all'||isOpenQ(q)).sort((a,b)=>(qRank(a)-qRank(b))||String(b.received||'').localeCompare(String(a.received||''))||String(a.due||'9999').localeCompare(String(b.due||'9999')));
   const won=all.filter(q=>q.status==='Won'), decided=won.length+all.filter(q=>q.status==='Lost').length;
   const open=all.filter(isOpenQ), quoted=all.filter(q=>q.status==='Quoted'), visits=all.filter(visitDue);
   const onTender=open.reduce((s,q)=>s+quoteValue(q),0);
