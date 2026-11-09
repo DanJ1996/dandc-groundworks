@@ -1177,7 +1177,12 @@ const changes={
   tsp(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].p=v;saveSheet(ui.week,d.e,rows);},
   qstatus(d,v){
     const q=S.quotes[d.id];write('quotes',d.id,'update',{status:v});
-    if(v==='Won'&&q&&q.projectId&&(S.projects[q.projectId]||{}).status==='Pricing'){write('projects',q.projectId,'update',{status:'Live'});toast('Won. The project is now Live.');}
+    if(v==='Won'&&q){
+      let pid=q.projectId&&S.projects[q.projectId]?q.projectId:'';
+      if(!pid){pid=uid();write('projects',pid,'set',{name:q.job||'Untitled',client:q.client||'',site:q.site||'',status:'Ready to start',tender:quoteValue(q)||0,lines:[],markup:0,docs:[],notes:[q.notes,q.meetNotes].filter(Boolean).join('\n\n'),created:todayISO()});write('quotes',d.id,'update',{projectId:pid});}
+      else if((S.projects[pid]||{}).status==='Pricing'){write('projects',pid,'update',{status:'Ready to start'});}
+      toast('Won — now in Projects, ready to start.');
+    }
   },
   // Link a day-works folder to one of our projects (sets that project's dwJob to this
   // folder, and clears it off whichever project was linked before). Also flips the
