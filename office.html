@@ -252,6 +252,9 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:rgba(255,255,255,.85);box-shadow:3px 0 0 rgba(255,255,255,.85)}
+.tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:none}
+.tev.mdrag,.vmark.mdrag{opacity:.55;cursor:grabbing}
+.sched.gantt td.mdrop{outline:2px dashed var(--info);outline-offset:-2px;background:color-mix(in srgb,var(--info) 12%,transparent)}
 .vmark{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
 .cform{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .thanks{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top:1px solid var(--line);color:var(--ink)}
@@ -580,10 +583,10 @@ views.schedule=()=>{
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
-  const visitRow=dayVisits.some(a=>a.length)?`<tr><th class="tcol">Visits</th>${days.map((d,i)=>`<td class="jcell vcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayVisits[i].slice().sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).map(q=>`<div class="tev" style="--c:var(--info)"><strong>${esc(q.client||'Visit')}</strong><span class="tsub">${q.visitTime?esc(q.visitTime):''}${q.visitBy?(q.visitTime?' · ':'')+esc(q.visitBy):''}</span>${q.phone?`<span class="tsub"><a href="${esc(telHref(q.phone))}">${esc(q.phone)}</a></span>`:''}${q.site?`<span class="tsub">${esc(q.site)}${mapLink(q.site)}</span>`:''}</div>`).join('')}</td>`).join('')}</tr>`:'';
+  const visitRow=dayVisits.some(a=>a.length)?`<tr><th class="tcol">Visits</th>${days.map((d,i)=>`<td class="jcell vcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayVisits[i].slice().sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).map(q=>`<div class="tev" data-vid="${esc(q.id)}" data-vkind="${esc(q.vkind||'q')}" style="--c:var(--info)"><strong>${esc(q.client||'Visit')}</strong><span class="tsub">${q.visitTime?esc(q.visitTime):''}${q.visitBy?(q.visitTime?' · ':'')+esc(q.visitBy):''}</span>${q.phone?`<span class="tsub"><a href="${esc(telHref(q.phone))}">${esc(q.phone)}</a></span>`:''}${q.site?`<span class="tsub">${esc(q.site)}${mapLink(q.site)}</span>`:''}</div>`).join('')}</td>`).join('')}</tr>`:'';
   // Quote-due deadlines (still unpriced) — markers on the due day.
   const dayDues=days.map(d=>list('quotes').filter(q=>q.due===d.day&&needsPrice(q)));
-  const dueRow=dayDues.some(a=>a.length)?`<tr><th class="tcol">Quotes due</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayDues[i].map(q=>`<div class="vmark" style="--c:var(--warn)">${esc(q.client||'')}</div>`).join('')}</td>`).join('')}</tr>`:'';
+  const dueRow=dayDues.some(a=>a.length)?`<tr><th class="tcol">Quotes due</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayDues[i].map(q=>`<div class="vmark" data-qid="${esc(q.id)}" style="--c:var(--warn)">${esc(q.client||'')}</div>`).join('')}</td>`).join('')}</tr>`:'';
   // Approved holidays — static spanning bars.
   const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.to>=wk&&h.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
   const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off'+((h.time&&h.from===h.to)?' '+h.time:''),rowcls:'offrow'})).join('');
@@ -2445,7 +2448,17 @@ view.addEventListener('drop',e=>{const z=e.target.closest('[data-droptender]');i
 /* ---------- Schedule: drag a job bar across the days to set how long it runs ----------
    Start stays pinned and you drag the end; drag before the start to pull the start earlier.
    A plain tap (no drag) opens the project. */
-let jobDrag=null;
+let jobDrag=null, mDrag=null, _swallowClick=false;
+function endMarkerDrag(){
+  if(!mDrag)return;const m=mDrag;mDrag=null;
+  m.el.classList.remove('mdrag');if(m.lastCell)m.lastCell.classList.remove('mdrop');
+  _swallowClick=true;
+  if(m.toDay&&m.toDay!==m.fromDay){
+    if(m.kind==='visit'){write(m.vkind==='p'?'projects':'quotes',m.id,'update',{visitDate:m.toDay});toast('Visit moved to '+fmtD(m.toDay));}
+    else{write('quotes',m.id,'update',{due:m.toDay});toast('Quote due moved to '+fmtD(m.toDay));}
+  }else{ui.schedDay=m.fromDay;ui.focusNext='sd-close';}
+  schedule();
+}
 function paintJobDrag(){
   if(!jobDrag)return;
   const tds=[...jobDrag.row.querySelectorAll('td.jcell')];
@@ -2455,6 +2468,11 @@ function paintJobDrag(){
   });
 }
 view.addEventListener('pointerdown',e=>{
+  // Site-visit / quote-due markers: single-day, draggable to another day. Skip links/buttons inside.
+  if(!e.target.closest('a,button')){
+    const mk=e.target.closest('.tev[data-vid],.vmark[data-qid]');
+    if(mk){const cell=mk.closest('td[data-sday]');mDrag={el:mk,kind:mk.dataset.vid?'visit':'due',id:mk.dataset.vid||mk.dataset.qid,vkind:mk.dataset.vkind||'q',fromDay:cell?cell.dataset.sday:'',toDay:'',lastCell:null};mk.classList.add('mdrag');try{mk.setPointerCapture(e.pointerId);}catch(_){}return;}
+  }
   const td=e.target.closest('tr.jobrow td.jcell[data-jday][data-jid]');if(!td)return;
   const row=td.closest('tr.jobrow');if(!row)return;
   const jid=td.dataset.jid, kind=td.dataset.jkind||'job';
@@ -2473,6 +2491,7 @@ view.addEventListener('pointerdown',e=>{
   try{td.setPointerCapture(e.pointerId);}catch(_){}
 });
 view.addEventListener('pointermove',e=>{
+  if(mDrag){const el=document.elementFromPoint(e.clientX,e.clientY);const td=el&&el.closest&&el.closest('.sched.gantt td[data-sday]');if(td&&td!==mDrag.lastCell){if(mDrag.lastCell)mDrag.lastCell.classList.remove('mdrop');mDrag.lastCell=td;td.classList.add('mdrop');mDrag.toDay=td.dataset.sday;}return;}
   if(!jobDrag)return;
   const el=document.elementFromPoint(e.clientX,e.clientY);
   const td=el&&el.closest&&el.closest('td.jcell[data-jday]');
@@ -2508,17 +2527,18 @@ function endJobDrag(){
   }
   schedule();
 }
-view.addEventListener('pointerup',endJobDrag);
+view.addEventListener('pointerup',e=>{endMarkerDrag();endJobDrag();});
 /* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
 view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;schedule();}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.meetDone){ui.meetDone=null;schedule();}});
 /* tap an empty / visit / quote / off / hour cell on the schedule → open that day in full */
 view.addEventListener('click',e=>{
+  if(_swallowClick){_swallowClick=false;return;}   // a marker was just dragged — don't also open the day
   if(e.target.closest('a,button,tr.jobrow'))return;
   const td=e.target.closest('.sched.gantt td[data-sday]');if(!td)return;
   ui.schedDay=td.dataset.sday;ui.focusNext='sd-close';schedule();
 });
-view.addEventListener('pointercancel',endJobDrag);
+view.addEventListener('pointercancel',e=>{endMarkerDrag();endJobDrag();});
 
 /* ---------- address autocomplete (type → pick the real address) ----------
    Suggestions come from OpenStreetMap's free Nominatim search (UK only, no key).
