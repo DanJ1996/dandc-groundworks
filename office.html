@@ -416,6 +416,30 @@ function weekLabour(wk){
   return {hours,cost};
 }
 function projTotals(p){const sub=(p.lines||[]).reduce((t,l)=>t+num(l.qty)*num(l.rate),0);const mk=sub*num(p.markup)/100;return {sub,mk,total:sub+mk};}
+// Interim applications for payment. Each application records the CUMULATIVE
+// position to date: the overall % of the tender valued so far, plus any
+// variations and a retention %. "This application" is the new money since the
+// previous one, so earlier applications stay on file and the latest shows
+// what's now due. A voided application is kept on file but counts for nothing.
+function appCalc(p){
+  const tender=num(p.tender);
+  const apps=(p.apps||[]).slice().sort((x,y)=>num(x.n)-num(y.n));
+  let prevNet=0;
+  const rows=apps.map(a=>{
+    const pct=num(a.pct), vars=num(a.vars), retPct=num(a.ret);
+    const worksVal=tender*pct/100;
+    const subtotal=worksVal+vars;
+    const retention=subtotal*retPct/100;
+    const netToDate=subtotal-retention;
+    const thisApp=a.void?0:netToDate-prevNet;
+    if(!a.void)prevNet=netToDate;
+    return {...a,pct,vars,retPct,worksVal,subtotal,retention,netToDate,thisApp};
+  });
+  const live=rows.filter(r=>!r.void), last=live[live.length-1];
+  const worksValued=last?last.worksVal:0, varsToDate=last?last.vars:0;
+  const invoicedToDate=last?last.netToDate:0;
+  return {tender,rows,last,worksValued,varsToDate,invoicedToDate,remaining:tender-worksValued,pctValued:tender?worksValued/tender*100:0};
+}
 const termsOf=i=>i.terms===''||i.terms==null?30:num(i.terms);
 const gross=i=>num(i.net)*(i.vat==='std'?1.2:1);
 function invState(i,today){if(i.paid)return 'paid';if(i.sent)return addDays(i.sent,termsOf(i))<today?'overdue':'awaiting';return i.sendBy&&i.sendBy<today?'late':'tosend';}
@@ -909,6 +933,9 @@ function vProject(p){
   // / zero rated, 5% reduced rate, or 20% standard. Stored per project as vatRate.
   const vr=p.vatRate===''||p.vatRate==null?20:num(p.vatRate);
   const tenderBox=`<section class="panel" data-droptender="${p.id}"><div class="panel-h"><h3>Tender</h3><span class="sub">Type the figure, or drop a tender PDF or Excel here to read it.</span></div><div class="panel-b form"><label class="f"><span>Tender price (ex VAT) £</span><input id="pf-tender" value="${esc(nf(p.tender||''))}" inputmode="decimal" placeholder="e.g. 12500" data-chg="pf" data-id="${p.id}" data-k="tender"></label><label class="f"><span>VAT rate</span><select id="pf-vatRate" data-chg="pf" data-id="${p.id}" data-k="vatRate">${[[20,'20% — standard'],[5,'5% — reduced rate'],[0,'0% — zero / reverse charge']].map(([r,l])=>`<option value="${r}"${vr===r?' selected':''}>${l}</option>`).join('')}</select></label></div>${tv?`<div class="panel-b"><div class="totals"><div><span>Tender (ex VAT)</span><strong>${money(tv)}</strong></div><div class="sub"><span>VAT at ${vr}%</span><span>${money(tv*vr/100)}</span></div><div class="grand"><span>Total inc VAT</span><span>${money(tv*(1+vr/100))}</span></div></div></div>`:''}<div class="panel-b">${assets?`<label class="btn sm filebtn">${scan&&scan.busy?'Reading the file…':'Read a PDF or Excel'}<input class="vh" type="file" accept=".pdf,.xlsx,.xlsm,application/pdf" data-chg="tenderFile" data-id="${p.id}"${scan&&scan.busy?' disabled':''}></label><p class="dw-xhint" style="margin-top:8px">Or drag a tender PDF or Excel onto this panel.</p>`:'<p class="dw-xhint">This view cannot read files here — type the tender figure above.</p>'}${scan&&!scan.busy?(scan.amounts.length?(()=>{const bottom=pickBottom(scan.amounts);return `<p class="dw-xhint" style="margin:14px 0 6px">The bottom line is the final total ex VAT (your "plus VAT" figure). Tap it to set the tender, or pick another figure.</p><button type="button" class="btn" data-act="useTender" data-id="${p.id}" data-v="${bottom.val}" style="width:100%">Bottom line — ${money(bottom.val)}</button><div class="dw-xbtns" style="margin-top:10px">${scan.amounts.map(a=>`<button type="button" class="btn sm ghost" data-act="useTender" data-id="${p.id}" data-v="${a.val}">${money(a.val)}${a.ctx?`<span class="sub" style="display:block;font-weight:400">${esc(a.ctx)}</span>`:''}</button>`).join('')}</div>`;})():`<p class="dw-xhint" style="margin-top:12px">${scan.error==='fail'?'Could not read that file. If a PDF is a scan/photo it has no text — type the figure in manually above.':'No £ figures found. Type the tender figure above.'}</p>`):''}</div></section>`;
+  const A=appCalc(p), nextN=(p.apps||[]).reduce((m,a)=>Math.max(m,num(a.n)),0)+1;
+  const appPct=n=>n.toFixed(n%1?1:0);
+  const appsBox=tv?`<section class="panel"><div class="panel-h"><h3>Applications for payment</h3><span class="sub">Raise an interim application as a % of the tender. Each one stays on file; the next deducts what you've already applied for.</span></div>${A.rows.length?`<div class="scroll-x"><table class="grid"><thead><tr><th>App</th><th>Date</th><th class="n">Complete</th><th class="n">Variations</th><th class="n">Retention</th><th class="n">This application</th><th class="n">To date</th><th></th></tr></thead><tbody>${A.rows.map((a,i)=>{const isLast=i===A.rows.length-1;return `<tr><td>${a.void?`<s>${a.n}</s> <span class="sub">void</span>`:a.n}</td><td>${fmtD(a.date)}</td><td class="n">${appPct(a.pct)}%</td><td class="n">${a.vars?money(a.vars):'—'}</td><td class="n">${a.retPct?appPct(a.retPct)+'%':'—'}</td><td class="n"><strong>${a.void?'—':money(a.thisApp)}</strong></td><td class="n">${a.void?'—':money(a.netToDate)}</td><td class="n">${isLast?`${a.void?`<button type="button" class="btn sm ghost" data-act="appUnvoid" data-id="${p.id}" data-a="${a.id}">Reinstate</button>`:`<button type="button" class="btn sm ghost" data-act="appVoid" data-id="${p.id}" data-a="${a.id}">Void</button>`}${del('app/'+p.id+'/'+a.id,'×')}`:''}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No applications yet','Raise your first interim application below — enter the overall % of the tender complete and it works out the figure.')}<div class="panel-b"><div class="totals"><div class="sub"><span>Tender (ex VAT)</span><span>${money(A.tender)}</span></div><div><span>Valued to date</span><strong>${money(A.worksValued)} · ${appPct(A.pctValued)}%</strong></div>${A.varsToDate?`<div class="sub"><span>Variations to date</span><span>${money(A.varsToDate)}</span></div>`:''}<div><span>Invoiced to date</span><strong>${money(A.invoicedToDate)}</strong></div><div class="grand"><span>Left to invoice in tender</span><span>${money(Math.max(0,A.remaining))}</span></div></div></div><form class="panel-b form" data-form="appAdd">${fld('appAdd','date','Application date',todayISO(),{type:'date'})}${fld('appAdd','pct','% of tender complete',nf(A.last?A.last.pct:''),{attrs:'inputmode="decimal" placeholder="e.g. 45"'})}${fld('appAdd','vars','Variations to date £',nf(A.last?A.last.vars:''),{attrs:'inputmode="decimal" placeholder="0"'})}${fld('appAdd','ret','Retention %',nf(A.last?A.last.retPct:''),{attrs:'inputmode="decimal" placeholder="0"'})}<div class="go"><button class="btn">Add application ${nextN}</button></div></form></section>`:'';
   const documents=`<section class="panel"><div class="panel-h"><h3>Documents</h3>${assets?`<label class="btn sm filebtn">${ui.busy==='upload'?'Uploading…':'Add PDFs'}<input class="vh" type="file" id="doc-up" accept="application/pdf,image/png,image/jpeg" multiple data-chg="upload" data-id="${p.id}"${ui.busy==='upload'?' disabled':''}></label>`:''}</div>${docs.length?`<ul class="items">${docs.map(d=>`<li class="item"><div class="item-main"><a href="/_blob/${esc(d.id)}" target="_blank" rel="noopener">${esc(d.name)}</a><div class="sub">${size(num(d.size))} · added ${fmtD(d.added,true)}</div></div>${assets?`<div class="item-act">${del('doc/'+p.id+'/'+d.id,'Remove')}</div>`:''}</li>`).join('')}</ul>`:empty('No documents attached',assets?'Add drawings, specs, tender documents and quotes as PDFs (up to 20 MB each).':'Documents can be added by people with edit access to this page.')}</section>`;
   // Make the Xero button actually useful: if an invoice is already linked to this job, open
   // THAT invoice in Xero; otherwise jump to the Invoices tab with this client pre-searched so
@@ -917,7 +944,7 @@ function vProject(p){
   const xeroBtn=xHere.length
     ?`<a class="btn sm" href="https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(xHere[0].xero_id)}" target="_blank" rel="noopener">Open ${esc(xHere[0].number||'invoice')} in Xero</a>`
     :`<button type="button" class="btn sm" data-act="findInvoice" data-q="${esc(p.client||p.name)}">Find invoice</button>`;
-  return `<div class="head"><div><button type="button" class="btn ghost sm" id="p-back" data-act="closeProject">‹ All projects</button></div></div><div class="head"><div><h2>${esc(p.name)}</h2><p class="sub">${[p.client,p.site].filter(Boolean).map(esc).join(' · ')}</p></div><div class="item-act">${xeroBtn}${pill(projPill(p.status),p.status||'Pricing')}</div></div>${details}${tenderBox}${pricing}${documents}`;
+  return `<div class="head"><div><button type="button" class="btn ghost sm" id="p-back" data-act="closeProject">‹ All projects</button></div></div><div class="head"><div><h2>${esc(p.name)}</h2><p class="sub">${[p.client,p.site].filter(Boolean).map(esc).join(' · ')}</p></div><div class="item-act">${xeroBtn}${pill(projPill(p.status),p.status||'Pricing')}</div></div>${details}${tenderBox}${appsBox}${pricing}${documents}`;
 }
 
 const invFields=(f,i,edit)=>{
@@ -1139,6 +1166,7 @@ const actions={
     const [kind,a,b]=d.key.split('/');ui.confirm=null;
     if(kind==='line'){const p=S.projects[a];if(p)write('projects',a,'update',{lines:(p.lines||[]).filter(l=>l.id!==b)});return;}
     if(kind==='doc'){removeDoc(a,b);return;}
+    if(kind==='app'){const p=S.projects[a];if(p)write('projects',a,'update',{apps:(p.apps||[]).filter(x=>x.id!==b)});return;}
     if(kind==='projects'){
       const p=S.projects[a];
       if(p&&assets)(p.docs||[]).forEach(x=>assets.delete(x.id).catch(()=>{}));
@@ -1180,6 +1208,8 @@ const actions={
   projActive(d){write('projects',d.id,'update',{interim:false});toast('Back in current jobs');},
   projReopen(d){write('projects',d.id,'update',{status:'Live',interim:false});toast('Reopened');},
   useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
+  appVoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:true}:a)});toast('Application voided — kept on file');},
+  appUnvoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:false}:a)});toast('Application reinstated');},
   closeProject(){ui.project=null;ui.confirm=null;},
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
   remPin(d){write('reminders',d.id,'update',{pri:d.pin==='1'?Date.now():0});},
@@ -1330,6 +1360,14 @@ const forms={
     const line=r?{id:uid(),code:r.code||'',cat:r.cat||'',desc:r.desc||'',unit:r.unit||'',qty:num(f.qty)||1,rate:num(r.rate)}:{id:uid(),code:'',cat:'',desc:'',unit:'item',qty:num(f.qty)||1,rate:0};
     write('projects',ui.project,'update',{lines:(p.lines||[]).concat([line])});
     ui.drafts.addline={rateId:'',qty:'1'};if(!r)ui.focusNext='ln-'+line.id+'-desc';return false;
+  },
+  appAdd(f){
+    const p=S.projects[ui.project];if(!p)return false;
+    const pct=num(f.pct);if(!f.date||!(pct>0))return false;
+    const n=(p.apps||[]).reduce((m,a)=>Math.max(m,num(a.n)),0)+1;
+    const app={id:uid(),n,date:f.date,pct,vars:num(f.vars),ret:num(f.ret),void:false,created:Date.now()};
+    write('projects',ui.project,'update',{apps:(p.apps||[]).concat([app])});
+    toast('Application '+n+' added');return true;
   },
   quote(f){write('quotes',uid(),'set',{...enqBody(f),received:f.received||todayISO(),status:'New',projectId:'',visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,created:todayISO()});toast('Enquiry logged');ui.focusNext='quote-client';return true;},
   quoteEdit(f){const id=ui.edit.split('/')[1];write('quotes',id,'update',enqBody(f));ui.edit=null;return true;},
