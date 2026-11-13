@@ -150,7 +150,53 @@ Deno.serve(async (req) => {
   // Surface a save problem (e.g. a missing column / stale schema cache) instead of
   // silently reporting success — the office can then show the real reason.
   if (upErr) return json({ connected: true, synced: 0, fetched: allInvoices.length, xero_error: "save failed: " + (upErr.message || upErr.code || "unknown") });
-  return json({ connected: true, synced: rows.length, fetched: allInvoices.length });
+
+  // --- Quotes (what's been PRICED up in Xero) ---------------------------------
+  // So a job's Tender figure can be pulled straight from the Xero quote instead of
+  // typing it or reading a PDF. accounting.invoices.read (already granted) covers
+  // Quotes too, so no re-approval is needed. We store the ex-VAT SubTotal as `total`
+  // — that's the "tender price (ex VAT)" the office wants — keyed with a "Q:" prefix
+  // so a quote number can never collide with an invoice number in the shared table.
+  // Quotes are kept out of the invoiced/paid maths by their kind="quote" (the office
+  // reads them into a separate list). No `order` param — Xero rejects it on Invoices
+  // and we sort newest-first in the app anyway.
+  const quoteRows: Array<Record<string, unknown>> = [];
+  const qseen = new Set<string>();
+  for (let page = 1; page <= 4; page++) {
+    const qres = await api(`Quotes?page=${page}`);
+    if (!qres || !Array.isArray(qres.Quotes)) break;
+    for (const q of qres.Quotes as Array<Record<string, unknown>>) {
+      const st = String(q.Status || "");
+      if (st === "DELETED" || st === "DECLINED") continue; // not a live priced figure
+      const ref = "Q:" + String(q.QuoteNumber || q.QuoteID);
+      if (qseen.has(ref)) continue;
+      qseen.add(ref);
+      const sub = (q.SubTotal ?? q.Total ?? 0) as number; // ex-VAT = the tender figure
+      quoteRows.push({
+        ref,
+        kind: "quote",
+        xero_id: q.QuoteID,
+        number: q.QuoteNumber || "",
+        contact: ((q.Contact as { Name?: string })?.Name) || "",
+        status: st,
+        date: xdate(q.DateString || q.Date),
+        total: sub,
+        amount_due: 0,
+        amount_paid: 0,
+        paid_date: null,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    if ((qres.Quotes as unknown[]).length < 100) break;
+  }
+  // A quote-save failure must NOT fail the whole sync (invoices already saved fine);
+  // report it alongside the success counts so the office can mention it if needed.
+  let quoteError: string | null = null;
+  if (quoteRows.length) {
+    const { error: qErr } = await db.from("xero_status").upsert(quoteRows, { onConflict: "ref" });
+    if (qErr) quoteError = qErr.message || qErr.code || "unknown";
+  }
+  return json({ connected: true, synced: rows.length, quotes: quoteRows.length, fetched: allInvoices.length, ...(quoteError ? { quote_error: quoteError } : {}) });
   } catch (e) {
     // Never 500 — hand the real message back so the office can show what broke.
     return json({ connected: true, synced: 0, fetched: 0, xero_error: "crash: " + ((e as Error)?.message || String(e)) });
