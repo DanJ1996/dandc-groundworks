@@ -2557,6 +2557,9 @@ function certModel(p,aid){
     ref:(p.appRef||'').trim(), jobTitle:p.name||'', orderNo:(p.po||'').trim()||'N/A',
     appNo:a.n, dateStr:fmtD(a.date,true),
     tender:A.tender, pct:a.pct, worksVal:a.worksVal,
+    // What's still left in the tender to invoice after this application — tender minus the
+    // works valued to date (matches the project panel's "Left to invoice in tender").
+    remaining:Math.max(0,A.tender-a.worksVal),
     vars:a.vars, subtotal:a.subtotal, retPct:a.retPct, retention:a.retention,
     netToDate:a.netToDate, prior:prior, thisApp:a.thisApp,
     vr:vr, vatApplies:vr>0, vatText:vr===0?'Domestic reverse charge — customer to account for VAT':(certPct(vr)+'% standard rate'),
@@ -2598,6 +2601,14 @@ function certInner(d){
       row('This application'+(d.vatApplies?' (ex VAT)':''),money(d.thisApp),{bold:true,top:true})+
       (d.vatApplies?row('VAT @ '+certPct(d.vr)+'%',money(d.vatAmt))+row('Total due this application',money(d.totalDue),{bold:true}):'')+
     '</tbody></table></div>'+
+    // At-a-glance position: this application's amount, the whole contract total, and what's
+    // still left to invoice in the tender.
+    (function(){var card=function(lab,val,hi){return '<div style="flex:1 1 180px;border-radius:8px;padding:10px 12px;'+(hi?'background:'+navy+';color:#F4EFE8':'background:#F7F4EF;border:1px solid '+line+';color:'+ink)+'"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;'+(hi?'opacity:.82':'color:'+muted)+'">'+lab+'</div><div style="font-weight:700;font-size:17px">'+val+'</div></div>';};
+      return '<div style="display:flex;flex-wrap:wrap;gap:12px;padding:16px 22px 4px">'+
+        card('This application'+(d.vatApplies?' (ex VAT)':''),money(d.thisApp),true)+
+        card('Contract total (ex VAT)',money(d.tender),false)+
+        card('Left to invoice',money(d.remaining),false)+
+      '</div>';})()+
     (d.varItems&&d.varItems.length?(
       '<div style="padding:16px 22px 0"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:'+muted+';margin-bottom:6px">Variations schedule</div>'+
       '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
@@ -2664,6 +2675,9 @@ function certExcel(d){
   d.prior.forEach(function(r){rows.push(['Less application '+r.n,{v:-r.thisApp,s:S2}]);});
   rows.push([{v:'This application'+(d.vatApplies?' (ex VAT)':''),s:1},{v:d.thisApp,s:S3}]);
   if(d.vatApplies){rows.push(['VAT @ '+certPct(d.vr)+'%',{v:d.vatAmt,s:S2}]);rows.push([{v:'Total due this application',s:1},{v:d.totalDue,s:S3}]);}
+  rows.push([]);
+  rows.push([{v:'Contract total (ex VAT)',s:1},{v:d.tender,s:S3}]);
+  rows.push([{v:'Left to invoice',s:1},{v:d.remaining,s:S3}]);
   rows.push([]);
   rows.push(['VAT treatment',d.vatText]);
   rows.push(['Payment / pay-less notice by',d.noticeStr]);
