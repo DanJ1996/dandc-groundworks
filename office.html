@@ -219,7 +219,7 @@ table.grid{border-collapse:collapse;width:100%}
 .listfoot .sub{font-weight:400}
 .item.quoted{background:#eef7f1;box-shadow:inset 3px 0 0 #57d38a}
 .item.unpriced{background:#fdeeee;box-shadow:inset 3px 0 0 #e05656}
-[data-droptender].dragover,[data-dropdocs].dragover{outline:2px dashed #57d38a;outline-offset:-6px;background:#eef7f1}
+[data-droptender].dragover,[data-dropdocs].dragover,[data-dropboq].dragover{outline:2px dashed #57d38a;outline-offset:-6px;background:#eef7f1}
 .sched.gantt{table-layout:fixed;min-width:620px;border-collapse:separate;border-spacing:0}
 .sched.gantt th,.sched.gantt td{border:1px solid var(--line)}
 .sched.gantt th.tcol,.sched.gantt td.tcol{width:74px;min-width:74px;text-align:right;white-space:nowrap;font-weight:600;color:var(--muted);vertical-align:middle;font-size:.78rem;padding:4px 8px;background:var(--surface)}
@@ -954,6 +954,7 @@ function vProject(p){
   <div class="panel-b"><div class="totals">${Object.entries(byCat).sort().map(([c,v])=>`<div class="sub"><span>${esc(c)}</span><span>${money(v)}</span></div>`).join('')}<div><span>Subtotal</span><strong>${money(t.sub)}</strong></div><div><label for="pf-markup">Overheads &amp; profit %</label><span><input id="pf-markup" value="${esc(nf(p.markup||''))}" inputmode="decimal" data-chg="pf" data-id="${p.id}" data-k="markup"> ${money(t.mk)}</span></div><div class="grand"><span>Price ex VAT</span><span>${money(t.total)}</span></div></div></div></section>`;
   const docs=p.docs||[];
   const scan=ui.tenderScan&&ui.tenderScan.pid===p.id?ui.tenderScan:null;
+  const boq=ui.boqScan&&ui.boqScan.pid===p.id?ui.boqScan:null;
   const tv=num(p.tender);
   // VAT rate on the tender is a dropdown of the UK rates (default 20%). Pick 0% for reverse charge
   // / zero rated, 5% reduced rate, or 20% standard. Stored per project as vatRate.
@@ -986,7 +987,7 @@ function vProject(p){
   // updates it in place (every later application re-deducts automatically).
   const edApp=ui.appEdit?((p.apps||[]).find(a=>a.id===ui.appEdit)):null;
   const appForm=edApp?`<form class="panel-b form" data-form="appEdit">${fld('appEdit','date','Application date',edApp.date,{type:'date'})}${fld('appEdit','pct','% of tender complete',nf(edApp.pct),{attrs:'inputmode="decimal" placeholder="e.g. 45"'})}${fld('appEdit','vars','Variations to date £',nf(edApp.vars),{attrs:'inputmode="decimal" placeholder="0"'})}${fld('appEdit','ret','Retention %',nf(edApp.ret),{attrs:'inputmode="decimal" placeholder="0"'})}<div class="go"><button class="btn">Save application ${edApp.n}</button><button type="button" class="btn ghost" data-act="appEditCancel">Cancel</button></div></form>`:`<form class="panel-b form" data-form="appAdd">${fld('appAdd','date','Application date',todayISO(),{type:'date'})}${fld('appAdd','pct','% of tender complete',nf(A.last?A.last.pct:''),{attrs:'inputmode="decimal" placeholder="e.g. 45"'})}${fld('appAdd','vars','Variations to date £',nf(vlines.length?varsClaimed:(A.last?A.last.vars:'')),{attrs:'inputmode="decimal" placeholder="0"'})}${vlines.length?`<p class="dw-xhint full" style="margin:-4px 0 4px">Pre-filled from your variations schedule (${money(varsClaimed)}). Edit if needed.</p>`:''}${fld('appAdd','ret','Retention %',nf(A.last?A.last.retPct:''),{attrs:'inputmode="decimal" placeholder="0"'})}<div class="go"><button class="btn">Add application ${nextN}</button></div></form>`;
-  const appsBox=tv?`<section class="panel"><div class="panel-h"><h3>Applications for payment</h3><span class="sub">Raise an interim application as a % of the tender. Each one stays on file; the next deducts what you've already applied for.</span></div>${A.rows.length?`<div class="scroll-x"><table class="grid"><thead><tr><th>App</th><th>Date</th><th class="n">Complete</th><th class="n">Variations</th><th class="n">Retention</th><th class="n">This application</th><th class="n">To date</th><th></th></tr></thead><tbody>${A.rows.map((a,i)=>{const isLast=i===A.rows.length-1;return `<tr><td>${a.void?`<s>${a.n}</s> <span class="sub">void</span>`:a.n}</td><td>${fmtD(a.date)}</td><td class="n">${appPct(a.pct)}%</td><td class="n">${a.vars?money(a.vars):'—'}</td><td class="n">${a.retPct?appPct(a.retPct)+'%':'—'}</td><td class="n"><strong>${a.void?'—':money(a.thisApp)}</strong></td><td class="n">${a.void?'—':money(a.netToDate)}</td><td class="n">${a.void?'':`<button type="button" class="btn sm ghost" data-act="certOpen" data-id="${p.id}" data-a="${a.id}">Certificate</button>`}<button type="button" class="btn sm ghost" data-act="appEditAsk" data-id="${p.id}" data-a="${a.id}">Edit</button>${isLast?`${a.void?`<button type="button" class="btn sm ghost" data-act="appUnvoid" data-id="${p.id}" data-a="${a.id}">Reinstate</button>`:`<button type="button" class="btn sm ghost" data-act="appVoid" data-id="${p.id}" data-a="${a.id}">Void</button>`}${del('app/'+p.id+'/'+a.id,'×')}`:''}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No applications yet','Raise your first interim application below — enter the overall % of the tender complete and it works out the figure.')}<div class="panel-b"><div class="totals"><div class="sub"><span>Tender (ex VAT)</span><span>${money(A.tender)}</span></div><div><span>Valued to date</span><strong>${money(A.worksValued)} · ${appPct(A.pctValued)}%</strong></div>${A.varsToDate?`<div class="sub"><span>Variations to date</span><span>${money(A.varsToDate)}</span></div>`:''}<div><span>Invoiced to date</span><strong>${money(A.invoicedToDate)}</strong></div><div class="grand"><span>Left to invoice in tender</span><span>${money(Math.max(0,A.remaining))}</span></div></div></div><details class="panel-b"${(p.appTo||p.appEmail||p.appRef)?' open':''}><summary style="cursor:pointer;font-weight:600">Certificate details — who it's addressed to &amp; payment terms</summary><p class="dw-xhint" style="margin:8px 0">Used when you tap <strong>Certificate</strong> on an application to produce a send-ready PDF or Excel for the client.</p><div class="form"><label class="f full"><span>Addressed to (name &amp; address)</span><textarea id="pf-appTo" data-chg="pf" data-id="${p.id}" data-k="appTo" placeholder="Client company&#10;Address&#10;Town, Postcode">${esc(p.appTo||'')}</textarea></label>${pf('appEmail','Their email',{attrs:'type="email" placeholder="name@company.co.uk"'})}${pf('appRef','Our reference',{attrs:'placeholder="e.g. D&C/GORERD"'})}${pf('noticeDays','Notice days (default 7)',{attrs:'inputmode="numeric" placeholder="7"'})}${pf('dueDays','Payment due days (default 14)',{attrs:'inputmode="numeric" placeholder="14"'})}</div></details>${appForm}</section>`:'';
+  const appsBox=tv?`<section class="panel"><div class="panel-h"><h3>Applications for payment</h3><span class="sub">Raise an interim application as a % of the tender. Each one stays on file; the next deducts what you've already applied for.</span></div>${A.rows.length?`<div class="scroll-x"><table class="grid"><thead><tr><th>App</th><th>Date</th><th class="n">Complete</th><th class="n">Variations</th><th class="n">Retention</th><th class="n">This application</th><th class="n">To date</th><th></th></tr></thead><tbody>${A.rows.map((a,i)=>{const isLast=i===A.rows.length-1;return `<tr><td>${a.void?`<s>${a.n}</s> <span class="sub">void</span>`:a.n}</td><td>${fmtD(a.date)}</td><td class="n">${appPct(a.pct)}%</td><td class="n">${a.vars?money(a.vars):'—'}</td><td class="n">${a.retPct?appPct(a.retPct)+'%':'—'}</td><td class="n"><strong>${a.void?'—':money(a.thisApp)}</strong></td><td class="n">${a.void?'—':money(a.netToDate)}</td><td class="n">${a.void?'':`<button type="button" class="btn sm ghost" data-act="certOpen" data-id="${p.id}" data-a="${a.id}">Certificate</button>`}<button type="button" class="btn sm ghost" data-act="appEditAsk" data-id="${p.id}" data-a="${a.id}">Edit</button>${isLast?`${a.void?`<button type="button" class="btn sm ghost" data-act="appUnvoid" data-id="${p.id}" data-a="${a.id}">Reinstate</button>`:`<button type="button" class="btn sm ghost" data-act="appVoid" data-id="${p.id}" data-a="${a.id}">Void</button>`}${del('app/'+p.id+'/'+a.id,'×')}`:''}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No applications yet','Raise your first interim application below — enter the overall % of the tender complete and it works out the figure.')}<div class="panel-b"><div class="totals"><div class="sub"><span>Tender (ex VAT)</span><span>${money(A.tender)}</span></div><div><span>Valued to date</span><strong>${money(A.worksValued)} · ${appPct(A.pctValued)}%</strong></div>${A.varsToDate?`<div class="sub"><span>Variations to date</span><span>${money(A.varsToDate)}</span></div>`:''}<div><span>Invoiced to date</span><strong>${money(A.invoicedToDate)}</strong></div><div class="grand"><span>Left to invoice in tender</span><span>${money(Math.max(0,A.remaining))}</span></div></div></div><details class="panel-b"${(p.appTo||p.appEmail||p.appRef)?' open':''}><summary style="cursor:pointer;font-weight:600">Certificate details — who it's addressed to &amp; payment terms</summary><p class="dw-xhint" style="margin:8px 0">Used when you tap <strong>Certificate</strong> on an application to produce a send-ready PDF or Excel for the client.</p><div class="form"><label class="f full"><span>Addressed to (name &amp; address)</span><textarea id="pf-appTo" data-chg="pf" data-id="${p.id}" data-k="appTo" placeholder="Client company&#10;Address&#10;Town, Postcode">${esc(p.appTo||'')}</textarea></label>${pf('appEmail','Their email',{attrs:'type="email" placeholder="name@company.co.uk"'})}${pf('appRef','Our reference',{attrs:'placeholder="e.g. D&C/GORERD"'})}${pf('noticeDays','Notice days (default 7)',{attrs:'inputmode="numeric" placeholder="7"'})}${pf('dueDays','Payment due days (default 14)',{attrs:'inputmode="numeric" placeholder="14"'})}</div></details>${assets?`<details class="panel-b"${boq?' open':''}><summary style="cursor:pointer;font-weight:600">Fill from your BOQ Excel</summary><div data-dropboq="${p.id}"><p class="dw-xhint" style="margin:8px 0">Update the <strong>Accounted %</strong> column in your BOQ, save it in Excel, then add it here. It reads the <strong>Total</strong> row and fills application ${nextN}'s % for you — earlier applications are deducted automatically.</p><label class="btn sm filebtn">${boq&&boq.busy?'Reading your BOQ…':'Add your BOQ Excel'}<input class="vh" type="file" accept=".xlsx,.xlsm" data-chg="boqFile" data-id="${p.id}"${boq&&boq.busy?' disabled':''}></label><p class="dw-xhint" style="margin-top:8px">Or drag the Excel straight onto this panel.</p>${boq&&!boq.busy?(boq.error?`<p class="dw-xhint" style="margin-top:12px">${boq.error==='no-header'||boq.error==='no-total'?'Could not find the Total row in that BOQ. Check the sheet has a Total line with the works total and an Invoiced column.':'Could not read that BOQ. Open it in Excel, press Save, then add it again.'}</p>`:`<div class="totals" style="margin-top:12px"><div class="sub"><span>Tender total (ex VAT)</span><span>${money(boq.tender)}</span></div><div class="sub"><span>Invoiced to date</span><span>${money(boq.invoiced)}</span></div><div class="grand"><span>Overall complete</span><span>${appPct(boq.pct)}%</span></div></div><button type="button" class="btn" data-act="useBoq" data-id="${p.id}" style="width:100%;margin-top:10px">Use for application ${nextN}</button>`):''}</div></details>`:''}${appForm}</section>`:'';
   const documents=`<section class="panel"${assets?` data-dropdocs="${p.id}"`:''}><div class="panel-h"><h3>Documents</h3>${assets?`<label class="btn sm filebtn">${ui.busy==='upload'?'Uploading…':'Add drawings or PDFs'}<input class="vh" type="file" id="doc-up" accept="application/pdf,image/png,image/jpeg" multiple data-chg="upload" data-id="${p.id}"${ui.busy==='upload'?' disabled':''}></label>`:''}</div>${docs.length?`<ul class="items">${docs.map(d=>`<li class="item"><div class="item-main"><a href="/_blob/${esc(d.id)}" target="_blank" rel="noopener">${esc(d.name)}</a><div class="sub">${size(num(d.size))} · added ${fmtD(d.added,true)}</div></div>${assets?`<div class="item-act">${del('doc/'+p.id+'/'+d.id,'Remove')}</div>`:''}</li>`).join('')}</ul>`:empty('No documents attached',assets?'Add drawings, specs, tender documents and quotes as PDFs or photos (up to 20 MB each).':'Documents can be added by people with edit access to this page.')}${assets?`<div class="panel-b"><p class="dw-xhint" style="margin:0">On a phone, tap <strong>Add drawings or PDFs</strong> to pick from Files or your photos. On a computer you can also drag drawings straight onto this panel.</p></div>`:''}</section>`;
   // Make the Xero button actually useful: if an invoice is already linked to this job, open
   // THAT invoice in Xero; otherwise jump to the Invoices tab with this client pre-searched so
@@ -1271,6 +1272,13 @@ const actions={
   projActive(d){write('projects',d.id,'update',{interim:false});toast('Back in current jobs');},
   projReopen(d){write('projects',d.id,'update',{status:'Live',interim:false});toast('Reopened');},
   useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
+  // Fill the next application from the uploaded BOQ: the BOQ is the priced source, so set
+  // the tender to its works total and pre-fill the % complete it read. Retention/variations
+  // are left for the director; the existing app maths then deducts earlier applications.
+  useBoq(d){const b=ui.boqScan;if(!b||b.busy||b.error)return;const p=S.projects[d.id];if(!p)return;
+    if(b.tender>0)write('projects',d.id,'update',{tender:b.tender});
+    ui.drafts.appAdd={...(ui.drafts.appAdd||{}),date:todayISO(),pct:nf(Math.round(b.pct*10)/10)};
+    ui.boqScan=null;toast('Application filled from your BOQ — check and add it');},
   appEditAsk(d){ui.appEdit=d.a;delete ui.drafts.appEdit;window.scrollTo(0,document.body.scrollHeight);},
   appEditCancel(){ui.appEdit=null;delete ui.drafts.appEdit;},
   certOpen(d){ui.cert={pid:d.id,aid:d.a};},
@@ -1314,6 +1322,7 @@ const changes={
   empActive(d,v,el){write('employees',d.id,'update',{active:el.checked});},
   upload(d,v,el){const files=[...el.files];el.value='';uploadDocs(d.id,files);},
   tenderFile(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanTenderFile(d.id,f);},
+  boqFile(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanBoqFile(d.id,f);},
   importRates(d,v,el){const f=(el.files||[])[0];el.value='';if(f)importRates(f);},
   remDone(d,v,el){write('reminders',d.id,'update',{done:el.checked});},
   cwh(d,v){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));if(!ents[+d.i])return;ents[+d.i].h=Math.max(0,Math.min(24,num(v)));write('crew_hours',d.key,'update',{entries:ents});},
@@ -1631,6 +1640,84 @@ function scanTenderFile(pid,file){
   if(/\.(xlsx|xlsm)$/i.test(file.name)){scanTenderXlsx(pid,file);return;}
   if(/\.pdf$/i.test(file.name)||file.type==='application/pdf'){scanTenderPdf(pid,file);return;}
   toast('Drop a PDF or an Excel file (.xlsx).');
+}
+/* --- read a BOQ/quote Excel and pull the works "Total" row for an application ---
+   Finds the header by its labels (Total (£) / Accounted % / Invoiced (£)) and the
+   works total by the word "Total", so it works whatever size the BOQ is and whether
+   or not a VAT line sits below. Returns the tender (ex VAT), invoiced-to-date and the
+   overall % — the three figures the application needs. Needs the file SAVED in Excel
+   (the figures are live formulas; an un-saved file has nothing to read). */
+function boqUnesc(s){return String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#x([0-9a-fA-F]+);/g,function(_,h){return String.fromCodePoint(parseInt(h,16));}).replace(/&#(\d+);/g,function(_,d){return String.fromCodePoint(+d);}).replace(/&amp;/g,'&');}
+async function readBoqXlsx(file){
+  const z=readZip(await file.arrayBuffer());
+  const sheetPath=await firstSheetPath(z);
+  const xml=await readZipText(z,sheetPath);
+  let shared=[];
+  if(z.entries['xl/sharedStrings.xml']){
+    const sx=await readZipText(z,'xl/sharedStrings.xml');
+    shared=(sx.match(/<si>[\s\S]*?<\/si>/g)||[]).map(function(si){
+      let t='';(si.match(/<t[^>]*>([\s\S]*?)<\/t>/g)||[]).forEach(function(x){t+=x.replace(/<[^>]*>/g,'');});
+      return boqUnesc(t);
+    });
+  }
+  const norm=function(s){return String(s==null?'':s).replace(/\s+/g,' ').trim().toLowerCase();};
+  const rows=[];
+  const rowRe=/<row[^>]*r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g; let rm;
+  while(rm=rowRe.exec(xml)){
+    const cells={};
+    const cellRe=/<c\s+r="([A-Z]+)\d+"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let cm;
+    while(cm=cellRe.exec(rm[2])){
+      const col=cm[1], attr=cm[2]||'', inner=cm[3]||'';
+      const t=(attr.match(/\bt="([^"]+)"/)||[])[1]||'';
+      let text='', numv=NaN;
+      if(t==='inlineStr'){ let tt='';(inner.match(/<t[^>]*>([\s\S]*?)<\/t>/g)||[]).forEach(function(x){tt+=x.replace(/<[^>]*>/g,'');});text=boqUnesc(tt);}
+      else{
+        const vm=inner.match(/<v>([\s\S]*?)<\/v>/);
+        if(vm){
+          if(t==='s')text=shared[+vm[1]]||'';
+          else if(t==='str')text=boqUnesc(vm[1]);
+          else numv=parseFloat(vm[1]);
+        }
+      }
+      cells[col]={text:text,numv:numv};
+    }
+    rows.push(cells);
+  }
+  // header row: carries the Total (£) and Invoiced (£) column labels
+  let colTotal='',colInv='',colPct='',hdrIdx=-1;
+  for(let i=0;i<rows.length;i++){
+    let ct='',ci='',cp='';
+    for(const col in rows[i]){const tx=norm(rows[i][col].text);
+      if(tx.indexOf('total (')===0)ct=col;
+      else if(tx.indexOf('invoiced')===0)ci=col;
+      else if(tx.indexOf('accounted')===0)cp=col;
+    }
+    if(ct&&ci){colTotal=ct;colInv=ci;colPct=cp;hdrIdx=i;break;}
+  }
+  if(hdrIdx<0)throw new Error('no-header');
+  // works total: first row after the header whose label reads exactly "total"
+  // (not "total including vat" or "revised contract total").
+  let tr=null;
+  for(let i=hdrIdx+1;i<rows.length;i++){
+    let hit=false;for(const col in rows[i]){if(norm(rows[i][col].text)==='total'){hit=true;break;}}
+    if(hit){tr=rows[i];break;}
+  }
+  if(!tr)throw new Error('no-total');
+  const cellNum=function(c){const x=tr[c];return x&&isFinite(x.numv)?x.numv:0;};
+  const tender=cellNum(colTotal), invoiced=cellNum(colInv);
+  if(!(tender>0))throw new Error('no-total');
+  return {tender:tender, invoiced:invoiced, pct:invoiced/tender*100};
+}
+async function scanBoqFile(pid,file){
+  if(!file)return;
+  if(!/\.(xlsx|xlsm)$/i.test(file.name)){toast('Add your BOQ as an Excel (.xlsx).');return;}
+  ui.boqScan={pid:pid,busy:true};schedule();
+  if(assets)uploadDocs(pid,[file]);
+  try{
+    const r=await readBoqXlsx(file);
+    ui.boqScan={pid:pid,busy:false,tender:r.tender,invoiced:r.invoiced,pct:r.pct};
+  }catch(e){ui.boqScan={pid:pid,busy:false,error:(e&&e.message)||'fail'};}
+  schedule();
 }
 /* --- import a rate card from a CSV the director picks on their device --- */
 function parseCSV(text){
@@ -2862,6 +2949,10 @@ view.addEventListener('drop',e=>{const z=e.target.closest('[data-droptender]');i
 view.addEventListener('dragover',e=>{const z=e.target.closest('[data-dropdocs]');if(!z)return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('dragover');});
 view.addEventListener('dragleave',e=>{const z=e.target.closest('[data-dropdocs]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('dragover');});
 view.addEventListener('drop',e=>{const z=e.target.closest('[data-dropdocs]');if(!z)return;e.preventDefault();z.classList.remove('dragover');const files=[...(e.dataTransfer.files||[])];if(files.length)uploadDocs(z.dataset.dropdocs,files);});
+/* Drag a saved BOQ Excel onto the Applications panel — read its Total row and fill the next application. */
+view.addEventListener('dragover',e=>{const z=e.target.closest('[data-dropboq]');if(!z)return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('dragover');});
+view.addEventListener('dragleave',e=>{const z=e.target.closest('[data-dropboq]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('dragover');});
+view.addEventListener('drop',e=>{const z=e.target.closest('[data-dropboq]');if(!z)return;e.preventDefault();z.classList.remove('dragover');const f=(e.dataTransfer.files||[])[0];if(f)scanBoqFile(z.dataset.dropboq,f);});
 
 /* ---------- Schedule: drag a job bar across the days to set how long it runs ----------
    Start stays pinned and you drag the end; drag before the start to pull the start earlier.
