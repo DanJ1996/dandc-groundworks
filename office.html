@@ -1119,14 +1119,15 @@ views.reminders=()=>{
         :empty('Nothing yet','Type anything the moment it comes to you — it saves straight away and '+other+' sees it too.'))
       +`</section>`;
   };
-  const nOn=('Notification' in window)&&Notification.permission==='granted';
-  const nBtn=('Notification' in window)&&Notification.permission!=='denied'
-    ?`<div class="item-act">${nOn?pill('good','Alerts on'):`<button type="button" class="btn sm" data-act="notifyOn">Turn on alerts</button>`}</div>`:'';
+  // Same phone-alert switch as the schedule: a real push subscription, so due
+  // reminders reach the lock screen with the app closed (iPhone: home-screen app).
+  const pc=pushCtl();
+  const nBtn=pc?`<div class="item-act">${pc}</div>`:'';
   // Put the signed-in director's own list first (top on a phone, left on a computer).
   const me=/chris/i.test(DWME.name||'')?'chris':'dan';
   const mine=me==='chris'?col('chris','Chris'):col('dan','Dan');
   const theirs=me==='chris'?col('dan','Dan'):col('chris','Chris');
-  return `<div class="head"><div><h2>Reminders</h2><p class="sub">Your running list — type and it saves instantly. You both see each other's. Put a date and time on one and it pings you when it's due.</p></div>${nBtn}</div><div class="rem-cols">${mine}${theirs}</div>`;
+  return `<div class="head"><div><h2>Reminders</h2><p class="sub">Your running list — type and it saves instantly. You both see each other's. Put a date and time on one and it pings your phone when it's due — turn on phone alerts once on each phone.</p></div>${nBtn}</div><div class="rem-cols">${mine}${theirs}</div>`;
 };
 
 /* Crew tab — holiday requests the lads send in. Directors approve or decline;
@@ -1376,7 +1377,7 @@ async function pushOn(){
     const sub=(await PUSH.reg.pushManager.getSubscription())||await PUSH.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey()});
     const ok=await pushSave(sub);
     PUSH.state='on';schedule();
-    toast(ok?'Phone alerts on — you will get a ping when anything is added to the schedule':'Alerts on here, but the server is not set up yet (run office-push.sql)');
+    toast(ok?'Phone alerts on — you will get a ping for due reminders and anything added to the schedule':'Alerts on here, but the server is not set up yet (run office-push.sql)');
   }catch(e){PUSH.state='off';schedule();toast('Could not turn alerts on: '+((e&&e.message)||'unknown error'));}
 }
 async function pushOff(){
@@ -1411,7 +1412,13 @@ function remCheck(){
   list('reminders').filter(r=>r.when&&!r.done&&r.when<=n&&remFired.indexOf(r.id)<0).forEach(r=>{
     remFired.push(r.id);try{localStorage.setItem('dc-rem-fired',JSON.stringify(remFired.slice(-200)));}catch(e){}
     const who=r.owner==='chris'?'Chris':'Dan';
-    if(('Notification' in window)&&Notification.permission==='granted'){try{new Notification('Reminder · '+who,{body:r.text,tag:r.id});}catch(e){}}
+    // With phone alerts on, the server sends the push (office-reminder-push.sql) — don't double up.
+    // Otherwise pop one via the service worker (iPhone ignores page-made `new Notification`).
+    if(PUSH.state!=='on'&&('Notification' in window)&&Notification.permission==='granted'){
+      const o={body:r.text,tag:'rem-'+r.id,icon:'assets/logo.png'};
+      if(PUSH.reg&&PUSH.reg.showNotification)PUSH.reg.showNotification('Reminder · '+who,o).catch(()=>{});
+      else{try{new Notification('Reminder · '+who,o);}catch(e){}}
+    }
     toast('Reminder · '+who+': '+r.text);
   });
 }
