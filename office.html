@@ -346,7 +346,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false},tsGridOpen:false};
+const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -836,7 +836,7 @@ views.quotes=()=>{
   const tenderSec=tenderN?dropSec('qTender',`Out on tender <span class="sub" style="font-weight:600">${tenderN}</span>`,tenderFig,`<ul class="items">${tenderItems.map(x=>x.h).join('')}</ul>`):'';
   const filterBtns=`<button type="button" class="btn sm ${ui.quoteFilter==='open'?'':'ghost'}" id="qf-open" data-act="qfilter" data-v="open">Open (${open.length})</button><button type="button" class="btn sm ${ui.quoteFilter==='all'?'':'ghost'}" id="qf-all" data-act="qfilter" data-v="all">All (${all.length})</button>`;
   const newBody=newQ.length?`<ul class="items">${newQ.map(row).join('')}</ul>`:`<div class="panel-b"><p class="sub" style="margin:0">${all.length?'Nothing new to price right now — priced ones are in Out on tender below.':'No enquiries logged yet. Log each call or email as it comes in, book the site visit, then use Price it to build the quote off your rate card.'}</p></div>`;
-  const newSec=`<section class="panel"><div class="panel-h"><h3>New — to price${newQ.length?` <span class="sub" style="font-weight:600">${newQ.length}</span>`:''}</h3><div class="item-act">${filterBtns}</div></div>${newBody}</section>`;
+  const newSec=dropSec('qNew',`New — to price${newQ.length?` <span class="sub" style="font-weight:600">${newQ.length}</span>`:''}`,'',`<div class="panel-b" style="padding-bottom:4px"><div class="item-act">${filterBtns}</div></div>${newBody}`);
   const decidedSec=doneQ.length?`<section class="panel"><div class="panel-h"><h3>Decided <span class="sub" style="font-weight:600">${doneQ.length}</span></h3></div><ul class="items">${doneQ.map(row).join('')}</ul></section>`:'';
   const listing=newSec+tenderSec+decidedSec;
   return `<div class="head"><div><h2>Enquiries &amp; quotes</h2><p class="sub">From first call to site visit, price, and decision.</p></div></div><datalist id="dl-staff">${staff.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>${stats}${add}${listing}`;
