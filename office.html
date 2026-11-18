@@ -2518,7 +2518,19 @@ function meetDoneModal(){
   const who=m.kind==='p'?(r.name||'Job'):(r.client||'Enquiry')+(r.job?' · '+r.job:'');
   return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="md-h"><div class="panel-h"><h3 id="md-h">Meeting done</h3></div><form class="panel-b form" data-form="meetDone"><p class="sub full" style="margin:0">${esc(who)}${r.site?' · '+esc(r.site):''}</p><label class="f full"><span>Notes from the meeting</span><textarea id="meetDone-notes" name="notes" rows="7" placeholder="What they want, measurements, levels, access, spoil, drainage, anything to price against…">${esc(dv('meetDone','notes',''))}</textarea></label><p class="sub full" style="margin:0">${m.kind==='p'?'Saved onto the job notes.':'Saved onto the enquiry, ready for you to price.'} Leave it blank to just mark it done.</p><div class="go"><button class="btn">Save &amp; mark done</button><button type="button" class="btn ghost" data-act="meetCancel">Cancel</button></div></form></section></div>`;
 }
+// A Ready-to-start job with a start date goes live by itself the day it begins —
+// nobody has to flip it. Runs on each render; once promoted it's Live so it's never
+// picked up again (no loop). Only when the shared data is actually connected.
+function autoGoLive(){
+  if(mode!=='live')return;
+  const t=todayISO();
+  const due=list('projects').filter(p=>p.status==='Ready to start'&&p.startDate&&p.startDate<=t);
+  if(!due.length)return;
+  due.forEach(p=>write('projects',p.id,'update',{status:'Live'}));
+  toast(due.length===1?'"'+(due[0].name||'Job')+'" has reached its start date — now Live':due.length+' jobs reached their start date — now Live');
+}
 function render(){
+  autoGoLive();
   const ae=document.activeElement;let keep=null;
   if(ae&&ae.id&&(view.contains(ae)||tabsEl.contains(ae)))keep={id:ae.id,value:ae.value,s:null,e:null,text:/^(INPUT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=='checkbox'&&ae.type!=='file'};
   if(keep&&keep.text){try{keep.s=ae.selectionStart;keep.e=ae.selectionEnd;}catch(e){}}
