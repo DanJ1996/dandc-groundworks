@@ -455,11 +455,8 @@ function invPill(i,st,today){
 const projName=id=>(S.projects[id]||{}).name||'';
 const quoteValue=q=>{const p=q.projectId&&S.projects[q.projectId];const t=p?(num(p.tender)||projTotals(p).total):0;return t>0?t:num(q.value);};
 const VAT={std:'20% VAT',drc:'Reverse charge',zero:'Zero rated'};
-// Issuer block printed on every Application for Payment certificate. This matches the
-// footer on Dan's existing applications. NOTE: confirm the address — his email signature
-// uses the registered office "42a Fairfield, Christchurch, BH23 1QX"; the applications
-// footer uses "4 Portfield Road, Christchurch, BH23 2AG".
-const DC_CO={name:'D&C Groundworks and Civils Limited',addr:'4 Portfield Road, Christchurch, BH23 2AG',reg:'15548081',vat:'GB 474 1001 27'};
+// Issuer block printed on every Application for Payment certificate — the registered office.
+const DC_CO={name:'D&C Groundworks and Civils Limited',addr:'42a Fairfield, Christchurch, BH23 1QX',reg:'15548081',vat:'GB 474 1001 27'};
 const certPct=n=>(num(n)).toFixed(num(n)%1?1:0);
 const QSTATUS=['New','Visit booked','Pricing','Quoted','Won','Lost'];
 const toPrice=q=>q.status==='New'||q.status==='Visit booked'||q.status==='Pricing';
