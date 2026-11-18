@@ -906,7 +906,7 @@ views.projects=()=>{
     const isDW=q.basis==='dayworks';
     const amtMain=isDW?`<span class="amt">Day works</span><span class="sub">cost-plus · ${hrs(h.h)} h · ${money(h.cost)} labour</span>`:`<span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span>`;
     const amtRight=isDW?costPlusTally(q):`<span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
-    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
+    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow"><button type="button" data-act="setStartAsk" data-id="${q.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</button></div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
   // Current jobs split into their own collapsible dropdowns by stage, so the live jobs are
   // clearly apart from ones still being priced (a "Pricing" job is still a tender, not on site).
   const liveP=active.filter(p=>p.status==='Live');
@@ -1187,6 +1187,8 @@ const actions={
   evToVisit(d){const e=S.events[d.id];if(!e)return;const client=(e.client||e.title||'Visit').trim();const job=(e.client?(e.title||''):'').trim();write('quotes',uid(),'set',{client,phone:(e.phone||'').trim(),email:'',source:'',workType:'',job,site:(e.site||'').trim(),received:todayISO(),due:'',value:0,notes:'',projectId:'',visitDate:e.from||'',visitTime:e.time||'',visitBy:(e.who||'').trim(),visitNotes:'',visitDone:false,status:'Visit booked',created:todayISO()});write('events',d.id,'delete');toast('Booked as a site visit'+(e.from?' — '+fmtD(e.from)+(e.time?' at '+e.time:''):''));},
   visitDone(d){ui.meetDone={kind:d.vkind==='p'?'p':'q',id:d.id};ui.focusNext='meetDone-notes';},
   meetCancel(){ui.meetDone=null;delete ui.drafts.meetDone;},
+  setStartAsk(d){ui.setStart=d.id;},
+  setStartCancel(){ui.setStart=null;},
   _visitDoneNow(d){if(d.vkind==='p'){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{visitDone:true});toast('Site visit marked done.');return;}const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDone:true,status:q.status==='Visit booked'?'Pricing':q.status});toast('Visit done. Ready to price.');},
   clearVisit(d){const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false,status:q.status==='Visit booked'?'New':q.status});ui.edit=null;delete ui.drafts.visit;},
   ovClearVisit(d){const patch={visitDate:'',visitTime:'',visitBy:'',visitNotes:'',visitDone:false};if(d.kind==='p'){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',patch);}else{const q=S.quotes[d.id];if(!q)return;write('quotes',d.id,'update',{...patch,status:q.status==='Visit booked'?'New':q.status});}ui.edit=null;delete ui.drafts.ovVisit;toast('Site visit removed');},
@@ -1261,7 +1263,9 @@ const changes={
       let pid=q.projectId&&S.projects[q.projectId]?q.projectId:'';
       if(!pid){pid=uid();write('projects',pid,'set',{name:q.job||'Untitled',client:q.client||'',site:q.site||'',status:'Ready to start',tender:quoteValue(q)||0,lines:[],markup:0,docs:[],notes:[q.notes,q.meetNotes].filter(Boolean).join('\n\n'),created:todayISO()});write('quotes',d.id,'update',{projectId:pid});}
       else if((S.projects[pid]||{}).status==='Pricing'){write('projects',pid,'update',{status:'Ready to start'});}
-      toast('Won — now in Projects, ready to start.');
+      // Ask for the start date straight away so it lands in the schedule without
+      // Dan having to hunt the job down later to allocate one.
+      ui.setStart=pid;
     }
   },
   // Link a day-works folder to one of our projects (sets that project's dwJob to this
@@ -1421,6 +1425,14 @@ const forms={
       toast(notes?'Meeting done — notes saved on the enquiry, ready to price':'Meeting done. Ready to price.');
     }
     ui.meetDone=null;return true;
+  },
+  setStart(f){
+    const id=ui.setStart;if(!id){return true;}
+    const p=S.projects[id];if(!p){ui.setStart=null;return true;}
+    const d=String(f.date||'').trim();
+    if(d){write('projects',id,'update',{startDate:d});toast('"'+(p.name||'Job')+'" starts '+fmtD(d)+' — now in the schedule');}
+    else toast('"'+(p.name||'Job')+'" is ready to start — set its date whenever you like');
+    ui.setStart=null;return true;
   },
   visit(f){const id=ui.edit.split('/')[1],q=S.quotes[id];if(!q||!f.visitDate)return false;write('quotes',id,'update',{visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:f.visitBy.trim(),visitNotes:f.visitNotes.trim(),visitDone:false,status:q.status==='New'?'Visit booked':q.status});ui.edit=null;toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
   bookVisit(f){const ref=f.ref||'',kind=ref.slice(0,1),id=ref.slice(2);if(kind!=='q'&&kind!=='p'){toast('Pick an enquiry or job first');return false;}if(!f.visitDate){toast('Add a date');return false;}const patch={visitDate:f.visitDate,visitTime:f.visitTime||'',visitBy:(f.visitBy||'').trim(),visitNotes:(f.visitNotes||'').trim(),visitDone:false};if(kind==='q'){const q=S.quotes[id];if(!q){toast('Pick an enquiry or job first');return false;}write('quotes',id,'update',{...patch,status:q.status==='New'?'Visit booked':q.status});}else{const p=S.projects[id];if(!p){toast('Pick an enquiry or job first');return false;}write('projects',id,'update',patch);}toast('Site visit booked for '+fmtD(f.visitDate)+(f.visitTime?' at '+f.visitTime:''));return true;},
@@ -2533,6 +2545,14 @@ function meetDoneModal(){
   const who=m.kind==='p'?(r.name||'Job'):(r.client||'Enquiry')+(r.job?' · '+r.job:'');
   return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="md-h"><div class="panel-h"><h3 id="md-h">Meeting done</h3></div><form class="panel-b form" data-form="meetDone"><p class="sub full" style="margin:0">${esc(who)}${r.site?' · '+esc(r.site):''}</p><label class="f full"><span>Notes from the meeting</span><textarea id="meetDone-notes" name="notes" rows="7" placeholder="What they want, measurements, levels, access, spoil, drainage, anything to price against…">${esc(dv('meetDone','notes',''))}</textarea></label><p class="sub full" style="margin:0">${m.kind==='p'?'Saved onto the job notes.':'Saved onto the enquiry, ready for you to price.'} Leave it blank to just mark it done.</p><div class="go"><button class="btn">Save &amp; mark done</button><button type="button" class="btn ghost" data-act="meetCancel">Cancel</button></div></form></section></div>`;
 }
+// Pops up the moment an enquiry is marked Won (and from the "Set start date" pill on
+// a Ready-to-start job), so the start date is set there and then — no hunting the job
+// down later. A date drops it into the schedule and it goes Live by itself on the day.
+function setStartModal(){
+  const id=ui.setStart;if(!id)return '';
+  const p=S.projects[id];if(!p)return '';
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="ss-h"><div class="panel-h"><h3 id="ss-h">When does it start?</h3></div><form class="panel-b form" data-form="setStart"><p class="sub full" style="margin:0">${esc(p.name||'Job')}${p.client?' · '+esc(p.client):''} — won and ready to start.</p><label class="f full"><span>Start date</span><input id="setStart-date" name="date" type="date" value="${esc(p.startDate||'')}"></label><p class="sub full" style="margin:0">Give it a date and it drops straight into the schedule — and goes live by itself on the day. Leave it blank to set it later.</p><div class="go"><button class="btn">Set start date</button><button type="button" class="btn ghost" data-act="setStartCancel">Skip for now</button></div></form></section></div>`;
+}
 // A Ready-to-start job with a start date goes live by itself the day it begins —
 // nobody has to flip it. Runs on each render; once promoted it's Live so it's never
 // picked up again (no loop). Only when the shared data is actually connected.
@@ -2554,7 +2574,7 @@ function render(){
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
-  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal();
+  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal()+setStartModal();
   sx.forEach(([id,l])=>{const el=$(id);if(el)el.scrollLeft=l;});
   if(ui.focusNext){const el=$(ui.focusNext);ui.focusNext=null;if(el){el.focus({preventScroll:el.id==='sd-close'});if(el.id==='sd-close'){const pn=$('sd-panel');if(pn)pn.scrollIntoView({block:'start',behavior:'smooth'});}ui.skipKeep=null;return;}}
   if(keep){const el=$(keep.id);if(el){if(keep.text&&ui.skipKeep!==keep.id)el.value=keep.value;el.focus({preventScroll:true});if(keep.text&&keep.s!=null){try{el.setSelectionRange(keep.s,keep.e);}catch(e){}}}}
@@ -2653,8 +2673,8 @@ function endJobDrag(){
 }
 view.addEventListener('pointerup',e=>{endMarkerDrag();endJobDrag();});
 /* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
-view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;schedule();}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.meetDone){ui.meetDone=null;schedule();}});
+view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;schedule();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart)){ui.meetDone=null;ui.setStart=null;schedule();}});
 /* tap an empty / visit / quote / off / hour cell on the schedule → open that day in full */
 view.addEventListener('click',e=>{
   if(_swallowClick){_swallowClick=false;return;}   // a marker was just dragged — don't also open the day
