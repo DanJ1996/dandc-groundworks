@@ -455,6 +455,12 @@ function invPill(i,st,today){
 const projName=id=>(S.projects[id]||{}).name||'';
 const quoteValue=q=>{const p=q.projectId&&S.projects[q.projectId];const t=p?(num(p.tender)||projTotals(p).total):0;return t>0?t:num(q.value);};
 const VAT={std:'20% VAT',drc:'Reverse charge',zero:'Zero rated'};
+// Issuer block printed on every Application for Payment certificate. This matches the
+// footer on Dan's existing applications. NOTE: confirm the address — his email signature
+// uses the registered office "42a Fairfield, Christchurch, BH23 1QX"; the applications
+// footer uses "4 Portfield Road, Christchurch, BH23 2AG".
+const DC_CO={name:'D&C Groundworks and Civils Limited',addr:'4 Portfield Road, Christchurch, BH23 2AG',reg:'15548081',vat:'GB 474 1001 27'};
+const certPct=n=>(num(n)).toFixed(num(n)%1?1:0);
 const QSTATUS=['New','Visit booked','Pricing','Quoted','Won','Lost'];
 const toPrice=q=>q.status==='New'||q.status==='Visit booked'||q.status==='Pricing';
 // still needs a price = in a pricing stage AND no figure entered yet (matches the red enquiry row)
@@ -971,7 +977,7 @@ function vProject(p){
   // updates it in place (every later application re-deducts automatically).
   const edApp=ui.appEdit?((p.apps||[]).find(a=>a.id===ui.appEdit)):null;
   const appForm=edApp?`<form class="panel-b form" data-form="appEdit">${fld('appEdit','date','Application date',edApp.date,{type:'date'})}${fld('appEdit','pct','% of tender complete',nf(edApp.pct),{attrs:'inputmode="decimal" placeholder="e.g. 45"'})}${fld('appEdit','vars','Variations to date £',nf(edApp.vars),{attrs:'inputmode="decimal" placeholder="0"'})}${fld('appEdit','ret','Retention %',nf(edApp.ret),{attrs:'inputmode="decimal" placeholder="0"'})}<div class="go"><button class="btn">Save application ${edApp.n}</button><button type="button" class="btn ghost" data-act="appEditCancel">Cancel</button></div></form>`:`<form class="panel-b form" data-form="appAdd">${fld('appAdd','date','Application date',todayISO(),{type:'date'})}${fld('appAdd','pct','% of tender complete',nf(A.last?A.last.pct:''),{attrs:'inputmode="decimal" placeholder="e.g. 45"'})}${fld('appAdd','vars','Variations to date £',nf(A.last?A.last.vars:''),{attrs:'inputmode="decimal" placeholder="0"'})}${fld('appAdd','ret','Retention %',nf(A.last?A.last.retPct:''),{attrs:'inputmode="decimal" placeholder="0"'})}<div class="go"><button class="btn">Add application ${nextN}</button></div></form>`;
-  const appsBox=tv?`<section class="panel"><div class="panel-h"><h3>Applications for payment</h3><span class="sub">Raise an interim application as a % of the tender. Each one stays on file; the next deducts what you've already applied for.</span></div>${A.rows.length?`<div class="scroll-x"><table class="grid"><thead><tr><th>App</th><th>Date</th><th class="n">Complete</th><th class="n">Variations</th><th class="n">Retention</th><th class="n">This application</th><th class="n">To date</th><th></th></tr></thead><tbody>${A.rows.map((a,i)=>{const isLast=i===A.rows.length-1;return `<tr><td>${a.void?`<s>${a.n}</s> <span class="sub">void</span>`:a.n}</td><td>${fmtD(a.date)}</td><td class="n">${appPct(a.pct)}%</td><td class="n">${a.vars?money(a.vars):'—'}</td><td class="n">${a.retPct?appPct(a.retPct)+'%':'—'}</td><td class="n"><strong>${a.void?'—':money(a.thisApp)}</strong></td><td class="n">${a.void?'—':money(a.netToDate)}</td><td class="n"><button type="button" class="btn sm ghost" data-act="appEditAsk" data-id="${p.id}" data-a="${a.id}">Edit</button>${isLast?`${a.void?`<button type="button" class="btn sm ghost" data-act="appUnvoid" data-id="${p.id}" data-a="${a.id}">Reinstate</button>`:`<button type="button" class="btn sm ghost" data-act="appVoid" data-id="${p.id}" data-a="${a.id}">Void</button>`}${del('app/'+p.id+'/'+a.id,'×')}`:''}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No applications yet','Raise your first interim application below — enter the overall % of the tender complete and it works out the figure.')}<div class="panel-b"><div class="totals"><div class="sub"><span>Tender (ex VAT)</span><span>${money(A.tender)}</span></div><div><span>Valued to date</span><strong>${money(A.worksValued)} · ${appPct(A.pctValued)}%</strong></div>${A.varsToDate?`<div class="sub"><span>Variations to date</span><span>${money(A.varsToDate)}</span></div>`:''}<div><span>Invoiced to date</span><strong>${money(A.invoicedToDate)}</strong></div><div class="grand"><span>Left to invoice in tender</span><span>${money(Math.max(0,A.remaining))}</span></div></div></div>${appForm}</section>`:'';
+  const appsBox=tv?`<section class="panel"><div class="panel-h"><h3>Applications for payment</h3><span class="sub">Raise an interim application as a % of the tender. Each one stays on file; the next deducts what you've already applied for.</span></div>${A.rows.length?`<div class="scroll-x"><table class="grid"><thead><tr><th>App</th><th>Date</th><th class="n">Complete</th><th class="n">Variations</th><th class="n">Retention</th><th class="n">This application</th><th class="n">To date</th><th></th></tr></thead><tbody>${A.rows.map((a,i)=>{const isLast=i===A.rows.length-1;return `<tr><td>${a.void?`<s>${a.n}</s> <span class="sub">void</span>`:a.n}</td><td>${fmtD(a.date)}</td><td class="n">${appPct(a.pct)}%</td><td class="n">${a.vars?money(a.vars):'—'}</td><td class="n">${a.retPct?appPct(a.retPct)+'%':'—'}</td><td class="n"><strong>${a.void?'—':money(a.thisApp)}</strong></td><td class="n">${a.void?'—':money(a.netToDate)}</td><td class="n">${a.void?'':`<button type="button" class="btn sm ghost" data-act="certOpen" data-id="${p.id}" data-a="${a.id}">Certificate</button>`}<button type="button" class="btn sm ghost" data-act="appEditAsk" data-id="${p.id}" data-a="${a.id}">Edit</button>${isLast?`${a.void?`<button type="button" class="btn sm ghost" data-act="appUnvoid" data-id="${p.id}" data-a="${a.id}">Reinstate</button>`:`<button type="button" class="btn sm ghost" data-act="appVoid" data-id="${p.id}" data-a="${a.id}">Void</button>`}${del('app/'+p.id+'/'+a.id,'×')}`:''}</td></tr>`;}).join('')}</tbody></table></div>`:empty('No applications yet','Raise your first interim application below — enter the overall % of the tender complete and it works out the figure.')}<div class="panel-b"><div class="totals"><div class="sub"><span>Tender (ex VAT)</span><span>${money(A.tender)}</span></div><div><span>Valued to date</span><strong>${money(A.worksValued)} · ${appPct(A.pctValued)}%</strong></div>${A.varsToDate?`<div class="sub"><span>Variations to date</span><span>${money(A.varsToDate)}</span></div>`:''}<div><span>Invoiced to date</span><strong>${money(A.invoicedToDate)}</strong></div><div class="grand"><span>Left to invoice in tender</span><span>${money(Math.max(0,A.remaining))}</span></div></div></div><details class="panel-b"${(p.appTo||p.appEmail||p.appRef)?' open':''}><summary style="cursor:pointer;font-weight:600">Certificate details — who it's addressed to &amp; payment terms</summary><p class="dw-xhint" style="margin:8px 0">Used when you tap <strong>Certificate</strong> on an application to produce a send-ready PDF or Excel for the client.</p><div class="form"><label class="f full"><span>Addressed to (name &amp; address)</span><textarea id="pf-appTo" data-chg="pf" data-id="${p.id}" data-k="appTo" placeholder="Client company&#10;Address&#10;Town, Postcode">${esc(p.appTo||'')}</textarea></label>${pf('appEmail','Their email',{attrs:'type="email" placeholder="name@company.co.uk"'})}${pf('appRef','Our reference',{attrs:'placeholder="e.g. D&C/GORERD"'})}${pf('noticeDays','Notice days (default 7)',{attrs:'inputmode="numeric" placeholder="7"'})}${pf('dueDays','Payment due days (default 14)',{attrs:'inputmode="numeric" placeholder="14"'})}</div></details>${appForm}</section>`:'';
   const documents=`<section class="panel"${assets?` data-dropdocs="${p.id}"`:''}><div class="panel-h"><h3>Documents</h3>${assets?`<label class="btn sm filebtn">${ui.busy==='upload'?'Uploading…':'Add drawings or PDFs'}<input class="vh" type="file" id="doc-up" accept="application/pdf,image/png,image/jpeg" multiple data-chg="upload" data-id="${p.id}"${ui.busy==='upload'?' disabled':''}></label>`:''}</div>${docs.length?`<ul class="items">${docs.map(d=>`<li class="item"><div class="item-main"><a href="/_blob/${esc(d.id)}" target="_blank" rel="noopener">${esc(d.name)}</a><div class="sub">${size(num(d.size))} · added ${fmtD(d.added,true)}</div></div>${assets?`<div class="item-act">${del('doc/'+p.id+'/'+d.id,'Remove')}</div>`:''}</li>`).join('')}</ul>`:empty('No documents attached',assets?'Add drawings, specs, tender documents and quotes as PDFs or photos (up to 20 MB each).':'Documents can be added by people with edit access to this page.')}${assets?`<div class="panel-b"><p class="dw-xhint" style="margin:0">On a phone, tap <strong>Add drawings or PDFs</strong> to pick from Files or your photos. On a computer you can also drag drawings straight onto this panel.</p></div>`:''}</section>`;
   // Make the Xero button actually useful: if an invoice is already linked to this job, open
   // THAT invoice in Xero; otherwise jump to the Invoices tab with this client pre-searched so
@@ -1257,6 +1263,10 @@ const actions={
   useTender(d){write('projects',d.id,'update',{tender:num(d.v)});ui.tenderScan=null;toast('Tender set to '+money(num(d.v)));},
   appEditAsk(d){ui.appEdit=d.a;delete ui.drafts.appEdit;window.scrollTo(0,document.body.scrollHeight);},
   appEditCancel(){ui.appEdit=null;delete ui.drafts.appEdit;},
+  certOpen(d){ui.cert={pid:d.id,aid:d.a};},
+  certClose(){ui.cert=null;},
+  certPdf(){const c=ui.cert;if(!c)return;const p=S.projects[c.pid];if(!p)return;const d=certModel(p,c.aid);if(d)certPrint(d);},
+  certXl(){const c=ui.cert;if(!c)return;const p=S.projects[c.pid];if(!p)return;const d=certModel(p,c.aid);if(d)certExcel(d);},
   appVoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:true}:a)});toast('Application voided — kept on file');},
   appUnvoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:false}:a)});toast('Application reinstated');},
   closeProject(){ui.project=null;ui.confirm=null;},
@@ -2350,6 +2360,186 @@ function dwDownload(blob,name){
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
 }
+
+/* ---------- minimal .xlsx writer (built from scratch via JSZip) ----------
+   rows = array of row arrays; each cell is a string, a number, or {v,t,s}
+   where t='n'|'s' and s = style index (0 default, 1 bold, 2 currency, 3 bold+currency).
+   Used by the Application for Payment certificate; reusable for variations/BOQ. */
+var XL_STYLES='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+  '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;\u00a3&quot;#,##0.00"/></numFmts>'+
+  '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'+
+  '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'+
+  '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'+
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+  '<cellXfs count="4">'+
+  '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+  '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+  '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'+
+  '<xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>'+
+  '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+function xlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function xlCol(i){var s='';i++;while(i){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26;}return s;}
+function xlCell(addr,cell){
+  if(cell==null||cell==='')return '';
+  var v,t,s=0;
+  if(typeof cell==='object'){v=cell.v;t=cell.t;s=cell.s||0;}else{v=cell;}
+  if(t==null)t=(typeof v==='number')?'n':'s';
+  var sa=s?(' s="'+s+'"'):'';
+  if(t==='n')return '<c r="'+addr+'"'+sa+'><v>'+v+'</v></c>';
+  return '<c r="'+addr+'"'+sa+' t="inlineStr"><is><t xml:space="preserve">'+xlEsc(v)+'</t></is></c>';
+}
+function buildXlsx(JSZip,sheetName,rows,cols){
+  var body='';
+  rows.forEach(function(row,r){
+    var cells=(row||[]).map(function(c,i){return xlCell(xlCol(i)+(r+1),c);}).join('');
+    body+='<row r="'+(r+1)+'">'+cells+'</row>';
+  });
+  var colsXml=(cols&&cols.length)?('<cols>'+cols.map(function(w,i){return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>';}).join('')+'</cols>'):'';
+  var sheetXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+colsXml+'<sheetData>'+body+'</sheetData></worksheet>';
+  var zip=new JSZip();
+  zip.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'+
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  var xl=zip.folder('xl');
+  xl.file('workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+    '<sheets><sheet name="'+xlEsc(sheetName).slice(0,31)+'" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  xl.folder('_rels').file('workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  xl.file('styles.xml',XL_STYLES);
+  xl.folder('worksheets').file('sheet1.xml',sheetXml);
+  return zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+/* ---------- Application for Payment certificate ---------- */
+function certModel(p,aid){
+  var A=appCalc(p);
+  var a=A.rows.find(function(r){return r.id===aid;});
+  if(!a)return null;
+  var vr=(p.vatRate===''||p.vatRate==null)?20:num(p.vatRate);
+  var notice=num(p.noticeDays)||7, due=num(p.dueDays)||14;
+  var prior=A.rows.filter(function(r){return num(r.n)<num(a.n)&&!r.void;});
+  var vatAmt=vr>0?a.thisApp*vr/100:0;
+  var block=(p.appTo&&p.appTo.trim())?p.appTo:(p.client||'');
+  return {
+    client:p.client||'', block:block, appEmail:(p.appEmail||'').trim(),
+    ref:(p.appRef||'').trim(), jobTitle:p.name||'', orderNo:(p.po||'').trim()||'N/A',
+    appNo:a.n, dateStr:fmtD(a.date,true),
+    tender:A.tender, pct:a.pct, worksVal:a.worksVal,
+    vars:a.vars, subtotal:a.subtotal, retPct:a.retPct, retention:a.retention,
+    netToDate:a.netToDate, prior:prior, thisApp:a.thisApp,
+    vr:vr, vatApplies:vr>0, vatText:vr===0?'Domestic reverse charge — customer to account for VAT':(certPct(vr)+'% standard rate'),
+    vatAmt:vatAmt, totalDue:a.thisApp+(vr>0?vatAmt:0),
+    noticeStr:fmtD(addDays(a.date,notice),true), dueStr:fmtD(addDays(a.date,due),true),
+    issuer:DC_CO, fileBase:('Application '+a.n+' - '+(p.name||'Job')).replace(/[^\w\- ]+/g,'').replace(/\s+/g,' ').trim()
+  };
+}
+function certInner(d){
+  var navy='#273E57', ink='#1D2C3D', line='#D3C9BB', muted='#586574';
+  var row=function(label,val,o){o=o||{};var td='padding:7px 10px;border-bottom:1px solid '+line+';'+(o.bold?'font-weight:700;':'')+(o.top?'border-top:2px solid '+navy+';':'');return '<tr><td style="'+td+'">'+label+'</td><td style="'+td+'text-align:right;white-space:nowrap">'+val+'</td></tr>';};
+  var toLines=String(d.block||'').split(/\r?\n/).map(function(s){return esc(s.trim());}).filter(Boolean);
+  if(!toLines.length&&d.client)toLines.push(esc(d.client));
+  if(d.appEmail)toLines.push('<span style="color:'+muted+'">'+esc(d.appEmail)+'</span>');
+  var priorRows=d.prior.map(function(r){return row('Less application '+r.n,'\u2212'+money(r.thisApp));}).join('');
+  return '<div style="max-width:720px;margin:0 auto;background:#fff;color:'+ink+';font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.4">'+
+    '<div style="background:'+navy+';color:#F4EFE8;padding:20px 22px;display:flex;align-items:center;gap:16px">'+
+      '<img src="https://dandcgroundworks.com/assets/logo.png" alt="" width="60" height="60" style="border-radius:50%;background:#fff">'+
+      '<div><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.82">D&amp;C Groundworks &amp; Civils Ltd</div><div style="font-size:22px;font-weight:700">Application for Payment</div></div>'+
+      '<div style="margin-left:auto;text-align:right"><div style="font-size:12px;opacity:.82">Application</div><div style="font-size:26px;font-weight:700">'+d.appNo+'</div></div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:18px;padding:18px 22px">'+
+      '<div style="flex:1 1 240px"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:'+muted+';margin-bottom:4px">To</div>'+toLines.join('<br>')+'</div>'+
+      '<div style="flex:1 1 240px"><table style="width:100%;border-collapse:collapse;font-size:13px">'+
+        (d.ref?'<tr><td style="color:'+muted+';padding:2px 0">Our reference</td><td style="text-align:right;font-weight:600">'+esc(d.ref)+'</td></tr>':'')+
+        '<tr><td style="color:'+muted+';padding:2px 0">Job</td><td style="text-align:right;font-weight:600">'+esc(d.jobTitle)+'</td></tr>'+
+        '<tr><td style="color:'+muted+';padding:2px 0">Order number</td><td style="text-align:right;font-weight:600">'+esc(d.orderNo)+'</td></tr>'+
+        '<tr><td style="color:'+muted+';padding:2px 0">Date</td><td style="text-align:right;font-weight:600">'+esc(d.dateStr)+'</td></tr>'+
+      '</table></div>'+
+    '</div>'+
+    '<div style="padding:0 22px"><table style="width:100%;border-collapse:collapse">'+
+      '<thead><tr><th style="text-align:left;padding:8px 10px;background:'+navy+';color:#F4EFE8;font-weight:600">Description</th><th style="text-align:right;padding:8px 10px;background:'+navy+';color:#F4EFE8;font-weight:600">Amount</th></tr></thead><tbody>'+
+      row('Works as application \u2014 '+certPct(d.pct)+'% of '+money(d.tender),money(d.worksVal))+
+      (d.vars?row('Variations (100%)',money(d.vars)):'')+
+      row('Sub-total',money(d.subtotal),{bold:true})+
+      (d.retention?row('Less retention @ '+certPct(d.retPct)+'%','\u2212'+money(d.retention)):'')+
+      row('Net valuation to date',money(d.netToDate),{bold:true})+
+      priorRows+
+      row('This application'+(d.vatApplies?' (ex VAT)':''),money(d.thisApp),{bold:true,top:true})+
+      (d.vatApplies?row('VAT @ '+certPct(d.vr)+'%',money(d.vatAmt))+row('Total due this application',money(d.totalDue),{bold:true}):'')+
+    '</tbody></table></div>'+
+    '<div style="padding:14px 22px;color:'+muted+';font-size:13px">VAT treatment: <strong style="color:'+ink+'">'+esc(d.vatText)+'</strong></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:18px;padding:0 22px 6px">'+
+      '<div style="flex:1 1 220px;background:#F7F4EF;border:1px solid '+line+';border-radius:8px;padding:10px 12px"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:'+muted+'">Payment / pay-less notice by</div><div style="font-weight:700;font-size:15px">'+esc(d.noticeStr)+'</div></div>'+
+      '<div style="flex:1 1 220px;background:#F7F4EF;border:1px solid '+line+';border-radius:8px;padding:10px 12px"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:'+muted+'">Final date for payment</div><div style="font-weight:700;font-size:15px">'+esc(d.dueStr)+'</div></div>'+
+    '</div>'+
+    '<div style="margin-top:14px;border-top:1px solid '+line+';padding:14px 22px;color:'+muted+';font-size:12px"><strong style="color:'+ink+'">'+esc(d.issuer.name)+'</strong> \u00b7 '+esc(d.issuer.addr)+'<br>Company Reg '+esc(d.issuer.reg)+' \u00b7 VAT '+esc(d.issuer.vat)+'</div>'+
+  '</div>';
+}
+function certPrint(d){
+  var w=window.open('','_blank');
+  if(!w){toast('Allow pop-ups to save the PDF, or use Export Excel instead');return;}
+  var btn='<div class="noprint" style="text-align:center;padding:16px"><button onclick="window.print()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}</style></head><body>'+btn+certInner(d)+btn+'</body></html>');
+  w.document.close();w.focus();
+  setTimeout(function(){try{w.print();}catch(e){}},500);
+}
+function certExcel(d){
+  var S2=2,S3=3; // currency, bold+currency
+  var rows=[
+    [{v:'APPLICATION FOR PAYMENT',s:1}],
+    [{v:d.issuer.name,s:1}],
+    [d.issuer.addr],
+    ['Company Reg '+d.issuer.reg+'  ·  VAT '+d.issuer.vat],
+    [],
+    [{v:'Application number',s:1},{v:d.appNo}],
+    ['Date',d.dateStr],
+    (d.ref?['Our reference',d.ref]:['Our reference','']),
+    ['Job',d.jobTitle],
+    ['Order number',d.orderNo],
+    [],
+    [{v:'To',s:1}]
+  ];
+  String(d.block||'').split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean).forEach(function(l){rows.push(['',l]);});
+  if(d.appEmail)rows.push(['Email',d.appEmail]);
+  rows.push([]);
+  rows.push([{v:'Description',s:1},{v:'Amount',s:1}]);
+  rows.push(['Works as application — '+certPct(d.pct)+'% of tender',{v:d.worksVal,s:S2}]);
+  if(d.vars)rows.push(['Variations (100%)',{v:d.vars,s:S2}]);
+  rows.push([{v:'Sub-total',s:1},{v:d.subtotal,s:S3}]);
+  if(d.retention)rows.push(['Less retention @ '+certPct(d.retPct)+'%',{v:-d.retention,s:S2}]);
+  rows.push([{v:'Net valuation to date',s:1},{v:d.netToDate,s:S3}]);
+  d.prior.forEach(function(r){rows.push(['Less application '+r.n,{v:-r.thisApp,s:S2}]);});
+  rows.push([{v:'This application'+(d.vatApplies?' (ex VAT)':''),s:1},{v:d.thisApp,s:S3}]);
+  if(d.vatApplies){rows.push(['VAT @ '+certPct(d.vr)+'%',{v:d.vatAmt,s:S2}]);rows.push([{v:'Total due this application',s:1},{v:d.totalDue,s:S3}]);}
+  rows.push([]);
+  rows.push(['VAT treatment',d.vatText]);
+  rows.push(['Payment / pay-less notice by',d.noticeStr]);
+  rows.push(['Final date for payment',d.dueStr]);
+  loadZip().then(function(JSZip){return buildXlsx(JSZip,'Application '+d.appNo,rows,[42,20]);})
+    .then(function(blob){dwDownload(blob,d.fileBase+'.xlsx');})
+    .catch(function(){toast('Could not build the Excel file — try again');});
+}
+function certModal(){
+  var c=ui.cert;if(!c)return '';
+  var p=S.projects[c.pid];if(!p)return '';
+  var d=certModel(p,c.aid);if(!d)return '';
+  return '<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-label="Application certificate" style="max-width:800px">'+
+    '<div class="panel-h"><h3>Application '+d.appNo+' \u2014 certificate</h3><button type="button" class="btn ghost sm" data-act="certClose">Close</button></div>'+
+    '<div class="panel-b" style="background:#e9e3da;max-height:58vh;overflow:auto">'+certInner(d)+'</div>'+
+    '<div class="panel-b go"><button type="button" class="btn" data-act="certPdf">Save as PDF</button> <button type="button" class="btn ghost" data-act="certXl">Export Excel</button></div>'+
+  '</section></div>';
+}
 function icsEsc(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');}
 function icsForVisit(q){
   var ymd=(q.visitDate||'').replace(/-/g,'');if(!ymd)return '';
@@ -2596,7 +2786,7 @@ function render(){
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
-  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal()+setStartModal();
+  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal()+setStartModal()+certModal();
   sx.forEach(([id,l])=>{const el=$(id);if(el)el.scrollLeft=l;});
   if(ui.focusNext){const el=$(ui.focusNext);ui.focusNext=null;if(el){el.focus({preventScroll:el.id==='sd-close'});if(el.id==='sd-close'){const pn=$('sd-panel');if(pn)pn.scrollIntoView({block:'start',behavior:'smooth'});}ui.skipKeep=null;return;}}
   if(keep){const el=$(keep.id);if(el){if(keep.text&&ui.skipKeep!==keep.id)el.value=keep.value;el.focus({preventScroll:true});if(keep.text&&keep.s!=null){try{el.setSelectionRange(keep.s,keep.e);}catch(e){}}}}
@@ -2700,8 +2890,8 @@ function endJobDrag(){
 }
 view.addEventListener('pointerup',e=>{endMarkerDrag();endJobDrag();});
 /* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
-view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;schedule();}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart)){ui.meetDone=null;ui.setStart=null;schedule();}});
+view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;ui.cert=null;schedule();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart||ui.cert)){ui.meetDone=null;ui.setStart=null;ui.cert=null;schedule();}});
 /* tap an empty / visit / quote / off / hour cell on the schedule → open that day in full */
 view.addEventListener('click',e=>{
   if(_swallowClick){_swallowClick=false;return;}   // a marker was just dragged — don't also open the day
