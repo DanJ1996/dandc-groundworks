@@ -329,7 +329,7 @@ const pill=(k,t)=>`<span class="pill ${k}">${esc(t)}</span>`;
 const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 
 const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays']];
-const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced'];
+const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced','daynotes'];
 const S={};COLS.forEach(c=>S[c]={});
 const loaded={};
 let db=null, assets=null, mode='connecting';
@@ -664,8 +664,10 @@ views.schedule=()=>{
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':''],q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
+    const dNote=(S.daynotes[sd]||{}).text||'';
+    const noteSec=`<div class="sdsec">Notes for this day</div><form class="panel-b form" data-form="dayNote">${area('dayNote','text','Jot anything — reminders, who to call, access codes, deliveries…',dNote)}<div class="go"><button class="btn">${dNote?'Save note':'Add note'}</button>${dNote?`<button type="button" class="btn ghost" data-act="dayNoteDel" data-day="${sd}">Remove</button>`:''}</div></form>`;
     const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${evForm(sd)}`;
-    dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${dayAdd}</section>`;
+    dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
   return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
@@ -1144,6 +1146,7 @@ const actions={
   // Start a job straight from a tapped day: creates a live project already dated to that day
   // (shows as a one-day bar — drag the grip to extend) and opens it so you fill in the details.
   newDayJob(d){const id=uid();write('projects',id,'set',{name:'New job',client:'',site:'',status:'Live',startDate:d.day,endDate:d.day,lines:[],markup:0,docs:[],notes:'',created:todayISO()});ui.schedDay=null;ui.tab='projects';ui.project=id;window.scrollTo(0,0);toast('New job started on '+fmtD(d.day)+' — fill in the details');},
+  dayNoteDel(d){if(d.day&&S.daynotes[d.day])write('daynotes',d.day,'delete');delete ui.drafts.dayNote;toast('Note removed');},
   ovSec(d){ui.ovOpen[d.k]=!ui.ovOpen[d.k];},
   tsGrid(){ui.tsGridOpen=!ui.tsGridOpen;},
   newDW(d){openDW({mode:d.mode||'dayworks',jobid:d.jobid,project:d.job});},
@@ -1374,6 +1377,7 @@ function remCheck(){
 setInterval(()=>{try{remCheck();}catch(e){}},30000);
 function addReminder(owner,f){const t=(f.text||'').trim();if(!t)return false;const when=f.when||'';write('reminders',uid(),'set',{owner,text:t,when,done:false,created:Date.now()});if(when)askNotify();ui.focusNext='reminder'+(owner==='dan'?'Dan':'Chris')+'-text';return true;}
 const forms={
+  dayNote(f){const d=ui.schedDay;if(!d)return true;const text=String(f.text||'').trim();if(text)write('daynotes',d,'set',{date:d,text,updated:Date.now()});else if(S.daynotes[d])write('daynotes',d,'delete');toast(text?'Note saved for '+fmtD(d):'Note cleared');return true;},
   reminderDan(f){return addReminder('dan',f);},
   reminderChris(f){return addReminder('chris',f);},
   event(f){
