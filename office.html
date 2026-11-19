@@ -496,7 +496,7 @@ const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
    appt), shown as "part day · 08:00" instead of "1 day" so it doesn't read as a full day off. */
 /* Company dates — works do, break up, back to work. Directors add them (Holidays tab);
    every lad sees them in the field app's Dates tab. */
-const CD_KINDS=[['do','Works do','--note'],['shut','Break up / closed','--warn'],['back','Back to work','--good'],['other','Other','--info']];
+const CD_KINDS=[['do','Works do','--note'],['shut','Last day / break up','--warn'],['paid','Paid day off','--good'],['back','Back to work','--accent'],['other','Other','--info']];
 const cdKind=k=>CD_KINDS.find(x=>x[0]===k)||CD_KINDS[3];
 const cdEnd=c=>(c.to&&c.to>=c.from)?c.to:c.from;
 const cdWhen=(c,today)=>{const d=dayDiff(c.from,today);if(d<=0&&cdEnd(c)>=today)return 'On now';if(d===0)return 'Today';if(d===1)return 'Tomorrow';return d>0?'In '+d+' days':'';};
@@ -1837,6 +1837,7 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTim
    version their device last acknowledged; the X / tap-away marks them seen. */
 const WHATSNEW=[
   {v:3,d:'19 Nov 2026',items:[
+    {who:'all',t:'Company dates can now be marked “Paid day off”, so everyone can see which days off are paid.'},
     {who:'crew',t:'New Dates tab — the works do, when we break up and when we\u2019re back, straight from the office. The next one also shows at the top of the app.'},
     {who:'director',t:'Holidays tab → Company dates: add the works do, break-up and back-to-work dates and every lad sees them in their app. They show on your Schedule too.'},
     {who:'director',t:'Tap any box in “This week in numbers” on Overview to jump to that page.'}
