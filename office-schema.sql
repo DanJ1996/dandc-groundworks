@@ -170,3 +170,14 @@ create policy office_docs_crew_own on public.office_docs for all to authenticate
 -- role='director', so he gets no access to pricing, quotes or invoices.
 update public.profiles set role = 'lead_crew'
   where id = (select id from auth.users where lower(email) = 'matt@dandcgroundworks.co.uk');
+
+-- ==================================================================
+-- 6) COMPANY DATES — works do, break up, back to work.
+--    Directors write them (office_docs_all); every signed-in lad can
+--    READ this one collection so it shows in their Dates tab.
+--    (Same as office-company-dates.sql.)
+-- ==================================================================
+drop policy if exists office_docs_crew_read_company_dates on public.office_docs;
+create policy office_docs_crew_read_company_dates on public.office_docs
+  for select to authenticated
+  using (collection = 'company_dates');

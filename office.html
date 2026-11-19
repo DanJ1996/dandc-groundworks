@@ -79,6 +79,8 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .stat .k{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .stat .v{font:600 1.55rem/1.2 var(--display)}
 .stat.bad .v{color:var(--bad)}
+.pill.cd{background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--ink)}
+.cd-next{border-left:4px solid var(--c);padding:12px 16px}
 .stat[data-act]{cursor:pointer;transition:background .15s}
 .stat[data-act]:hover,.stat[data-act]:focus-visible{background:var(--sunk)}
 .stat[data-act]:active{opacity:.8}
@@ -333,7 +335,7 @@ const pill=(k,t)=>`<span class="pill ${k}">${esc(t)}</span>`;
 const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 
 const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays']];
-const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced','daynotes'];
+const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced','daynotes','company_dates'];
 const S={};COLS.forEach(c=>S[c]={});
 const loaded={};
 let db=null, assets=null, mode='connecting';
@@ -492,6 +494,12 @@ const projPill=s=>s==='Live'?'good':s==='Ready to start'?'info':s==='Complete'?'
 const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
 /* Duration label — a single day with a time is a PART day (e.g. a morning doctor's
    appt), shown as "part day · 08:00" instead of "1 day" so it doesn't read as a full day off. */
+/* Company dates — works do, break up, back to work. Directors add them (Holidays tab);
+   every lad sees them in the field app's Dates tab. */
+const CD_KINDS=[['do','Works do','--note'],['shut','Break up / closed','--warn'],['back','Back to work','--good'],['other','Other','--info']];
+const cdKind=k=>CD_KINDS.find(x=>x[0]===k)||CD_KINDS[3];
+const cdEnd=c=>(c.to&&c.to>=c.from)?c.to:c.from;
+const cdWhen=(c,today)=>{const d=dayDiff(c.from,today);if(d<=0&&cdEnd(c)>=today)return 'On now';if(d===0)return 'Today';if(d===1)return 'Tomorrow';return d>0?'In '+d+' days':'';};
 const holDur=h=>{const t=(h.time||'').trim();if(t&&h.from===h.to)return 'part day · '+t;const n=num(h.days)||1;return n+' day'+(n>1?'s':'');};
 const evEnd=e=>(e.to&&e.to>=e.from)?e.to:e.from;
 /* Reminder due times are plain local 'YYYY-MM-DDTHH:MM' strings, so they sort and compare as text. */
@@ -633,6 +641,8 @@ views.schedule=()=>{
   // Approved holidays — static spanning bars.
   const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.to>=wk&&h.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
   const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off'+((h.time&&h.from===h.to)?' '+h.time:''),rowcls:'offrow'})).join('');
+  // Company dates (works do, break up, back to work) — static bars, same as the lads see.
+  const cdRows=list('company_dates').filter(c=>c.from&&cdEnd(c)>=wk&&c.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))).map((c,idx)=>{const k=cdKind(c.kind);return spanRow(idx===0?'Company':'',c.from,cdEnd(c),k[2],{text:(c.title||k[1])+(c.time?' '+c.time:''),rowcls:'offrow'});}).join('');
   // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
   const evs=list('events').filter(e=>e.from&&evEnd(e)>=wk&&e.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))||String(a.title||'').localeCompare(String(b.title||'')));
   const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:evCat(e).c,{text:(g?g.name+' · ':'')+evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
@@ -679,7 +689,7 @@ views.schedule=()=>{
     const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${evForm(sd)}`;
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${holRows}${dueRow}${visitRow}${notesRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
@@ -1152,8 +1162,13 @@ views.crew=()=>{
   // Directors book their own time off — no approval, straight onto the schedule.
   const who=[...new Set([(DWME.name||'').trim(),...list('employees').filter(e=>e.active!==false).map(e=>(e.name||'').trim())].filter(Boolean))];
   const book=`<section class="panel"><div class="panel-h"><h3>Book time off</h3><span class="sub">Goes straight on the schedule — no approval needed.</span></div><form class="panel-b form" data-form="timeoff">${who.length?sel('timeoff','who','Who',who[0],who.map(n=>[n,n])):fld('timeoff','who','Who',DWME.name||'')}${fld('timeoff','from','From','',{type:'date',attrs:'required'})}${fld('timeoff','to','To (optional)','',{type:'date'})}${fld('timeoff','time','Time (if not all day)','',{type:'time'})}${fld('timeoff','note','Note (optional)','',{cls:'wide'})}<div class="go"><button class="btn">Book it</button></div></form></section>`;
+  const today=todayISO();
+  const cds=list('company_dates').filter(c=>c.from).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
+  const cdUp=cds.filter(c=>cdEnd(c)>=today), cdPast=cds.filter(c=>cdEnd(c)<today).reverse().slice(0,5);
+  const cdRow=c=>{const k=cdKind(c.kind);const w=cdWhen(c,today);return `<li class="item"><div><span class="pill cd" style="--c:var(${k[2]})">${esc(k[1])}</span></div><div class="item-main"><strong>${esc(c.title||k[1])}</strong> · ${esc(holSpan({from:c.from,to:cdEnd(c)}))}${c.time?' · '+esc(c.time):''}${w?` <span class="sub">(${esc(w)})</span>`:''}${c.place?`<div class="sub">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="sub">${esc(c.note)}</div>`:''}</div><div class="item-act">${del('company_dates/'+c.id)}</div></li>`;};
+  const cdSec=`<section class="panel"><div class="panel-h"><h3>Company dates${cdUp.length?' <span class="sub">'+cdUp.length+' coming up</span>':''}</h3><span class="sub">Works do, when we break up, when we're back — every lad sees these in their app.</span></div><form class="panel-b form" data-form="cdate">${fld('cdate','title','What','',{attrs:'required placeholder="Christmas do · Break up for Christmas"',cls:'wide'})}${sel('cdate','kind','Type','do',CD_KINDS.map(k=>[k[0],k[1]]))}${fld('cdate','from','Date','',{type:'date',attrs:'required'})}${fld('cdate','to','To (if more than one day)','',{type:'date'})}${fld('cdate','time','Time (optional)','',{type:'time'})}${fld('cdate','place','Where (optional)','',{attrs:'data-addr placeholder="Venue or address"'})}${fld('cdate','note','Note for the lads (optional)','',{cls:'wide',attrs:'placeholder="Partners welcome · last day on site is the 19th"'})}<div class="go"><button class="btn">Add &amp; share</button></div></form>${cdUp.length?`<ul class="items">${cdUp.map(cdRow).join('')}</ul>`:''}${cdPast.length?`<div class="panel-b sub" style="padding-bottom:0">Been and gone</div><ul class="items">${cdPast.map(cdRow).join('')}</ul>`:''}</section>`;
   return `<div class="head"><div><h2>Holidays</h2><p class="sub">Holiday requests from the lads — approve or decline and they'll see it straight away.</p></div></div>`
-    +book
+    +cdSec+book
     +sec('Awaiting your decision',pending,'No requests waiting')
     +(decided.length?sec('Decided',decided,''):'');
 };
@@ -1440,6 +1455,11 @@ const forms={
     if(!ui.edit)return true;const id=ui.edit.split('/')[1];const t=(f.title||'').trim();if(!t||!f.from)return false;
     write('events',id,'update',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim()});
     ui.edit=null;toast('Diary item updated');return true;
+  },
+  cdate(f){
+    const t=(f.title||'').trim();if(!t||!f.from)return false;
+    write('company_dates',uid(),'set',{title:t,kind:f.kind||'other',from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:(f.time||'').trim(),place:(f.place||'').trim(),note:(f.note||'').trim(),by:DWME.name||'',created:Date.now()});
+    toast('Added — the lads can see it now');return true;
   },
   timeoff(f){
     if(!f.from)return false;
@@ -1808,6 +1828,11 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTim
    A plain string is treated as 'all'. Everyone sees any entries newer than the
    version their device last acknowledged; the X / tap-away marks them seen. */
 const WHATSNEW=[
+  {v:3,d:'19 Nov 2026',items:[
+    {who:'crew',t:'New Dates tab — the works do, when we break up and when we\u2019re back, straight from the office. The next one also shows at the top of the app.'},
+    {who:'director',t:'Holidays tab → Company dates: add the works do, break-up and back-to-work dates and every lad sees them in their app. They show on your Schedule too.'},
+    {who:'director',t:'Tap any box in “This week in numbers” on Overview to jump to that page.'}
+  ]},
   {v:2,d:'5 Nov 2026',items:[
     {who:'director',t:'Holiday requests now ping your phone the moment a lad asks for time off — and sit at the top of Overview → Needs attention with Approve / Decline right there.'},
     {who:'all',t:'Asking for time off now has a Time box — for a morning appointment, pop the time in and it shows as a part day, not a full day off.'},
@@ -3258,9 +3283,9 @@ render();
     opts=opts||{};const lead=!!opts.lead;
     hideGate();setWho(profile);
     if(lead){const w=$('who');if(w)w.textContent=(w.textContent||'')+' · Lead';}
-    const CTABS=(lead?[['reminders','Reminders']]:[]).concat([['jobs','Jobs'],['holiday','Holiday'],['hours','My hours']]);
+    const CTABS=(lead?[['reminders','Reminders']]:[]).concat([['jobs','Jobs'],['holiday','Holiday'],['hours','My hours'],['dates','Dates']]);
     const cui={tab:CTABS[0][0],week:mondayOf(todayISO())};
-    const cS={entries:[],projects:[],sheets:[],jobs:[],files:{},holidays:[],reminders:[]};
+    const cS={entries:[],projects:[],sheets:[],jobs:[],files:{},holidays:[],reminders:[],dates:[]};
     const docId=w=>uid+'__'+w;
     const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     /* a lad can be on 1–3 jobs the same day, so hours are a flat list of
@@ -3285,6 +3310,8 @@ render();
     const loadFiles=()=>sb.from('job_files').select('job_id,name,path,size').then(r=>{const m={};(r.data||[]).forEach(f=>{(m[f.job_id]=m[f.job_id]||[]).push(f);});cS.files=m;});
     /* each lad sees ONLY their own holiday requests (RLS keeps it that way too) */
     const loadHolidays=()=>sb.from('office_docs').select('doc_id,data').eq('collection','holidays').then(r=>{cS.holidays=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(h=>h.uid===uid).sort((a,b)=>String(b.created||0).localeCompare(String(a.created||0)));}).catch(()=>{cS.holidays=[];});
+    /* company dates (works do, break up, back to work) — shared with every lad, read-only */
+    const loadDates=()=>sb.from('office_docs').select('doc_id,data').eq('collection','company_dates').then(r=>{cS.dates=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(c=>c.from).sort((a,b)=>String(a.from).localeCompare(String(b.from)));}).catch(()=>{cS.dates=[];});
     /* lead only — private reminders, nobody else's shown */
     const loadReminders=()=>!lead?Promise.resolve():sb.from('office_docs').select('doc_id,data').eq('collection','lead_reminders').then(r=>{cS.reminders=(r.data||[]).map(x=>({id:x.doc_id,...(x.data||{})})).filter(x=>x.uid===uid);}).catch(()=>{cS.reminders=[];});
     /* crew get ONLY material NAMES for the day-works dropdown via a locked-down
@@ -3355,6 +3382,19 @@ render();
       const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="items">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
       return `<div class="head"><div><h2>Holiday</h2><p class="sub">Ask for time off and see where each request stands.</p></div></div>`+form+mine;
     }
+    const cdLi=(c,today)=>{const k=cdKind(c.kind);const w=cdWhen(c,today);return `<li class="item"><div><span class="pill cd" style="--c:var(${k[2]})">${esc(k[1])}</span></div><div class="item-main"><strong>${esc(c.title||k[1])}</strong><div>${esc(DOW[(parse(c.from).getUTCDay()+6)%7])} ${esc(holSpan({from:c.from,to:cdEnd(c)}))}${c.time?' · '+esc(c.time):''}${w?` <span class="sub">(${esc(w)})</span>`:''}</div>${c.place?`<div class="sub">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="sub">${esc(c.note)}</div>`:''}</div></li>`;};
+    /* the next company date within 3 weeks, shown as a strip at the top of every tab */
+    function nextDateStrip(){
+      if(cui.tab==='dates')return '';
+      const today=todayISO();const c=cS.dates.find(x=>cdEnd(x)>=today&&dayDiff(x.from,today)<=21);if(!c)return '';
+      const k=cdKind(c.kind);
+      return `<section class="panel cd-next" style="--c:var(${k[2]})"><button type="button" class="link" data-ctabgo="dates"><strong>${esc(c.title||k[1])}</strong> — ${esc(holSpan({from:c.from,to:cdEnd(c)}))}${c.time?' · '+esc(c.time):''} <span class="sub">(${esc(cdWhen(c,today)||'')})</span> ›</button></section>`;
+    }
+    function datesView(){
+      const today=todayISO();
+      const up=cS.dates.filter(c=>cdEnd(c)>=today);
+      return `<div class="head"><div><h2>Company dates</h2><p class="sub">Works do, when we break up and when we're back — straight from the office.</p></div></div><section class="panel"><div class="panel-h"><h3>Coming up</h3></div>${up.length?`<ul class="items">${up.map(c=>cdLi(c,today)).join('')}</ul>`:empty('Nothing booked yet','When the office adds the works do or break-up dates, they show here.')}</section>`;
+    }
     function reminderView(){
       const open=cS.reminders.filter(r=>!r.done).sort((a,b)=>(b.created||0)-(a.created||0));
       const done=cS.reminders.filter(r=>r.done).sort((a,b)=>(b.created||0)-(a.created||0));
@@ -3376,7 +3416,7 @@ render();
     function addLeadRem(){const i=$('lrem-text');const t=((i&&i.value)||'').trim();if(!t)return;sb.from('office_docs').upsert({collection:'lead_reminders',doc_id:uid+'__'+newId(),data:{uid,text:t,done:false,created:Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'}).then(r=>{if(r.error){toast('Not saved — check your connection');return;}loadReminders().then(render);});}
     function setLeadRem(id,done){const r=cS.reminders.find(x=>x.id===id);if(!r)return;sb.from('office_docs').upsert({collection:'lead_reminders',doc_id:id,data:{uid,text:r.text,done:done,created:r.created||Date.now()},updated_at:new Date().toISOString()},{onConflict:'collection,doc_id'}).then(()=>loadReminders().then(render));}
     function delLeadRem(id){sb.from('office_docs').delete().eq('collection','lead_reminders').eq('doc_id',id).then(()=>loadReminders().then(render));}
-    function render(){viewEl.innerHTML=cui.tab==='hours'?hoursView():cui.tab==='jobs'?jobsView():cui.tab==='holiday'?holidayView():cui.tab==='reminders'?reminderView():jobsView();}
+    function render(){viewEl.innerHTML=nextDateStrip()+(cui.tab==='hours'?hoursView():cui.tab==='jobs'?jobsView():cui.tab==='holiday'?holidayView():cui.tab==='reminders'?reminderView():cui.tab==='dates'?datesView():jobsView());}
     function renderTabs(){tabsEl.innerHTML=CTABS.map(([k,l])=>`<button type="button" class="tab" data-ctab="${k}" aria-current="${cui.tab===k?'page':'false'}">${l}</button>`).join('');}
 
     tabsEl.addEventListener('click',e=>{const b=e.target.closest('[data-ctab]');if(!b)return;cui.tab=b.getAttribute('data-ctab');renderTabs();render();});
@@ -3384,6 +3424,7 @@ render();
       const wk=e.target.closest('[data-cwk]');if(wk){const d=+wk.getAttribute('data-cwk');cui.week=d?mondayOf(addDays(cui.week,d)):mondayOf(todayISO());loadWeek(cui.week).then(render);return;}
       const nw=e.target.closest('[data-cnew]');if(nw){const m=nw.getAttribute('data-cnew');const jt=nw.getAttribute('data-cjob');openDW({mode:m,project:jt||''});return;}
       const op=e.target.closest('[data-copen]');if(op){openDW({id:op.getAttribute('data-copen')});return;}
+      const tg=e.target.closest('[data-ctabgo]');if(tg){cui.tab=tg.getAttribute('data-ctabgo');renderTabs();render();window.scrollTo(0,0);return;}
       if(e.target.closest('[data-csubmit]')){submitHours();return;}
       if(e.target.closest('[data-hsubmit]')){saveHoliday();return;}
       const hd=e.target.closest('[data-hdel]');if(hd){cancelHoliday(hd.getAttribute('data-hdel'));return;}
@@ -3396,10 +3437,10 @@ render();
     viewEl.addEventListener('change',e=>{const t=e.target;if(t.getAttribute('data-cfield')==='loc'&&t.hasAttribute('data-eid')){const en=cS.entries.find(x=>x.id===t.getAttribute('data-eid'));if(en){en.loc=t.value;queueSave();}return;}const rc=t.closest&&t.closest('[data-rdone]');if(rc){setLeadRem(rc.getAttribute('data-rdone'),rc.checked);}});
 
     dwRefresh=()=>loadSheets().then(render);
-    fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
+    fgRefresh=()=>{const tasks=[loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders(),loadDates()];if(!saving)tasks.unshift(loadWeek(cui.week));return Promise.all(tasks).then(render).catch(()=>{});};
     renderTabs();viewEl.innerHTML='<div class="head"><h2>Loading…</h2></div>';
     loadMaterials();loadPlant();
-    Promise.all([loadWeek(cui.week),loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders()]).then(()=>{dwSetSites([...cS.jobs.map(j=>j.location),...cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.site)]);dwSetProjects(cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.name));dwSetClients(cS.jobs.map(j=>j&&j.client));render();}).catch(render);
+    Promise.all([loadWeek(cui.week),loadProjects(),loadSheets(),loadJobs(),loadFiles(),loadHolidays(),loadReminders(),loadDates()]).then(()=>{dwSetSites([...cS.jobs.map(j=>j.location),...cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.site)]);dwSetProjects(cS.projects.filter(p=>p&&p.status==='Live').map(p=>p.name));dwSetClients(cS.jobs.map(j=>j&&j.client));render();}).catch(render);
   }
   /* open a job drawing (crew) via a signed URL from the job-files bucket */
   document.addEventListener('click',e=>{
