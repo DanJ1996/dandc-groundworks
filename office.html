@@ -79,6 +79,9 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .stat .k{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .stat .v{font:600 1.55rem/1.2 var(--display)}
 .stat.bad .v{color:var(--bad)}
+.stat[data-act]{cursor:pointer;transition:background .15s}
+.stat[data-act]:hover,.stat[data-act]:focus-visible{background:var(--sunk)}
+.stat[data-act]:active{opacity:.8}
 
 .btn{font:500 .9rem var(--body);background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:var(--r);padding:8px 14px;cursor:pointer;white-space:nowrap}
 .btn:hover{opacity:.9}
@@ -537,12 +540,12 @@ views.overview=()=>{
   const toSend=inv.filter(i=>i.st==='tosend'||i.st==='late'), awaiting=inv.filter(i=>i.st==='awaiting'||i.st==='overdue'), overdue=inv.filter(i=>i.st==='overdue');
   const nextDue=toQuote.filter(q=>q.due).sort((a,b)=>a.due.localeCompare(b.due))[0];
   const stats=`<div class="stats">
-    <div class="stat"><span class="k">Hours this week</span><span class="v">${hrs(WL.hours)}</span><span class="sub">${money(WL.cost)} labour · w/c ${fmtD(wk)}</span></div>
-    <div class="stat"><span class="k">Enquiries to price</span><span class="v">${toQuote.length}</span><span class="sub">${nextDue?'Next due '+fmtD(nextDue.due):'None with a deadline'}${sentQ.length?' · '+sentQ.length+' quoted':''}</span></div>
-    <div class="stat"><span class="k">Site visits, next 7 days</span><span class="v">${visits7.length}</span><span class="sub">${visits7.length?'Next '+dayLabel(visits7[0].visitDate,today)+(visits7[0].visitTime?' '+visits7[0].visitTime:''):'None booked'}</span></div>
-    <div class="stat"><span class="k">Invoices to send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} invoice${toSend.length===1?'':'s'}, inc VAT</span></div>
-    <div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent, inc VAT</span></div>
-    <div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length?overdue.length+' past terms':'Nothing past terms'}</span></div>
+    <div class="stat" data-act="tab" data-tab="timesheets" role="button" tabindex="0" title="Open Hours this week"><span class="k">Hours this week</span><span class="v">${hrs(WL.hours)}</span><span class="sub">${money(WL.cost)} labour · w/c ${fmtD(wk)}</span></div>
+    <div class="stat" data-act="tab" data-tab="quotes" role="button" tabindex="0" title="Open Enquiries to price"><span class="k">Enquiries to price</span><span class="v">${toQuote.length}</span><span class="sub">${nextDue?'Next due '+fmtD(nextDue.due):'None with a deadline'}${sentQ.length?' · '+sentQ.length+' quoted':''}</span></div>
+    <div class="stat" data-act="tab" data-tab="schedule" role="button" tabindex="0" title="Open Site visits"><span class="k">Site visits, next 7 days</span><span class="v">${visits7.length}</span><span class="sub">${visits7.length?'Next '+dayLabel(visits7[0].visitDate,today)+(visits7[0].visitTime?' '+visits7[0].visitTime:''):'None booked'}</span></div>
+    <div class="stat" data-act="tab" data-tab="invoices" role="button" tabindex="0" title="Open Invoices to send"><span class="k">Invoices to send</span><span class="v">${money0(g(toSend))}</span><span class="sub">${toSend.length} invoice${toSend.length===1?'':'s'}, inc VAT</span></div>
+    <div class="stat" data-act="tab" data-tab="invoices" role="button" tabindex="0" title="Open Awaiting payment"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting))}</span><span class="sub">${awaiting.length} sent, inc VAT</span></div>
+    <div class="stat${overdue.length?' bad':''}" data-act="tab" data-tab="invoices" role="button" tabindex="0" title="Open Overdue"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length?overdue.length+' past terms':'Nothing past terms'}</span></div>
   </div>`;
   const qByProj={};quotes.forEach(q=>{if(q.projectId)qByProj[q.projectId]=q;});
   const att=[];
@@ -2964,6 +2967,7 @@ function render(){
   ui.skipKeep=null;
 }
 
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.stat[data-act]')){e.preventDefault();e.target.click();}});
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const fn=actions[el.dataset.act];if(fn){fn(el.dataset,el);schedule();}});
 view.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.chg)return;const fn=changes[el.dataset.chg];if(fn){ui.skipKeep=el.id;fn(el.dataset,el.value,el);schedule();}});
 view.addEventListener('input',e=>{const el=e.target;if(el.dataset&&el.dataset.inp){ui[el.dataset.inp]=el.value;schedule();return;}const f=el.closest('form[data-form]');if(f&&el.name){(ui.drafts[f.dataset.form]||(ui.drafts[f.dataset.form]={}))[el.name]=el.value;}});
