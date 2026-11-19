@@ -927,7 +927,12 @@ views.projects=()=>{
     else if(hasInv(q))acts=`<button type="button" class="btn sm ghost" data-act="projInterim" data-id="${q.id}">Interim</button><button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button>`;
     const isDW=q.basis==='dayworks';
     const amtMain=isDW?`<span class="amt">Day works</span><span class="sub">cost-plus · ${hrs(h.h)} h · ${money(h.cost)} labour</span>`:`<span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span>`;
-    const amtRight=isDW?costPlusTally(q):`<span>${money(invBy[q.id]||0)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
+    // Invoiced-to-date: a fixed-price job's real figure comes from its applications
+    // for payment (if any are raised) — the same number the project page shows — not
+    // just the separate 'invoices' records. Fall back to those when no application exists.
+    const appInv=appCalc(q).invoicedToDate;
+    const invAmt=appInv>0?appInv:(invBy[q.id]||0);
+    const amtRight=isDW?costPlusTally(q):`<span>${money(invAmt)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
     return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow"><button type="button" data-act="setStartAsk" data-id="${q.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</button></div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
   // Current jobs split into their own collapsible dropdowns by stage, so the live jobs are
   // clearly apart from ones still being priced (a "Pricing" job is still a tender, not on site).
@@ -945,7 +950,10 @@ views.projects=()=>{
 
 function vProject(p){
   const t=projTotals(p), h=hoursByProject()[p.id]||{h:0,cost:0};
-  const inv=list('invoices').filter(i=>i.projectId===p.id), invNet=sum(inv.map(i=>i.net)), paid=sum(inv.filter(i=>i.paid).map(i=>i.net));
+  const inv=list('invoices').filter(i=>i.projectId===p.id), paid=sum(inv.filter(i=>i.paid).map(i=>i.net));
+  // Invoiced shown in Details = the applications-for-payment total when any are raised
+  // (matches the Applications box below), else the separate 'invoices' records.
+  const _appInv=appCalc(p).invoicedToDate, invNet=_appInv>0?_appInv:sum(inv.map(i=>i.net));
   // Cost-plus job: pull in the day-works figures (lazy-load if needed) and the Xero
   // invoiced/paid totals so the whole money picture sits on the job itself.
   const isDW=p.basis==='dayworks';
@@ -1966,8 +1974,11 @@ function dwCombo(inp,getOpts,onPick,onDelete){
   const place=()=>{const r=inp.getBoundingClientRect();const below=window.innerHeight-r.bottom;pop.style.left=r.left+'px';pop.style.width=r.width+'px';pop.style.maxHeight=Math.max(140,Math.min(300,below-12))+'px';pop.style.top=r.bottom+'px';};
   const paint=()=>{
     const all=(getOpts()||[]).filter(Boolean);
-    const f=(inp.value||'').trim().toLowerCase();
-    const list=f?all.filter(v=>String(v).toLowerCase().includes(f)):all;
+    // Forgiving match: ignore spaces/punctuation so "9Ton", "9 ton" and "9t" all
+    // find "9T Dumper", and "type1" finds "Type 1 MOT".
+    const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
+    const f=norm(inp.value||'');
+    const list=f?all.filter(v=>norm(v).includes(f)):all;
     pop.innerHTML=list.length?list.slice(0,120).map(v=>`<div class="dw-copt" role="option" data-val="${esc(v)}">${esc(v)}${onDelete?`<button type="button" class="dw-del-opt" data-del="${esc(v)}" aria-label="Remove ${esc(v)} from the list">×</button>`:''}</div>`).join(''):`<div class="dw-copt none">${all.length?'No match — type your own and it still saves':'Type the material — it will save'}</div>`;
     place();pop.hidden=false;
   };
