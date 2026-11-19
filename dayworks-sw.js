@@ -1,5 +1,5 @@
 /* D&C Day Works — offline service worker */
-var CACHE = 'dandc-dayworks-v5';
+var CACHE = 'dandc-dayworks-v6';
 var ASSETS = [
   'dayworks.html',
   'dayworks.webmanifest',
@@ -27,6 +27,10 @@ self.addEventListener('activate', function(e){
 self.addEventListener('fetch', function(e){
   if(e.request.method!=='GET') return;
   var url = e.request.url;
+  // The Site Office (office.html) is a SEPARATE app with its own push-only worker
+  // and MUST always run live code/data. Never let this day-works cache intercept or
+  // store it — otherwise stale Site Office code gets served back. Straight to network.
+  if(/\/office\.html(\?|#|$)/.test(url) || /\/office-sw\.js(\?|$)/.test(url)) return;
   var sameOrigin = url.indexOf(self.location.origin)===0;
   var isAppCode = sameOrigin && /\.(html|js|webmanifest)(\?|$)/.test(url);
   if(isAppCode || e.request.mode==='navigate'){
