@@ -1888,7 +1888,7 @@ const _RL=window.DW_RATELISTS||{};
 const DW_FIRM_CREW=['Daniel James','Chris James','Matt Wright','Dave Pearce','Brandon Hall','Ryan Seerey','Luca Weeks'];
 const DW_TRADES=['Groundworker','Machine Operator','Ganger','Foreman','Driver','Labourer','Banksman','Pipelayer'];
 const _DW_PLANT_HIDE=/delivery|fuel cube|mobilise|demobilise/i;
-const DW_PLANT=((_RL.plant&&_RL.plant.length)?_RL.plant:['1.5T Excavator','3T Excavator','5T Excavator','8T Excavator','13T Excavator','360 Excavator','1T Dumper','3T Dumper','6T Dumper','9 Ton Dumper','Tracked Dumper','Roller','Whacker Plate','Compactor','Hydraulic Breaker','Telehandler','Grab Lorry','Muck Away Lorry']).filter(v=>!_DW_PLANT_HIDE.test(v));
+const DW_PLANT=((_RL.plant&&_RL.plant.length)?_RL.plant:['1.5T Excavator','3T Excavator','5T Excavator','8T Excavator','13T Excavator','360 Excavator','1T Dumper','3T Dumper','6T Dumper','9T Dumper','Tracked Dumper','Roller','Whacker Plate','Compactor','Hydraulic Breaker','Telehandler','Grab Lorry','Muck Away Lorry']).filter(v=>!_DW_PLANT_HIDE.test(v));
 const DW_MATERIALS=(_RL.materials&&_RL.materials.length)?_RL.materials:['Type 1 MOT','Concrete C20','Concrete C35','Ready-mix Concrete','Sharp Sand','Building Sand','Ballast','Cement','Rebar / Mesh','110mm Drainage Pipe','160mm Drainage Pipe','Shingle / Gravel','6F2 / 6F5','Geotextile Membrane','Topsoil','Road Sweepings','Pea Shingle'];
 const DW_UNITS=['tonne','m³','m²','m','no.','bag','load','each','hrs','litre'];
 const DW_FIELDS=['f_date','f_sheet','f_day','f_project','f_client','f_site','f_by','f_byrole','f_po','f_desc','f_reason','f_notes','f_markup','f_sig1name','f_sig1date','f_sig2name','f_sig2date'];
@@ -1942,7 +1942,7 @@ function dwCombo(inp,getOpts,onPick,onDelete){
   const paint=()=>{
     const all=(getOpts()||[]).filter(Boolean);
     // Forgiving match: ignore spaces/punctuation so "9Ton", "9 ton" and "9t" all
-    // find "9 Ton Dumper", and "type1" finds "Type 1 MOT".
+    // find "9T Dumper", and "type1" finds "Type 1 MOT".
     const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
     const f=norm(inp.value||'');
     const list=f?all.filter(v=>norm(v).includes(f)):all;
