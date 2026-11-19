@@ -3307,6 +3307,7 @@ render();
   function crewApp(profile,uid,opts){
     opts=opts||{};const lead=!!opts.lead;
     hideGate();setWho(profile);
+    {const sy=$('sync');if(sy)sy.style.display='none';}   /* the director's save-status label never applies here — it sat on "Connecting…" */
     if(lead){const w=$('who');if(w)w.textContent=(w.textContent||'')+' · Lead';}
     const CTABS=(lead?[['reminders','Reminders']]:[]).concat([['jobs','Jobs'],['holiday','Holiday'],['hours','My hours'],['dates','Dates']]);
     const cui={tab:CTABS[0][0],week:mondayOf(todayISO())};
