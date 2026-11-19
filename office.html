@@ -1988,9 +1988,11 @@ function dwCombo(inp,getOpts,onPick,onDelete){
   const place=()=>{const r=inp.getBoundingClientRect();const below=window.innerHeight-r.bottom;pop.style.left=r.left+'px';pop.style.width=r.width+'px';pop.style.maxHeight=Math.max(140,Math.min(300,below-12))+'px';pop.style.top=r.bottom+'px';};
   const paint=()=>{
     const all=(getOpts()||[]).filter(Boolean);
-    // Forgiving match: ignore spaces/punctuation so "9Ton", "9 ton" and "9t" all
-    // find "9T Dumper", and "type1" finds "Type 1 MOT".
-    const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
+    // Forgiving match: collapse "ton"/"tonne" to the "t" the names abbreviate, then
+    // ignore spaces/punctuation — so "9Ton", "9 ton", "9t" and "9T du" all find
+    // "9T Dumper", and "type1" finds "Type 1 MOT". The same collapse runs on both the
+    // option and what's typed, so nothing that matched before stops matching.
+    const norm=s=>String(s).toLowerCase().replace(/tonnes?|tons?/g,'t').replace(/[^a-z0-9]+/g,'');
     const f=norm(inp.value||'');
     const list=f?all.filter(v=>norm(v).includes(f)):all;
     pop.innerHTML=list.length?list.slice(0,120).map(v=>`<div class="dw-copt" role="option" data-val="${esc(v)}">${esc(v)}${onDelete?`<button type="button" class="dw-del-opt" data-del="${esc(v)}" aria-label="Remove ${esc(v)} from the list">×</button>`:''}</div>`).join(''):`<div class="dw-copt none">${all.length?'No match — type your own and it still saves':'Type the material — it will save'}</div>`;
