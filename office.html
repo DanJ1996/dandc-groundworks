@@ -82,6 +82,23 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .dn-move{align-items:end;margin-top:8px}
 .dn-move .f{flex:1 1 170px}
 .wktag{align-self:center;white-space:nowrap}
+.cdlist{list-style:none;margin:0;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.cdcard{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);padding:12px 14px}
+.cdcard.past{opacity:.6}
+.cdcard.editing{display:block}
+.cd-date{flex:0 0 54px;text-align:center;border-radius:var(--r);padding:6px 0;background:color-mix(in srgb,var(--c) 14%,var(--surface));line-height:1.05}
+.cd-dow,.cd-mon{display:block;font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cd-day{display:block;font:700 1.45rem/1.15 var(--display);color:var(--ink)}
+.cd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.cd-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cd-kind{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.cd-when{font-size:.78rem;color:var(--muted);white-space:nowrap}
+.cd-title{font-weight:600;font-size:1.02rem;color:var(--ink)}
+.cd-meta{font-size:.88rem;color:var(--ink)}
+.cd-note{font-size:.86rem;color:var(--muted)}
+.cd-acts{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.cd-past-h{padding:4px 16px 0;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cd-form{border-bottom:1px solid var(--line)}
 .pill.cd{background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--ink)}
 .cd-next{border-left:4px solid var(--c);padding:12px 16px}
 .stat[data-act]{cursor:pointer;transition:background .15s}
@@ -514,6 +531,12 @@ const cdKind=k=>CD_KINDS.find(x=>x[0]===k)||CD_KINDS[3];
 const cdTime=c=>{const t=String(c.time||'').trim();return t==='00:00'?'':t;};
 const cdEnd=c=>(c.to&&c.to>=c.from)?c.to:c.from;
 const cdWhen=(c,today)=>{const d=dayDiff(c.from,today);if(d<=0&&cdEnd(c)>=today)return 'On now';if(d===0)return 'Today';if(d===1)return 'Tomorrow';return d>0?'In '+d+' days':'';};
+/* One company date as a card: date block on the left (weekday / day / month), then the type,
+   title, the full span in words, time/place/note, and any buttons — same layout for every kind. */
+const cdFull=d=>DOW[(parse(d).getUTCDay()+6)%7]+' '+parse(d).getUTCDate()+' '+MON[parse(d).getUTCMonth()];
+const cdCard=(c,today,acts)=>{const k=cdKind(c.kind),e=cdEnd(c),n=dayDiff(e,c.from)+1,w=cdWhen(c,today),t=cdTime(c),f=parse(c.from);
+  const span=n>1?`${cdFull(c.from)} → ${cdFull(e)} · ${n} days`:cdFull(c.from);
+  return `<li class="cdcard${e<today?' past':''}" style="--c:var(${k[2]})"><div class="cd-date"><span class="cd-dow">${DOW[(f.getUTCDay()+6)%7]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="cd-body"><div class="cd-top"><span class="cd-kind">${esc(k[1])}</span>${w?`<span class="cd-when">${esc(w)}</span>`:''}</div><div class="cd-title">${esc(c.title||k[1])}</div><div class="cd-meta">${esc(span)}${t?' · '+esc(t):''}</div>${c.place?`<div class="cd-meta">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="cd-note">${esc(c.note)}</div>`:''}${acts?`<div class="cd-acts">${acts}</div>`:''}</div></li>`;};
 const holDur=h=>{const t=(h.time||'').trim();if(t&&h.from===h.to)return 'part day · '+t;const n=num(h.days)||1;return n+' day'+(n>1?'s':'');};
 const evEnd=e=>(e.to&&e.to>=e.from)?e.to:e.from;
 /* Reminder due times are plain local 'YYYY-MM-DDTHH:MM' strings, so they sort and compare as text. */
@@ -1190,10 +1213,12 @@ views.crew=()=>{
   const today=todayISO();
   const cds=list('company_dates').filter(c=>c.from).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
   const cdUp=cds.filter(c=>cdEnd(c)>=today), cdPast=cds.filter(c=>cdEnd(c)<today).reverse().slice(0,5);
-  const cdRow=c=>{const k=cdKind(c.kind);const w=cdWhen(c,today);return `<li class="item"><div><span class="pill cd" style="--c:var(${k[2]})">${esc(k[1])}</span></div><div class="item-main"><strong>${esc(c.title||k[1])}</strong> · ${esc(holSpan({from:c.from,to:cdEnd(c)}))}${cdTime(c)?' · '+esc(cdTime(c)):''}${w?` <span class="sub">(${esc(w)})</span>`:''}${c.place?`<div class="sub">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="sub">${esc(c.note)}</div>`:''}</div><div class="item-act"><button type="button" class="btn sm ghost" data-act="edit" data-key="cd/${c.id}">Edit</button>${del('company_dates/'+c.id)}</div></li>`;};
-  const cdEditLi=c=>`<li class="item editing"><form class="form" data-form="cdEdit">${fld('cdEdit','title','What',c.title||'',{attrs:'required',cls:'wide'})}${sel('cdEdit','kind','Type',c.kind||'other',CD_KINDS.map(k=>[k[0],k[1]]))}${fld('cdEdit','from','Date',c.from||'',{type:'date',attrs:'required'})}${fld('cdEdit','to','To (if more than one day)',c.to&&c.to!==c.from?c.to:'',{type:'date'})}${fld('cdEdit','time','Time (leave blank if none)',cdTime(c),{type:'time'})}${fld('cdEdit','place','Where',c.place||'',{attrs:'data-addr'})}${fld('cdEdit','note','Note for the lads',c.note||'',{cls:'wide'})}<div class="go"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-act="cdClearTime" data-id="${esc(c.id)}">Remove time</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form></li>`;
+  const cdRow=c=>cdCard(c,today,`<button type="button" class="btn sm ghost" data-act="edit" data-key="cd/${c.id}">Edit</button>${del('company_dates/'+c.id)}`);
+  const cdEditLi=c=>`<li class="cdcard editing" style="--c:var(${cdKind(c.kind)[2]})"><form class="form" data-form="cdEdit">${fld('cdEdit','title','What',c.title||'',{attrs:'required',cls:'wide'})}${sel('cdEdit','kind','Type',c.kind||'other',CD_KINDS.map(k=>[k[0],k[1]]))}${fld('cdEdit','from','Date',c.from||'',{type:'date',attrs:'required'})}${fld('cdEdit','to','To (if more than one day)',c.to&&c.to!==c.from?c.to:'',{type:'date'})}${fld('cdEdit','time','Time (leave blank if none)',cdTime(c),{type:'time'})}${fld('cdEdit','place','Where',c.place||'',{attrs:'data-addr'})}${fld('cdEdit','note','Note for the lads',c.note||'',{cls:'wide'})}<div class="go"><button class="btn sm">Save</button><button type="button" class="btn sm ghost" data-act="cdClearTime" data-id="${esc(c.id)}">Remove time</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form></li>`;
   const cdItem=c=>ui.edit==='cd/'+c.id?cdEditLi(c):cdRow(c);
-  const cdSec=`<section class="panel"><div class="panel-h"><h3>Company dates${cdUp.length?' <span class="sub">'+cdUp.length+' coming up</span>':''}</h3><span class="sub">Works do, when we break up, when we're back — every lad sees these in their app.</span></div><form class="panel-b form" data-form="cdate">${fld('cdate','title','What','',{attrs:'required placeholder="Christmas do · Break up for Christmas"',cls:'wide'})}${sel('cdate','kind','Type','do',CD_KINDS.map(k=>[k[0],k[1]]))}${fld('cdate','from','Date','',{type:'date',attrs:'required'})}${fld('cdate','to','To (if more than one day)','',{type:'date'})}${fld('cdate','time','Time (optional)','',{type:'time'})}${fld('cdate','place','Where (optional)','',{attrs:'data-addr placeholder="Venue or address"'})}${fld('cdate','note','Note for the lads (optional)','',{cls:'wide',attrs:'placeholder="Partners welcome · last day on site is the 19th"'})}<div class="go"><button class="btn">Add &amp; share</button></div></form>${cdUp.length?`<ul class="items">${cdUp.map(cdItem).join('')}</ul>`:''}${cdPast.length?`<div class="panel-b sub" style="padding-bottom:0">Been and gone</div><ul class="items">${cdPast.map(cdItem).join('')}</ul>`:''}</section>`;
+  const cdShowForm=ui.cdAdd||!cdUp.length;
+  const cdForm=`<form class="panel-b form cd-form" data-form="cdate">${fld('cdate','title','What','',{attrs:'required placeholder="Christmas do · Break up for Christmas"',cls:'wide'})}${sel('cdate','kind','Type','do',CD_KINDS.map(k=>[k[0],k[1]]))}${fld('cdate','from','Date','',{type:'date',attrs:'required'})}${fld('cdate','to','To (if more than one day)','',{type:'date'})}${fld('cdate','time','Time (optional)','',{type:'time'})}${fld('cdate','place','Where (optional)','',{attrs:'data-addr placeholder="Venue or address"'})}${fld('cdate','note','Note for the lads (optional)','',{cls:'wide',attrs:'placeholder="Partners welcome · last day on site is the 19th"'})}<div class="go"><button class="btn">Add &amp; share</button>${cdUp.length?'<button type="button" class="btn ghost" data-act="cdAddToggle">Cancel</button>':''}</div></form>`;
+  const cdSec=`<section class="panel"><div class="panel-h"><h3>Company dates${cdUp.length?' <span class="sub">'+cdUp.length+' coming up</span>':''}</h3><span class="sub">Every lad sees these in their app's Dates tab.</span>${cdShowForm?'':'<button type="button" class="btn sm" data-act="cdAddToggle">+ Add a date</button>'}</div>${cdShowForm?cdForm:''}${cdUp.length?`<ul class="cdlist">${cdUp.map(cdItem).join('')}</ul>`:''}${cdPast.length?`<div class="cd-past-h">Been and gone</div><ul class="cdlist">${cdPast.map(cdItem).join('')}</ul>`:''}</section>`;
   return `<div class="head"><div><h2>Holidays</h2><p class="sub">Holiday requests from the lads — approve or decline and they'll see it straight away.</p></div></div>`
     +cdSec+book
     +sec('Awaiting your decision',pending,'No requests waiting')
@@ -1215,6 +1240,7 @@ const actions={
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
   undoMove(){undoMove();},
+  cdAddToggle(){ui.cdAdd=!ui.cdAdd;delete ui.drafts.cdate;if(ui.cdAdd)ui.focusNext='cdate-title';},
   // Copy a visit's meeting notes, with the job and address on top, ready to paste to a lad.
   vnoteCopy(d){const r=(d.vkind==='p'?S.projects:S.quotes)[d.id];if(!r)return;const v=asVisit(d.vkind==='p'?'p':'q',{...r,id:d.id});if(!v.meetNotes){toast('No notes to copy');return;}
     const notes=v.meetNotes.split(/\n\s*\n/).map(x=>x.trim().replace(/^Site meeting [^:]{1,20}:\s*/,'')).join('\n\n');
@@ -1501,7 +1527,7 @@ const forms={
   cdate(f){
     const t=(f.title||'').trim();if(!t||!f.from)return false;
     write('company_dates',uid(),'set',{title:t,kind:f.kind||'other',from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:(f.time||'').trim()==='00:00'?'':(f.time||'').trim(),place:(f.place||'').trim(),note:(f.note||'').trim(),by:DWME.name||'',created:Date.now()});
-    toast('Added — the lads can see it now');return true;
+    ui.cdAdd=false;toast('Added — the lads can see it now');return true;
   },
   // Edit a site visit's meeting notes from the Schedule. Enquiry: its meetNotes. Job: the
   // "Site meeting …" paragraphs in its notes are swapped for the new text; the rest is untouched.
@@ -3460,7 +3486,7 @@ render();
       const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="items">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
       return `<div class="head"><div><h2>Holiday</h2><p class="sub">Ask for time off and see where each request stands.</p></div></div>`+form+mine;
     }
-    const cdLi=(c,today)=>{const k=cdKind(c.kind);const w=cdWhen(c,today);return `<li class="item"><div><span class="pill cd" style="--c:var(${k[2]})">${esc(k[1])}</span></div><div class="item-main"><strong>${esc(c.title||k[1])}</strong><div>${esc(DOW[(parse(c.from).getUTCDay()+6)%7])} ${esc(holSpan({from:c.from,to:cdEnd(c)}))}${cdTime(c)?' · '+esc(cdTime(c)):''}${w?` <span class="sub">(${esc(w)})</span>`:''}</div>${c.place?`<div class="sub">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="sub">${esc(c.note)}</div>`:''}</div></li>`;};
+    const cdLi=(c,today)=>cdCard(c,today,'');
     /* the next company date within 3 weeks, shown as a strip at the top of every tab */
     function nextDateStrip(){
       if(cui.tab==='dates')return '';
@@ -3471,7 +3497,7 @@ render();
     function datesView(){
       const today=todayISO();
       const up=cS.dates.filter(c=>cdEnd(c)>=today);
-      return `<div class="head"><div><h2>Company dates</h2><p class="sub">Works do, when we break up and when we're back — straight from the office.</p></div></div><section class="panel"><div class="panel-h"><h3>Coming up</h3></div>${up.length?`<ul class="items">${up.map(c=>cdLi(c,today)).join('')}</ul>`:empty('Nothing booked yet','When the office adds the works do or break-up dates, they show here.')}</section>`;
+      return `<div class="head"><div><h2>Company dates</h2><p class="sub">Works do, when we break up and when we're back — straight from the office.</p></div></div><section class="panel"><div class="panel-h"><h3>Coming up</h3></div>${up.length?`<ul class="cdlist">${up.map(c=>cdLi(c,today)).join('')}</ul>`:empty('Nothing booked yet','When the office adds the works do or break-up dates, they show here.')}</section>`;
     }
     function reminderView(){
       const open=cS.reminders.filter(r=>!r.done).sort((a,b)=>(b.created||0)-(a.created||0));
