@@ -8,7 +8,7 @@
   --bg:#EDE7DF; --surface:#F9F6F1; --sunk:#E4DCD1; --ink:#1D2C3D; --muted:#586574; --line:#D3C9BB;
   --accent:#273E57; --on-accent:#F4EFE8; --band:#273E57; --on-band:#EDE7DF; --band-muted:#B4C0CC;
   --good:#2C7A4B; --warn:#9A5A08; --bad:#B23A2E; --info:#5AA7E0; --note:#7A5AA7;
-  --gang1:#273E57; --gang2:#2E6E8E; --gang3:#6B4E8E; --gang4:#8A6D1F;
+  --gang1:#273E57; --gang2:#2E6E8E; --gang3:#6B4E8E; --gang4:#8A6D1F; --nogang:#8C4A4A;
   --ev-emergency:#C0392B; --ev-meeting:#A23E8C; --ev-delivery:#C77D2E; --ev-plant:#1E8C8C;
   --display:'Poppins',system-ui,'Segoe UI',sans-serif; --body:'IBM Plex Sans',system-ui,'Segoe UI',sans-serif;
   --r:6px;
@@ -258,11 +258,11 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt tr.jobrow{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 .sched.gantt tr.jobrow.dragging{cursor:grabbing}
 .sched.gantt tr.jobrow.dragging .jseg{opacity:.85}
-.jseg{background:var(--c);height:40px;line-height:40px;white-space:nowrap;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.jseg{background:var(--c);height:40px;display:flex;align-items:center;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
 .jseg.l{border-radius:3px 0 0 3px;z-index:2}
 .jseg.r{border-radius:0 3px 3px 0}
 .jseg.l.r{border-radius:3px}
-.jlabel{color:#fff;font-size:.82rem;font-weight:600;padding:0 8px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jlabel{color:#fff;font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:rgba(255,255,255,.85);box-shadow:3px 0 0 rgba(255,255,255,.85)}
@@ -631,7 +631,7 @@ views.schedule=()=>{
   };
   // Jobs = draggable bars. Any non-complete project with a start date that overlaps this week.
   const jobs=list('projects').filter(p=>p.status!=='Complete'&&p.startDate).map(p=>({p,s:p.startDate,e:(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate})).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
-  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--accent',{text:(g?g.name+' · ':'')+j.p.name,jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
@@ -649,9 +649,9 @@ views.schedule=()=>{
   const cdRows=list('company_dates').filter(c=>c.from&&cdEnd(c)>=wk&&c.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))).map((c,idx)=>{const k=cdKind(c.kind);return spanRow(idx===0?'Company':'',c.from,cdEnd(c),k[2],{text:(c.title||k[1])+(cdTime(c)?' '+cdTime(c):''),rowcls:'offrow'});}).join('');
   // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
   const evs=list('events').filter(e=>e.from&&evEnd(e)>=wk&&e.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))||String(a.title||'').localeCompare(String(b.title||'')));
-  const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:evCat(e).c,{text:(g?g.name+' · ':'')+evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
+  const evRows=evs.map((e,idx)=>{const g=gangOf(e.gang);return spanRow(idx===0?'Diary':'',e.from,evEnd(e),g?g.c:evCat(e).c,{text:evLabel(e),jid:e.id,kind:'event',rowcls:'jobrow evrow'});}).join('');
   const usedGangs=[...new Set(jobs.map(j=>j.p.gang).concat(evs.map(e=>e.gang)).filter(k=>gangOf(k)))];
-  const gangKeys=usedGangs.map(k=>{const g=gangOf(k);return `<span class="skey"><i style="--c:var(${g.c})"></i>${esc(g.name)}</span>`;}).join('')+(!jobs.length||jobs.some(j=>!gangOf(j.p.gang))?`<span class="skey"><i style="--c:var(--accent)"></i>Job</span>`:'');
+  const gangKeys=usedGangs.map(k=>{const g=gangOf(k);return `<span class="skey"><i style="--c:var(${g.c})"></i>${esc(g.name)}</span>`;}).join('')+(!jobs.length||jobs.some(j=>!gangOf(j.p.gang))?`<span class="skey"><i style="--c:var(--nogang)"></i>No gang yet</span>`:'');
   const evCats=evs.filter(e=>!gangOf(e.gang)).map(evCat);
   const evKeys=[...new Map(evCats.map(c=>[c.c,c])).values()].map(c=>`<span class="skey"><i style="--c:var(${c.c})"></i>${esc(c.label)}</span>`).join('');
   const legend=`<div class="slegend">${gangKeys}<span class="skey"><i style="--c:var(--info)"></i>Site visit</span><span class="skey"><i style="--c:var(--warn)"></i>Quote due</span>${evKeys}<span class="skey"><i style="--c:var(--muted)"></i>Off</span><span class="skey"><i style="--c:var(--note)"></i>Note</span></div>`;
@@ -683,7 +683,7 @@ views.schedule=()=>{
     const sec=(t,arr)=>arr.length?`<div class="sdsec">${t}</div><ul class="items">${arr.join('')}</ul>`:'';
     const spanTxt=(a,b)=>a===b?'':'Runs '+holSpan({from:a,to:b});
     const body=
-      sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--accent',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}">Open job</button>`);}))+
+      sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}">Open job</button>`);}))+
       sec('Diary',dEvs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);return li(g?g.c:evCat(e).c,`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],evActs(e));}))+
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':''],q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
