@@ -1460,7 +1460,7 @@ const changes={
   rate(d,v){write('rates',d.id,'update',{[d.k]:d.k==='rate'?num(v):v});},
   emp(d,v){write('employees',d.id,'update',{[d.k]:d.k==='rate'?num(v):v});},
   empActive(d,v,el){write('employees',d.id,'update',{active:el.checked});},
-  upload(d,v,el){const files=[...el.files];el.value='';uploadDocs(d.id,files);},
+  upload(d,v,el){const files=[...el.files];el.value='';uploadDocs(d.id,files,{readPO:true});},
   tenderFile(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanTenderFile(d.id,f);},
   boqFile(d,v,el){const f=(el.files||[])[0];el.value='';if(f)scanBoqFile(d.id,f);},
   importRates(d,v,el){const f=(el.files||[])[0];el.value='';if(f)importRates(f);},
@@ -1673,7 +1673,7 @@ function invBody(f,edit){
   if(edit){b.sent=f.sent||'';b.paid=f.paid||'';}else{b.sent='';b.paid='';b.created=todayISO();}
   return b;
 }
-async function uploadDocs(pid,files){
+async function uploadDocs(pid,files,opts){
   if(!assets||!files.length)return;
   ui.busy='upload';schedule();let ok=0;
   for(const file of files){
@@ -1686,12 +1686,100 @@ async function uploadDocs(pid,files){
       try{res=await put();}catch(e){if(e&&e.code==='store_unavailable'){await new Promise(r=>setTimeout(r,900));res=await put();}else throw e;}
       const p=S.projects[pid];if(!p)break;
       await write('projects',pid,'update',{docs:(p.docs||[]).concat([{id:res.id,name:file.name,size:res.sizeBytes,added:todayISO()}])});ok++;
+      if(isPdf&&opts&&opts.readPO)readPurchaseOrder(pid,file);
     }catch(e){
       const c=e&&e.code;
       toast(c==='too_large'?file.name+' is over the 20 MB limit.':c==='quota_or_state'?'Document storage for this page is full.':c==='rate_limited'?'Too many uploads at once. Wait a moment and try again.':c==='not_granted'||c==='capability_disabled'?'This view cannot add documents.':'Could not upload '+file.name+'. Try again.');
     }
   }
   ui.busy='';if(ok)toast(ok+' document'+(ok===1?'':'s')+' attached');schedule();
+}
+
+/* ---------- read a purchase order PDF and fill the project ----------
+   Pulls the text out of the PDF (typed PDFs, e.g. from Xero/Sage — not photos or scans), rebuilds
+   it into lines and columns, then looks for the usual PO labels. Only EMPTY project boxes are
+   filled — nothing you've typed is overwritten — and the pop-up has an Undo. */
+async function pdfCells(file){
+  const lib=await loadPdfJs();const pdf=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const lines=[];
+  for(let i=1;i<=Math.min(pdf.numPages,4);i++){
+    const pg=await pdf.getPage(i);const c=await pg.getTextContent();
+    const items=c.items.filter(it=>String(it.str).trim()).map(it=>({t:String(it.str),x:it.transform[4],y:it.transform[5],w:it.width||0}));
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const rows=[];items.forEach(it=>{const r=rows.find(r=>Math.abs(r.y-it.y)<3);if(r)r.items.push(it);else rows.push({y:it.y,items:[it]});});
+    rows.sort((a,b)=>b.y-a.y).forEach(r=>{r.items.sort((a,b)=>a.x-b.x);const cells=[];
+      r.items.forEach(it=>{const last=cells[cells.length-1];if(last&&it.x-(last.x+last.w)<10){last.t+=(it.x-(last.x+last.w)>1.5?' ':'')+it.t;last.w=it.x+it.w-last.x;}else cells.push({t:it.t,x:it.x,w:it.w});});
+      cells.forEach(c=>c.t=c.t.replace(/\s+/g,' ').trim());lines.push(cells.filter(c=>c.t));});
+  }
+  return lines.filter(l=>l.length);
+}
+const PO_LABEL=/^(attention|attn|contact|order\s*(date|number|no)|reference|ref|delivery\s*(date|address|instructions)|date|tel|telephone|phone|mobile|email|description|qty|quantity|unit\s*price|price|amount|vat|total|sub\s*total|site|p\.?o\.?(\s*(no|number))?|supplier|to|from)\s*:?$/i;
+const OUR_NAME=/d\s*&\s*c\b|dandc|groundworks\s*&\s*civils/i;
+const UK_PC=/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/i;
+function parsePO(lines,fileName){
+  const all=lines.map(l=>l.map(c=>c.t).join('  ')).join('\n');
+  // value next to / under a label
+  const near=(re,ok)=>{for(let i=0;i<lines.length;i++)for(let j=0;j<lines[i].length;j++){const c=lines[i][j];const m=c.t.match(re);if(!m||m.index>2)continue;
+    const cand=[{v:c.t.slice(m.index+m[0].length).replace(/^[\s:#.\-–()]+/,'').trim(),x:c.x,k:i}];
+    if(lines[i][j+1])cand.push({v:lines[i][j+1].t,x:lines[i][j+1].x,k:i});
+    for(let k=i+1;k<=i+2&&k<lines.length;k++){const u=lines[k].find(x=>Math.abs(x.x-c.x)<45);if(u){cand.push({v:u.t,x:u.x,k});break;}}
+    for(const o of cand)if(o.v&&!PO_LABEL.test(o.v)&&(!ok||ok(o.v)))return {v:o.v,i,j,x:o.x,k:o.k};}
+    return null;};
+  const out={};
+  // PO number
+  const isNum=v=>/\d/.test(v)&&v.length<=30&&!/\d{1,2}[\/.\- ](\d{1,2}|[a-z]{3,})[\/.\- ]\d{2,4}/i.test(v)&&!/^£/.test(v);
+  let po=near(/(?:purchase\s*order|p\.?\s?o\.?|order)\s*(?:no\.?|number|num|#|ref(?:erence)?)\b/i,isNum)||near(/^p\.?o\.?\b/i,isNum);
+  if(po)out.po=po.v.split(/\s+/)[0];
+  if(!out.po){const m=all.match(/\b(POR?[-\s]?\d{3,}[A-Z0-9\-]*)\b/i);if(m)out.po=m[1].replace(/\s/,'-');}
+  if(!out.po){const m=String(fileName||'').match(/(POR?[-_ ]?\d{3,}[A-Z0-9\-]*)/i);if(m)out.po=m[1].replace(/[_ ]/,'-');}
+  // site / delivery address: the label, then lines in the same column until a postcode
+  const at=near(/(?:deliver(?:y)?\s*(?:address|to|details|location)|site\s*(?:address|location)|job\s*address|works\s*address|^site\b)/i,v=>!OUR_NAME.test(v));
+  if(at){const parts=[at.v];if(!UK_PC.test(at.v)){for(let k=at.k+1;k<lines.length&&parts.length<6;k++){const u=lines[k].find(x=>Math.abs(x.x-at.x)<45);if(!u)break;if(/:$/.test(u.t)||/^(attention|contact|tel|phone|email|delivery\s*date|date|instructions)/i.test(u.t))break;parts.push(u.t);if(UK_PC.test(u.t))break;}}
+    const addr=parts.filter(x=>x&&!/^(deliver|site|address)/i.test(x)).join(', ').replace(/,\s*,/g,',');if(addr&&!OUR_NAME.test(addr))out.site=addr;}
+  // client = the company issuing the order (not us)
+  const from=near(/^(?:from|issued\s*by|company|client|customer|main\s*contractor)\b/i,v=>!OUR_NAME.test(v)&&v.length>2);
+  if(from)out.client=from.v;
+  if(!out.client){for(const l of lines.slice(0,25)){const c=l.find(c=>/\b(ltd|limited|llp|plc|homes|builders?|construction|contractors?|developments?|group)\b/i.test(c.t)&&!OUR_NAME.test(c.t)&&c.t.length<60);if(c){out.client=c.t;break;}}}
+  // job / reference
+  const ref=near(/^(?:reference|your\s*ref(?:erence)?|ref\.?|project(?:\s*name)?|job(?:\s*name)?|contract(?:\s*name)?|site\s*name)\b/i,v=>v.length>1&&!/^(no|number)$/i.test(v));
+  if(ref&&ref.v!==out.po)out.ref=ref.v;
+  // money: net (ex VAT) preferred
+  const money=v=>{const m=String(v).replace(/,/g,'').match(/(\d+\.\d{2})(?!.*\d+\.\d{2})/);return m?parseFloat(m[1]):NaN;};
+  const amt=re=>{const r=near(re,v=>isFinite(money(v)));if(!r)return NaN;const row=lines[r.i].map(c=>c.t).join(' ');const last=money(row);return isFinite(last)?last:money(r.v);};
+  let net=amt(/(?:sub\s*-?\s*total|total\s*\(?\s*(?:net|ex\.?|excl\.?|excluding|before)|net\s*(?:total|amount|value))/i);
+  const gross=amt(/(?:total\s*(?:inc\.?|incl\.?|including|gbp|due|order\s*value)?|amount\s*due|order\s*total|grand\s*total)/i);
+  if(!isFinite(net)&&isFinite(gross)){const vat=amt(/(?:total\s*)?vat\b|tax\b/i);net=isFinite(vat)&&vat<gross?gross-vat:(/\bvat\b/i.test(all)?NaN:gross);}
+  if(isFinite(net)&&net>0)out.value=Math.round(net*100)/100;
+  // delivery / start date
+  const dt=near(/(?:deliver(?:y)?\s*date|required\s*(?:by|date)|start\s*date|commencement)/i,v=>!!toISODate(v));
+  if(dt)out.start=toISODate(dt.v);
+  return out;
+}
+function toISODate(v){const M={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};let m=String(v).match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+  if(m){const y=+m[3]<100?2000+ +m[3]:+m[3];return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
+  m=String(v).match(/(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3})[a-z]*\.?,?\s+(\d{4})/);if(m&&M[m[2].toLowerCase()])return m[3]+'-'+pad(M[m[2].toLowerCase()])+'-'+pad(+m[1]);return '';}
+function toastAction(msg,btn,fn,ms){const t=$('toast');t.innerHTML='';t.append(msg+' ');const b=document.createElement('button');b.type='button';b.className='toast-undo';b.textContent=btn;
+  b.addEventListener('click',e=>{e.stopPropagation();t.hidden=true;fn();});t.append(b);t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},ms||12000);}
+async function readPurchaseOrder(pid,file){
+  let lines;try{lines=await pdfCells(file);}catch(e){return;}
+  const p=S.projects[pid];if(!p)return;
+  if(!lines.length){toast('Attached. That PDF is a scan, so its text can’t be read — fill the PO details in by hand.');return;}
+  const txt=lines.map(l=>l.map(c=>c.t).join(' ')).join(' ');
+  if(!/purchase\s*order|\bp\.?\s?o\.?\s*(no|number|#)|order\s*(no|number)|\bPOR?-?\d{3,}/i.test(txt+' '+file.name))return;  // not a PO — just a drawing etc.
+  const f=parsePO(lines,file.name);
+  const blank=v=>v==null||String(v).trim()===''||v===0||v==='0';
+  const patch={},filled=[],kept=[];
+  const put=(k,v,label,show)=>{if(v==null||v==='')return;if(blank(p[k])||(k==='name'&&/^new job$/i.test(p[k]))){patch[k]=v;filled.push(label+(show?' '+show:''));}else if(String(p[k]).trim().toLowerCase()!==String(v).trim().toLowerCase())kept.push(label);};
+  put('po',f.po,'PO',f.po);put('client',f.client,'client');put('site',f.site,'site address');
+  if(f.ref)put('name',f.ref,'job name');
+  if(f.value)put('tender',f.value,'order value',money0(f.value));
+  if(f.start)put('startDate',f.start,'start date',fmtD(f.start));
+  if(!filled.length){toast(kept.length?'PO read — '+kept.join(', ')+' already filled in, so nothing changed.':'Attached. Couldn’t find PO details in '+file.name+' — fill them in by hand.');return;}
+  const before={};Object.keys(patch).forEach(k=>before[k]=p[k]==null?'':p[k]);
+  if(patch.startDate&&blank(p.endDate))patch.endDate=patch.startDate;
+  if(patch.endDate)before.endDate=p.endDate||'';
+  await write('projects',pid,'update',patch);schedule();
+  toastAction('Read the PO and filled in: '+filled.join(', ')+'.'+(kept.length?' Kept your '+kept.join(', ')+'.':''),'Undo',()=>{write('projects',pid,'update',before);toast('Undone — PO details removed');schedule();});
 }
 async function removeDoc(pid,aid){
   const p=S.projects[pid];if(!p)return;
@@ -3151,7 +3239,7 @@ view.addEventListener('drop',e=>{const z=e.target.closest('[data-droptender]');i
    the "Add drawings or PDFs" button opens Files / the photo library instead. */
 view.addEventListener('dragover',e=>{const z=e.target.closest('[data-dropdocs]');if(!z)return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('dragover');});
 view.addEventListener('dragleave',e=>{const z=e.target.closest('[data-dropdocs]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('dragover');});
-view.addEventListener('drop',e=>{const z=e.target.closest('[data-dropdocs]');if(!z)return;e.preventDefault();z.classList.remove('dragover');const files=[...(e.dataTransfer.files||[])];if(files.length)uploadDocs(z.dataset.dropdocs,files);});
+view.addEventListener('drop',e=>{const z=e.target.closest('[data-dropdocs]');if(!z)return;e.preventDefault();z.classList.remove('dragover');const files=[...(e.dataTransfer.files||[])];if(files.length)uploadDocs(z.dataset.dropdocs,files,{readPO:true});});
 /* Drag a saved BOQ Excel onto the Applications panel — read its Total row and fill the next application. */
 view.addEventListener('dragover',e=>{const z=e.target.closest('[data-dropboq]');if(!z)return;e.preventDefault();e.dataTransfer.dropEffect='copy';z.classList.add('dragover');});
 view.addEventListener('dragleave',e=>{const z=e.target.closest('[data-dropboq]');if(z&&!z.contains(e.relatedTarget))z.classList.remove('dragover');});
