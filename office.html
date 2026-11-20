@@ -281,6 +281,8 @@ table.grid{border-collapse:collapse;width:100%}
 .tev strong{font-weight:600;display:block}
 .tev .tnote{display:inline-block;margin:2px 0;padding:0 5px;border-radius:3px;background:rgba(255,255,255,.25);font-size:.68rem;font-weight:600}
 .vnotes{white-space:pre-wrap;color:var(--ink);background:var(--sunk);border-left:3px solid var(--info);border-radius:3px;padding:8px 10px;margin-top:6px}
+.vnotes-edit{margin-top:6px;display:flex;flex-direction:column;gap:8px}
+.vnotes-edit textarea{min-height:9em}
 .vnotes-h{display:block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 .tev .tsub{color:rgba(255,255,255,.85);display:block;font-size:.7rem}
 .slegend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
@@ -693,7 +695,10 @@ views.schedule=()=>{
     const body=
       sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}">Open job</button>`);}))+
       sec('Diary',dEvs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);return li(g?g.c:evCat(e).c,`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],evActs(e));}))+
-      sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':'',q.meetNotes?`<div class="vnotes"><span class="vnotes-h">Meeting notes</span>${esc(q.meetNotes)}</div>`:''],q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)))+
+      sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':'',ui.edit==='vnote/'+q.vkind+'/'+q.id
+        ?`<form class="vnotes-edit" data-form="vnoteEdit"><label class="f full"><span>Meeting notes</span><textarea id="vnoteEdit-text" name="text" rows="7">${esc(dv('vnoteEdit','text',q.meetNotes))}</textarea></label><div class="go"><button class="btn sm">Save notes</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form>`
+        :q.meetNotes?`<div class="vnotes"><span class="vnotes-h">Meeting notes</span>${esc(q.meetNotes)}</div>`:''],
+        (q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)+(ui.edit==='vnote/'+q.vkind+'/'+q.id?'':`<button type="button" class="btn sm ghost" data-act="vnoteEditOpen" data-key="vnote/${q.vkind}/${q.id}">${q.meetNotes?'Edit notes':'Add notes'}</button>`))))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
     const dNote=(S.daynotes[sd]||{}).text||'';
@@ -1210,6 +1215,7 @@ const actions={
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
   undoMove(){undoMove();},
+  vnoteEditOpen(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.vnoteEdit;ui.focusNext='vnoteEdit-text';},
   dayNoteMove(d){const el=document.getElementById('dn-move');const to=el&&el.value;const from=d.day;const n=S.daynotes[from];if(!n||!to)return;if(to===from){toast('Pick a different day');return;}
     const text=String(n.text||'').trim();const had=String((S.daynotes[to]||{}).text||'').trim();
     write('daynotes',to,'set',{date:to,text:had?had+'\n'+text:text,updated:Date.now()});write('daynotes',from,'delete');delete ui.drafts.dayNote;
@@ -1254,7 +1260,7 @@ const actions={
   tsDel(d){const rows=rowsOf(ui.week,d.e);rows.splice(+d.r,1);saveSheet(ui.week,d.e,rows);},
   ask(d){ui.confirm=d.key;ui.focusNext='cf-'+d.key;},
   cdClearTime(d){if(!S.company_dates[d.id])return;write('company_dates',d.id,'update',{time:''});ui.edit=null;delete ui.drafts.cdEdit;toast('Time removed');},
-  cancel(){ui.confirm=null;ui.edit=null;delete ui.drafts.cdEdit;ui.moveDW=null;ui.dwEdit=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;delete ui.drafts.eventEdit;},
+  cancel(){ui.confirm=null;ui.edit=null;delete ui.drafts.cdEdit;delete ui.drafts.vnoteEdit;ui.moveDW=null;ui.dwEdit=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;delete ui.drafts.eventEdit;},
   edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';if(d.key.indexOf('rem/')===0){delete ui.drafts.remEdit;ui.focusNext='remEdit-text';}if(d.key.indexOf('ev/')===0){delete ui.drafts.eventEdit;ui.focusNext='eventEdit-title';}},
   // Turn a diary item into a reminder for whichever director is signed in.
   evRemind(d){const e=S.events[d.id];if(!e)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[e.title||'Diary',e.client].filter(Boolean).join(' · ');const when=e.from?e.from+'T'+(e.time||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});if(when)askNotify();toast('Added to your reminders'+(when?' — pings '+fmtD(e.from)+(e.time?' at '+e.time:''):''));},
@@ -1490,6 +1496,16 @@ const forms={
     const t=(f.title||'').trim();if(!t||!f.from)return false;
     write('company_dates',uid(),'set',{title:t,kind:f.kind||'other',from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:(f.time||'').trim()==='00:00'?'':(f.time||'').trim(),place:(f.place||'').trim(),note:(f.note||'').trim(),by:DWME.name||'',created:Date.now()});
     toast('Added — the lads can see it now');return true;
+  },
+  // Edit a site visit's meeting notes from the Schedule. Enquiry: its meetNotes. Job: the
+  // "Site meeting …" paragraphs in its notes are swapped for the new text; the rest is untouched.
+  vnoteEdit(f){
+    if(!ui.edit||ui.edit.indexOf('vnote/')!==0)return true;const [,k,id]=ui.edit.split('/');const text=String(f.text||'').trim();
+    if(k==='q'){if(S.quotes[id])write('quotes',id,'update',{meetNotes:text});}
+    else{const p=S.projects[id];if(p){const keep=String(p.notes||'').split(/\n\s*\n/).filter(x=>x.trim()&&!/^Site meeting /.test(x.trim()));
+      const mt=text&&!/^Site meeting /.test(text)?'Site meeting '+fmtD(p.visitDate||todayISO())+': '+text:text;
+      write('projects',id,'update',{notes:keep.concat(mt?[mt]:[]).join('\n\n')});}}
+    ui.edit=null;toast(text?'Meeting notes saved':'Meeting notes cleared');return true;
   },
   cdEdit(f){
     if(!ui.edit)return true;const id=ui.edit.split('/')[1];const t=(f.title||'').trim();if(!t||!f.from)return false;
