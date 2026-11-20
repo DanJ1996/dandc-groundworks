@@ -295,6 +295,7 @@ table.grid{border-collapse:collapse;width:100%}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .filebtn{position:relative;display:inline-block}
 .filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+#toast .toast-undo{margin-left:10px;font:600 .9rem var(--body);background:var(--on-accent);color:var(--accent);border:0;border-radius:var(--r);padding:5px 12px;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:var(--on-accent);padding:9px 16px;border-radius:var(--r);max-width:calc(100% - 32px);font-size:.9rem;z-index:10}
 </style>
 
@@ -619,7 +620,7 @@ views.overview=()=>{
 
 views.schedule=()=>{
   const today=todayISO(), wk=ui.schedWeek, thisWk=mondayOf(today), wkEnd=addDays(wk,6);
-  const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="-7" aria-label="Previous week">‹</button><h2>Week of ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="7" aria-label="Next week">›</button>${(()=>{const n=Math.round(dayDiff(wk,thisWk)/7);const tag=n===0?'This week':n===1?'Next week':n===-1?'Last week':n>0?'In '+n+' weeks':(-n)+' weeks ago';return `<span class="pill ${n===0?'good':'warn'} wktag">${tag}</span>`+(n!==0?`<button type="button" class="btn ghost sm" data-act="schedWeek" data-d="0">← Back to this week</button>`:'');})()}</div><div class="item-act">${pushCtl()}</div></div>`;
+  const head=`<div class="head"><div class="week"><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="-7" aria-label="Previous week">‹</button><h2>Week of ${fmtD(wk,true)}</h2><button type="button" class="btn ghost sm" data-act="schedWeek" data-d="7" aria-label="Next week">›</button>${(()=>{const n=Math.round(dayDiff(wk,thisWk)/7);const tag=n===0?'This week':n===1?'Next week':n===-1?'Last week':n>0?'In '+n+' weeks':(-n)+' weeks ago';return `<span class="pill ${n===0?'good':'warn'} wktag">${tag}</span>`+(lastMove?`<button type="button" class="btn sm" data-act="undoMove" title="${esc(lastMove.label)}">↶ Undo move</button>`:'')+(n!==0?`<button type="button" class="btn ghost sm" data-act="schedWeek" data-d="0">← Back to this week</button>`:'');})()}</div><div class="item-act">${pushCtl()}</div></div>`;
   const days=[];for(let i=0;i<7;i++){const day=addDays(wk,i);days.push({day,i,we:i>4,isT:day===today});}
   const cls=d=>`day${d.we?' we':''}${d.isT?' today':''}`;
   const col=iso=>Math.max(0,Math.min(6,dayDiff(iso,wk)));
@@ -1208,6 +1209,7 @@ const actions={
   newDayJob(d){const id=uid();write('projects',id,'set',{name:'New job',client:'',site:'',status:'Live',startDate:d.day,endDate:d.day,lines:[],markup:0,docs:[],notes:'',created:todayISO()});ui.schedDay=null;ui.tab='projects';ui.project=id;window.scrollTo(0,0);toast('New job started on '+fmtD(d.day)+' — fill in the details');},
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
+  undoMove(){undoMove();},
   dayNoteMove(d){const el=document.getElementById('dn-move');const to=el&&el.value;const from=d.day;const n=S.daynotes[from];if(!n||!to)return;if(to===from){toast('Pick a different day');return;}
     const text=String(n.text||'').trim();const had=String((S.daynotes[to]||{}).text||'').trim();
     write('daynotes',to,'set',{date:to,text:had?had+'\n'+text:text,updated:Date.now()});write('daynotes',from,'delete');delete ui.drafts.dayNote;
@@ -1851,6 +1853,13 @@ async function scanTenderPdf(pid,file){
 let pending=false, toastT=0;
 function schedule(){if(pending)return;pending=true;setTimeout(()=>{pending=false;render();},0);}
 function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},4200);}
+/* Undo for schedule drags. Each move remembers the record's old dates; the toast gets an Undo
+   button (shown longer), and an "Undo move" button sits by the week until the next move. */
+let lastMove=null;
+function recordMove(label,col,id,before){lastMove={label,col,id,before};
+  const t=$('toast');t.innerHTML='';t.append(label+' ');const b=document.createElement('button');b.type='button';b.className='toast-undo';b.textContent='Undo';
+  b.addEventListener('click',e=>{e.stopPropagation();undoMove();});t.append(b);t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true;},9000);}
+function undoMove(){const m=lastMove;if(!m)return;lastMove=null;if(S[m.col]&&S[m.col][m.id])write(m.col,m.id,'update',m.before);toast('Undone — back where it was');schedule();}
 
 /* ---------- "What's new" pop-up ----------
    Newest entry first. Bump the top entry's v each time you ship and add its
@@ -3063,8 +3072,8 @@ function endMarkerDrag(){
   m.el.classList.remove('mdrag');if(m.lastCell)m.lastCell.classList.remove('mdrop');
   _swallowClick=true;
   if(m.toDay&&m.toDay!==m.fromDay){
-    if(m.kind==='visit'){write(m.vkind==='p'?'projects':'quotes',m.id,'update',{visitDate:m.toDay});toast('Visit moved to '+fmtD(m.toDay));}
-    else{write('quotes',m.id,'update',{due:m.toDay});toast('Quote due moved to '+fmtD(m.toDay));}
+    if(m.kind==='visit'){const col=m.vkind==='p'?'projects':'quotes';const before={visitDate:(S[col][m.id]||{}).visitDate||''};write(col,m.id,'update',{visitDate:m.toDay});recordMove('Visit moved to '+fmtD(m.toDay)+'.',col,m.id,before);}
+    else{const before={due:(S.quotes[m.id]||{}).due||''};write('quotes',m.id,'update',{due:m.toDay});recordMove('Quote due moved to '+fmtD(m.toDay)+'.','quotes',m.id,before);}
   }else{ui.schedDay=m.fromDay;ui.focusNext='sd-close';}
   schedule();
 }
@@ -3126,9 +3135,11 @@ function endJobDrag(){
       ns=addDays(jd.origStart||addDays(wk,jd.startLo),jd.delta);
       ne=jd.origEnd?addDays(jd.origEnd,jd.delta):ns;
     }
+    const col=jd.kind==='event'?'events':'projects', r=S[col][jd.jid]||{};
+    const before=jd.kind==='event'?{from:r.from||'',to:r.to||''}:{startDate:r.startDate||'',endDate:r.endDate||''};
     if(jd.kind==='event')write('events',jd.jid,'update',{from:ns,to:ne});
     else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
-    toast((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job'));
+    recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,before);
   }else if(jd.kind!=='event'){
     actions.openProject({id:jd.jid});
   }else if(jd.tapDay){
