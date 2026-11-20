@@ -537,6 +537,13 @@ const cdFull=d=>DOW[(parse(d).getUTCDay()+6)%7]+' '+parse(d).getUTCDate()+' '+MO
 const cdCard=(c,today,acts)=>{const k=cdKind(c.kind),e=cdEnd(c),n=dayDiff(e,c.from)+1,w=cdWhen(c,today),t=cdTime(c),f=parse(c.from);
   const span=n>1?`${cdFull(c.from)} → ${cdFull(e)} · ${n} days`:cdFull(c.from);
   return `<li class="cdcard${e<today?' past':''}" style="--c:var(${k[2]})"><div class="cd-date"><span class="cd-dow">${DOW[(f.getUTCDay()+6)%7]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="cd-body"><div class="cd-top"><span class="cd-kind">${esc(k[1])}</span>${w?`<span class="cd-when">${esc(w)}</span>`:''}</div><div class="cd-title">${esc(c.title||k[1])}</div><div class="cd-meta">${esc(span)}${t?' · '+esc(t):''}</div>${c.place?`<div class="cd-meta">${esc(c.place)}${mapLink(c.place)}</div>`:''}${c.note?`<div class="cd-note">${esc(c.note)}</div>`:''}${acts?`<div class="cd-acts">${acts}</div>`:''}</div></li>`;};
+/* Holiday request as the same card: status as the coloured type, who (or "Time off") as the
+   title, full span + day count, note, who decided it, then the buttons. */
+const holCard=(h,today,title,acts)=>{const st=h.status==='approved'?['Approved','--good']:h.status==='declined'?['Declined','--bad']:['Pending','--warn'];
+  const e=(h.to&&h.to>=h.from)?h.to:h.from,n=dayDiff(e,h.from)+1,f=parse(h.from),t=String(h.time||'').trim();
+  const span=n>1?`${cdFull(h.from)} → ${cdFull(e)} · ${n} days`:cdFull(h.from)+(t?' · part day, '+t:' · 1 day');
+  const d=dayDiff(h.from,today),w=(d<=0&&e>=today)?'Off now':d===0?'Today':d===1?'Tomorrow':d>1?'In '+d+' days':'';
+  return `<li class="cdcard${e<today?' past':''}" style="--c:var(${st[1]})"><div class="cd-date"><span class="cd-dow">${DOW[(f.getUTCDay()+6)%7]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="cd-body"><div class="cd-top"><span class="cd-kind">${esc(st[0])}</span>${w?`<span class="cd-when">${esc(w)}</span>`:''}</div><div class="cd-title">${esc(title)}</div><div class="cd-meta">${esc(span)}</div>${h.note?`<div class="cd-note">${esc(h.note)}</div>`:''}${h.decidedBy&&h.status!=='pending'?`<div class="cd-note">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}${acts?`<div class="cd-acts">${acts}</div>`:''}</div></li>`;};
 const holDur=h=>{const t=(h.time||'').trim();if(t&&h.from===h.to)return 'part day · '+t;const n=num(h.days)||1;return n+' day'+(n>1?'s':'');};
 const evEnd=e=>(e.to&&e.to>=e.from)?e.to:e.from;
 /* Reminder due times are plain local 'YYYY-MM-DDTHH:MM' strings, so they sort and compare as text. */
@@ -1204,9 +1211,9 @@ views.crew=()=>{
     const act=h.status==='pending'
       ?`<button type="button" class="btn sm" data-act="holSet" data-id="${esc(h.id)}" data-v="approved">Approve</button><button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="declined">Decline</button>`
       :`<button type="button" class="btn sm ghost" data-act="holSet" data-id="${esc(h.id)}" data-v="pending">Reopen</button>`;
-    return `<li class="item"><div>${st}</div><div class="item-main"><strong>${esc(h.name||'Crew')}</strong> · ${esc(span(h))} <span class="sub">(${esc(holDur(h))})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${act}</div></li>`;
+    return holCard(h,todayISO(),h.name||'Crew',act);
   };
-  const sec=(title,rows,emptyTxt)=>`<section class="panel"><div class="panel-h"><h3>${title}${rows.length?' <span class="sub">'+rows.length+'</span>':''}</h3></div>${rows.length?`<ul class="items">${rows.map(row).join('')}</ul>`:empty(emptyTxt,'')}</section>`;
+  const sec=(title,rows,emptyTxt)=>`<section class="panel"><div class="panel-h"><h3>${title}${rows.length?' <span class="sub">'+rows.length+'</span>':''}</h3></div>${rows.length?`<ul class="cdlist">${rows.map(row).join('')}</ul>`:empty(emptyTxt,'')}</section>`;
   // Directors book their own time off — no approval, straight onto the schedule.
   const who=[...new Set([(DWME.name||'').trim(),...list('employees').filter(e=>e.active!==false).map(e=>(e.name||'').trim())].filter(Boolean))];
   const book=`<section class="panel"><div class="panel-h"><h3>Book time off</h3><span class="sub">Goes straight on the schedule — no approval needed.</span></div><form class="panel-b form" data-form="timeoff">${who.length?sel('timeoff','who','Who',who[0],who.map(n=>[n,n])):fld('timeoff','who','Who',DWME.name||'')}${fld('timeoff','from','From','',{type:'date',attrs:'required'})}${fld('timeoff','to','To (optional)','',{type:'date'})}${fld('timeoff','time','Time (if not all day)','',{type:'time'})}${fld('timeoff','note','Note (optional)','',{cls:'wide'})}<div class="go"><button class="btn">Book it</button></div></form></section>`;
@@ -3480,10 +3487,10 @@ render();
       const hs=cS.holidays;
       const span=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
       const stpill=h=>h.status==='approved'?pill('good','Approved'):h.status==='declined'?pill('bad','Declined'):pill('warn','Pending');
-      const row=h=>`<li class="item"><div>${stpill(h)}</div><div class="item-main"><strong>${esc(span(h))}</strong> <span class="sub">(${esc(holDur(h))})</span>${h.note?`<div class="sub">${esc(h.note)}</div>`:''}${h.decidedBy?`<div class="sub">${h.status==='approved'?'Approved':'Declined'} by ${esc(h.decidedBy)}</div>`:''}</div><div class="item-act">${h.status==='pending'?`<button type="button" class="btn sm ghost" data-hdel="${esc(h.id)}">Cancel</button>`:''}</div></li>`;
+      const row=h=>holCard(h,todayISO(),'Time off',h.status==='pending'?`<button type="button" class="btn sm ghost" data-hdel="${esc(h.id)}">Cancel request</button>`:'');
       const today=todayISO();
       const form=`<section class="panel"><div class="panel-h"><h3>Request time off</h3><span class="sub">Pick your dates — the office gets it straight away.</span></div><div class="panel-b form"><label class="f"><span>From</span><input type="date" id="hol-from" min="${today}"></label><label class="f"><span>To</span><input type="date" id="hol-to" min="${today}"></label><label class="f"><span>Time (if not all day)</span><input type="time" id="hol-time"></label><label class="f full"><span>Note (optional)</span><input id="hol-note" autocomplete="off" placeholder="e.g. family holiday, or dentist 8am"></label><div class="go"><button type="button" class="btn" data-hsubmit>Send request</button></div></div></section>`;
-      const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="items">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
+      const mine=`<section class="panel"><div class="panel-h"><h3>Your requests</h3></div>${hs.length?`<ul class="cdlist">${hs.map(row).join('')}</ul>`:empty('No requests yet','Pick your dates above to ask for time off.')}</section>`;
       return `<div class="head"><div><h2>Holiday</h2><p class="sub">Ask for time off and see where each request stands.</p></div></div>`+form+mine;
     }
     const cdLi=(c,today)=>cdCard(c,today,'');
