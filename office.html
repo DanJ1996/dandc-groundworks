@@ -1678,6 +1678,7 @@ async function uploadDocs(pid,files,opts){
   ui.busy='upload';schedule();let ok=0;
   for(const file of files){
     const isPdf=/\.pdf$/i.test(file.name)||file.type==='application/pdf';
+    if(isPdf&&opts&&opts.readPO)readPurchaseOrder(pid,file);
     const type=isPdf?'application/pdf':file.type;
     if(!isPdf&&type!=='image/png'&&type!=='image/jpeg'){toast(file.name+' was skipped. Only PDF, PNG and JPG files can be attached.');continue;}
     const put=()=>assets.upload(file,{type});
@@ -1686,10 +1687,9 @@ async function uploadDocs(pid,files,opts){
       try{res=await put();}catch(e){if(e&&e.code==='store_unavailable'){await new Promise(r=>setTimeout(r,900));res=await put();}else throw e;}
       const p=S.projects[pid];if(!p)break;
       await write('projects',pid,'update',{docs:(p.docs||[]).concat([{id:res.id,name:file.name,size:res.sizeBytes,added:todayISO()}])});ok++;
-      if(isPdf&&opts&&opts.readPO)readPurchaseOrder(pid,file);
     }catch(e){
       const c=e&&e.code;
-      toast(c==='too_large'?file.name+' is over the 20 MB limit.':c==='quota_or_state'?'Document storage for this page is full.':c==='rate_limited'?'Too many uploads at once. Wait a moment and try again.':c==='not_granted'||c==='capability_disabled'?'This view cannot add documents.':'Could not upload '+file.name+'. Try again.');
+      toast(c==='upload_failed'?'Couldn\u2019t attach '+file.name+': '+((e&&e.message)||'upload refused')+'. Send Claude this message.':c==='too_large'?file.name+' is over the 20 MB limit.':c==='quota_or_state'?'Document storage for this page is full.':c==='rate_limited'?'Too many uploads at once. Wait a moment and try again.':c==='not_granted'||c==='capability_disabled'?'This view cannot add documents.':'Could not upload '+file.name+'. Try again.');
     }
   }
   ui.busy='';if(ok)toast(ok+' document'+(ok===1?'':'s')+' attached');schedule();
@@ -1721,8 +1721,9 @@ function parsePO(lines,fileName){
   // value next to / under a label
   const near=(re,ok)=>{for(let i=0;i<lines.length;i++)for(let j=0;j<lines[i].length;j++){const c=lines[i][j];const m=c.t.match(re);if(!m||m.index>2)continue;
     const cand=[{v:c.t.slice(m.index+m[0].length).replace(/^[\s:#.\-–()]+/,'').trim(),x:c.x,k:i}];
-    if(lines[i][j+1])cand.push({v:lines[i][j+1].t,x:lines[i][j+1].x,k:i});
-    for(let k=i+1;k<=i+2&&k<lines.length;k++){const u=lines[k].find(x=>Math.abs(x.x-c.x)<45);if(u){cand.push({v:u.t,x:u.x,k});break;}}
+    const nx=lines[i][j+1],near1=nx&&nx.x-(c.x+(c.w||0))<60;let below=null;
+    for(let k=i+1;k<=i+2&&k<lines.length;k++){const u=lines[k].find(x=>Math.abs(x.x-c.x)<45);if(u){below={v:u.t,x:u.x,k};break;}}
+    if(nx&&near1)cand.push({v:nx.t,x:nx.x,k:i});if(below)cand.push(below);if(nx&&!near1)cand.push({v:nx.t,x:nx.x,k:i});
     for(const o of cand)if(o.v&&!PO_LABEL.test(o.v)&&(!ok||ok(o.v)))return {v:o.v,i,j,x:o.x,k:o.k};}
     return null;};
   const out={};
@@ -1748,6 +1749,7 @@ function parsePO(lines,fileName){
   const amt=re=>{const r=near(re,v=>isFinite(money(v)));if(!r)return NaN;const row=lines[r.i].map(c=>c.t).join(' ');const last=money(row);return isFinite(last)?last:money(r.v);};
   let net=amt(/(?:sub\s*-?\s*total|total\s*\(?\s*(?:net|ex\.?|excl\.?|excluding|before)|net\s*(?:total|amount|value))/i);
   const gross=amt(/(?:total\s*(?:inc\.?|incl\.?|including|gbp|due|order\s*value)?|amount\s*due|order\s*total|grand\s*total)/i);
+  if(!isFinite(net)&&isFinite(gross)&&/exclud\w*\s*v\.?\s?a\.?\s?t|ex\.?\s*v\.?a\.?t/i.test(all))net=gross;
   if(!isFinite(net)&&isFinite(gross)){const vat=amt(/(?:total\s*)?vat\b|tax\b/i);net=isFinite(vat)&&vat<gross?gross-vat:(/\bvat\b/i.test(all)?NaN:gross);}
   if(isFinite(net)&&net>0)out.value=Math.round(net*100)/100;
   // delivery / start date
@@ -1768,18 +1770,20 @@ async function readPurchaseOrder(pid,file){
   if(!/purchase\s*order|\bp\.?\s?o\.?\s*(no|number|#)|order\s*(no|number)|\bPOR?-?\d{3,}/i.test(txt+' '+file.name))return;  // not a PO — just a drawing etc.
   const f=parsePO(lines,file.name);
   const blank=v=>v==null||String(v).trim()===''||v===0||v==='0';
-  const patch={},filled=[],kept=[];
-  const put=(k,v,label,show)=>{if(v==null||v==='')return;if(blank(p[k])||(k==='name'&&/^new job$/i.test(p[k]))){patch[k]=v;filled.push(label+(show?' '+show:''));}else if(String(p[k]).trim().toLowerCase()!==String(v).trim().toLowerCase())kept.push(label);};
-  put('po',f.po,'PO',f.po);put('client',f.client,'client');put('site',f.site,'site address');
-  if(f.ref)put('name',f.ref,'job name');
+  const same=(a,b)=>String(a==null?'':a).trim().toLowerCase()===String(b==null?'':b).trim().toLowerCase();
+  const patch={},filled=[];
+  // The PO is the source of truth: PO number, client, site and value REPLACE what's there.
+  // Job name and start date only fill when empty (a PO's delivery date isn't always the start).
+  const put=(k,v,label,show,onlyEmpty)=>{if(v==null||v==='')return;if(same(p[k],v))return;if(onlyEmpty&&!(blank(p[k])||(k==='name'&&/^new job$/i.test(p[k]))))return;patch[k]=v;filled.push(label+(show?' '+show:''));};
+  put('po',f.po,'PO',f.po);put('client',f.client,'client');put('site',f.site,'site');
+  if(f.ref)put('name',f.ref,'job name','',true);
   if(f.value)put('tender',f.value,'order value',money0(f.value));
-  if(f.start)put('startDate',f.start,'start date',fmtD(f.start));
-  if(!filled.length){toast(kept.length?'PO read — '+kept.join(', ')+' already filled in, so nothing changed.':'Attached. Couldn’t find PO details in '+file.name+' — fill them in by hand.');return;}
+  if(f.start)put('startDate',f.start,'start date',fmtD(f.start),true);
+  if(!filled.length){toast(f.po?'PO '+f.po+' read — the project already matches it.':'Couldn\u2019t find PO details in '+file.name+' — fill them in by hand.');return;}
   const before={};Object.keys(patch).forEach(k=>before[k]=p[k]==null?'':p[k]);
-  if(patch.startDate&&blank(p.endDate))patch.endDate=patch.startDate;
-  if(patch.endDate)before.endDate=p.endDate||'';
+  if(patch.startDate&&blank(p.endDate)){patch.endDate=patch.startDate;before.endDate=p.endDate||'';}
   await write('projects',pid,'update',patch);schedule();
-  toastAction('Read the PO and filled in: '+filled.join(', ')+'.'+(kept.length?' Kept your '+kept.join(', ')+'.':''),'Undo',()=>{write('projects',pid,'update',before);toast('Undone — PO details removed');schedule();});
+  toastAction('Read PO '+(f.po||'')+' — updated: '+filled.join(', ')+'.','Undo',()=>{write('projects',pid,'update',before);toast('Undone — PO details removed');schedule();});
 }
 async function removeDoc(pid,aid){
   const p=S.projects[pid];if(!p)return;
@@ -3478,7 +3482,7 @@ render();
       if(file.size>20*1048576){const e=new Error('too large');e.code='too_large';return Promise.reject(e);}
       const type=(opt&&opt.type)||file.type||'application/octet-stream';
       const path=uid()+'-'+file.name.replace(/[^a-zA-Z0-9._-]+/g,'_');
-      return sb.storage.from(BUCKET).upload(path,file,{contentType:type}).then(r=>{if(r.error){const e=new Error(r.error.message);e.code='quota_or_state';throw e;}return {id:path,sizeBytes:file.size};});
+      return sb.storage.from(BUCKET).upload(path,file,{contentType:type}).then(r=>{if(r.error){const e=new Error(r.error.message);e.code=/quota|exceed|full/i.test(r.error.message||'')?'quota_or_state':'upload_failed';throw e;}return {id:path,sizeBytes:file.size};});
     },
     delete:id=>sb.storage.from(BUCKET).remove([id])
   };
