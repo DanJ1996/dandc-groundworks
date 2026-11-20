@@ -82,6 +82,24 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .dn-move{align-items:end;margin-top:8px}
 .dn-move .f{flex:1 1 170px}
 .wktag{align-self:center;white-space:nowrap}
+.sdlist{list-style:none;margin:0;padding:6px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.sdcard{width:100%;display:flex;gap:14px;align-items:flex-start;text-align:left;font:inherit;color:inherit;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:var(--r);padding:12px 12px 12px 14px;--c:var(--accent)}
+.sdcard.today{border-left-color:var(--good);background:color-mix(in srgb,var(--good) 6%,var(--surface))}
+.sdcard.today .cd-date{background:var(--good)}.sdcard.today .cd-date span{color:#fff}
+.sdcard.picked{box-shadow:0 0 0 2px var(--accent)}
+.sdcard.we.empty{padding-top:8px;padding-bottom:8px;opacity:.75}
+.sdcard .cd-date{background:var(--sunk)}
+.sd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;padding-top:2px}
+.sd-today{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
+.sd-none{color:var(--muted);font-size:.9rem;padding-top:14px}
+.sdcard.we.empty .sd-none{padding-top:10px}
+.sd-chev{color:var(--muted);font-size:1.3rem;align-self:center}
+.sdl{display:flex;gap:9px;align-items:flex-start}
+.sdl > i{flex:0 0 5px;align-self:stretch;min-height:18px;border-radius:3px;background:var(--c)}
+.sdl-t{font-weight:600;font-size:.94rem;color:var(--ink);overflow-wrap:anywhere}
+.sdl-s{display:block;font-size:.8rem;color:var(--muted);overflow-wrap:anywhere}
+.tnote.sdl-note{display:inline-block;padding:0 6px;border-radius:3px;font-size:.68rem;font-weight:600;margin-left:6px;background:color-mix(in srgb,var(--info) 22%,transparent);color:var(--ink);vertical-align:1px}
+.seg{display:inline-flex;gap:4px}
 .cdlist{list-style:none;margin:0;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px}
 .cdcard{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);padding:12px 14px}
 .cdcard.past{opacity:.6}
@@ -381,7 +399,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
+const ui={schedView:(()=>{try{const v=localStorage.getItem('dc-schedview');if(v==='days'||v==='grid')return v;}catch(e){}return (window.innerWidth||1000)<760?'days':'grid';})(),tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -736,7 +754,22 @@ views.schedule=()=>{
     const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${evForm(sd)}`;
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  /* ---- Days view: the week as a vertical list of day cards (phone-friendly, no sideways scroll) ---- */
+  const dayCards=days.map(d=>{
+    const it=[];const L=(c,txt,sub,tag)=>it.push(`<div class="sdl" style="--c:var(${c})"><i></i><div><span class="sdl-t">${txt}</span>${tag||''}${sub?`<span class="sdl-s">${sub}</span>`:''}</div></div>`);
+    list('company_dates').filter(c=>c.from&&c.from<=d.day&&cdEnd(c)>=d.day).forEach(c=>{const k=cdKind(c.kind);L(k[2],esc(c.title||k[1]),esc(k[1])+(cdTime(c)?' · '+esc(cdTime(c)):''));});
+    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;L(g?g.c:'--nogang',esc(j.p.name||'Job'),[g?esc(g.name):'No gang yet',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '));});
+    evs.filter(e=>e.from<=d.day&&evEnd(e)>=d.day).forEach(e=>{const g=gangOf(e.gang);L(g?g.c:evCat(e).c,esc(evLabel(e)),e.site?esc(e.site):'');});
+    schedVisits.filter(q=>q.visitDate===d.day).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).forEach(q=>L('--info',(q.visitTime?esc(q.visitTime)+' · ':'')+esc(q.client||'Visit'),['Site visit'+(q.visitBy?' · '+esc(q.visitBy):''),q.site?esc(q.site):'',q.visitDone?'Done':''].filter(Boolean).join(' · '),q.meetNotes?'<span class="tnote sdl-note">Notes</span>':''));
+    list('quotes').filter(q=>q.due===d.day&&needsPrice(q)).forEach(q=>L('--warn',esc(q.client||'Quote'),'Quote due'));
+    list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.from<=d.day&&h.to>=d.day).forEach(h=>L('--muted',esc((h.name||'Crew')+' off'),h.time&&h.from===h.to?'from '+esc(h.time):''));
+    const note=String((S.daynotes[d.day]||{}).text||'').trim();
+    if(note)L('--note',esc(note.length>90?note.slice(0,90)+'…':note),'Note');
+    const f=parse(d.day);
+    return `<li><button type="button" class="sdcard${d.isT?' today':''}${d.we?' we':''}${ui.schedDay===d.day?' picked':''}${it.length?'':' empty'}" data-act="schedDay" data-day="${d.day}"><div class="cd-date"><span class="cd-dow">${DOW[d.i]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="sd-body">${d.isT?'<span class="sd-today">Today</span>':''}${it.length?it.join(''):'<span class="sd-none">Nothing booked</span>'}</div><span class="sd-chev">›</span></button></li>`;}).join('');
+  const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
+  if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
@@ -1247,6 +1280,7 @@ const actions={
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
   undoMove(){undoMove();},
+  schedView(d){ui.schedView=d.v==='grid'?'grid':'days';try{localStorage.setItem('dc-schedview',ui.schedView);}catch(e){}},
   cdAddToggle(){ui.cdAdd=!ui.cdAdd;delete ui.drafts.cdate;if(ui.cdAdd)ui.focusNext='cdate-title';},
   // Copy a visit's meeting notes, with the job and address on top, ready to paste to a lad.
   vnoteCopy(d){const r=(d.vkind==='p'?S.projects:S.quotes)[d.id];if(!r)return;const v=asVisit(d.vkind==='p'?'p':'q',{...r,id:d.id});if(!v.meetNotes){toast('No notes to copy');return;}
