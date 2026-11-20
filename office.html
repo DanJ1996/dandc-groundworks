@@ -1775,6 +1775,10 @@ async function readPurchaseOrder(pid,file){
   // The PO is the source of truth: PO number, client, site and value REPLACE what's there.
   // Job name and start date only fill when empty (a PO's delivery date isn't always the start).
   const put=(k,v,label,show,onlyEmpty)=>{if(v==null||v==='')return;if(same(p[k],v))return;if(onlyEmpty&&!(blank(p[k])||(k==='name'&&/^new job$/i.test(p[k]))))return;patch[k]=v;filled.push(label+(show?' '+show:''));};
+  // Client: drop "Ltd/Limited" and use the spelling you already use for that client, if any.
+  if(f.client){const norm=x=>String(x||'').toLowerCase().replace(/\b(ltd|limited|plc|llp)\b\.?/g,'').replace(/[^a-z0-9]/g,'');
+    const known=[...new Set(list('projects').map(x=>x.client).concat(list('quotes').map(x=>x.client)).filter(Boolean))].find(k=>norm(k)===norm(f.client));
+    f.client=known||String(f.client).replace(/[\s,]*\b(ltd|limited|plc|llp)\b\.?\s*$/i,'').trim();}
   put('po',f.po,'PO',f.po);put('client',f.client,'client');put('site',f.site,'site');
   if(f.ref)put('name',f.ref,'job name','',true);
   if(f.value)put('tender',f.value,'order value',money0(f.value));
