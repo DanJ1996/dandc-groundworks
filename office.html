@@ -3222,6 +3222,17 @@ function autoGoLive(){
   due.forEach(p=>write('projects',p.id,'update',{status:'Live'}));
   toast(due.length===1?'"'+(due[0].name||'Job')+'" has reached its start date — now Live':due.length+' jobs reached their start date — now Live');
 }
+/* Open a stored file. iPhone blocks a window opened AFTER waiting for the secure link, so open
+   it straight away on the tap ("Opening…") and point it at the file once the link arrives. If the
+   phone still won't give us a window (home-screen app), go to the file in this one. */
+function openSigned(getUrl){
+  let w=null;try{w=window.open('','_blank');}catch(e){}
+  if(w){try{w.document.write('<title>Opening…</title><body style="font:16px -apple-system,sans-serif;padding:24px;color:#555">Opening document…</body>');}catch(e){}}
+  getUrl().then(r=>{const u=r&&r.data&&r.data.signedUrl;
+    if(!u){if(w)try{w.close();}catch(e){}toast('Could not open document');return;}
+    if(w&&!w.closed)w.location.href=u;else location.href=u;})
+  .catch(()=>{if(w)try{w.close();}catch(e){}toast('Could not open document — check your connection');});
+}
 function syncClientList(){let dl=document.getElementById('dl-clients');if(!dl){dl=document.createElement('datalist');dl.id='dl-clients';document.body.appendChild(dl);}
   const names=Object.keys(knownClients()).sort((a,b)=>a.localeCompare(b));const sig=names.join('|');if(dl.dataset.sig===sig)return;dl.dataset.sig=sig;dl.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');}
 function render(){
@@ -3505,7 +3516,7 @@ render();
   document.addEventListener('click',e=>{
     const a=e.target.closest&&e.target.closest('a[href^="/_blob/"]');if(!a)return;e.preventDefault();
     const path=decodeURIComponent(a.getAttribute('href').slice(7));
-    sb.storage.from(BUCKET).createSignedUrl(path,3600).then(r=>{if(r.data&&r.data.signedUrl)window.open(r.data.signedUrl,'_blank');else toast('Could not open document');});
+    openSigned(()=>sb.storage.from(BUCKET).createSignedUrl(path,3600));
   });
 
   /* --- header account control --- */
@@ -3703,7 +3714,7 @@ render();
   document.addEventListener('click',e=>{
     const a=e.target.closest&&e.target.closest('a[href^="/_jobfile/"]');if(!a)return;e.preventDefault();
     const path=decodeURIComponent(a.getAttribute('href').slice(10));
-    sb.storage.from('job-files').createSignedUrl(path,3600).then(r=>{if(r.data&&r.data.signedUrl)window.open(r.data.signedUrl,'_blank');else toast('Could not open document');});
+    openSigned(()=>sb.storage.from('job-files').createSignedUrl(path,3600));
   });
 
   function check(){
