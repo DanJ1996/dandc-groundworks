@@ -266,20 +266,24 @@ table.grid{border-collapse:collapse;width:100%}
 .item.quoted{background:#eef7f1;box-shadow:inset 3px 0 0 #57d38a}
 .item.unpriced{background:#fdeeee;box-shadow:inset 3px 0 0 #e05656}
 [data-droptender].dragover,[data-dropdocs].dragover,[data-dropboq].dragover{outline:2px dashed #57d38a;outline-offset:-6px;background:#eef7f1}
-.sched.gantt{table-layout:fixed;min-width:620px;border-collapse:separate;border-spacing:0}
-.sched.gantt th,.sched.gantt td{border:1px solid var(--line)}
+.sched.gantt{table-layout:fixed;min-width:620px;border-collapse:separate;border-spacing:0;background:var(--surface)}
+.sched.gantt th,.sched.gantt td{border:0;border-right:1px solid color-mix(in srgb,var(--line) 60%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
 .sched.gantt th.tcol,.sched.gantt td.tcol{width:74px;min-width:74px;text-align:right;white-space:nowrap;font-weight:600;color:var(--muted);vertical-align:middle;font-size:.78rem;padding:4px 8px;background:var(--surface)}
-.sched.gantt thead th{padding:7px 4px;text-align:center;background:var(--accent);color:var(--on-accent);border-color:color-mix(in srgb,var(--accent) 70%,#000);font-size:.84rem}
-.sched.gantt thead th .sub{display:block;font-weight:500;font-size:.72rem;color:color-mix(in srgb,var(--on-accent) 80%,transparent)}
+.sched.gantt thead th{padding:6px 5px;text-align:center;background:var(--surface);color:var(--ink);font-size:.84rem;border-bottom:1px solid var(--line)}
+.dh-dow,.dh-mon{display:block;font-size:.66rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dh-day{display:block;font:700 1.35rem/1.1 var(--display);color:var(--ink)}
+.dh-today{display:block;margin-top:2px;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+.sched.gantt thead th.today .dayhead{background:var(--good)}
+.sched.gantt thead th.today .dh-dow,.sched.gantt thead th.today .dh-mon,.sched.gantt thead th.today .dh-day{color:#fff}
 .sched.gantt thead th.tcol{background:var(--surface);color:var(--muted);border-color:var(--line)}
-.sched.gantt thead th.today{background:var(--good);border-color:color-mix(in srgb,var(--good) 70%,#000)}
-.sched.gantt td.jcell{padding:2px;height:44px;vertical-align:middle;position:relative;overflow:visible}
+.sched.gantt thead th.today{background:var(--surface)}
+.sched.gantt td.jcell{padding:3px 2px;height:48px;vertical-align:middle;position:relative;overflow:visible}
 .sched.gantt td.jcell.we{background:color-mix(in srgb,var(--sunk) 45%,transparent)}
-.sched.gantt td.jcell.today{background:color-mix(in srgb,var(--good) 8%,var(--surface))}
+.sched.gantt td.jcell.today{background:color-mix(in srgb,var(--good) 7%,var(--surface))}
 .sched.gantt thead th:not(.tcol){padding:0}
-.sched.gantt .dayhead{all:unset;box-sizing:border-box;display:block;width:100%;padding:7px 4px;cursor:pointer;text-align:center;font-weight:700}
-.sched.gantt .dayhead:hover,.sched.gantt .dayhead:focus-visible{background:color-mix(in srgb,#fff 14%,transparent)}
-.sched.gantt thead th.picked{box-shadow:inset 0 -4px 0 var(--warn)}
+.sched.gantt .dayhead{all:unset;box-sizing:border-box;display:block;width:100%;padding:7px 4px;cursor:pointer;text-align:center;font-weight:700;border-radius:var(--r);background:var(--sunk)}
+.sched.gantt .dayhead:hover,.sched.gantt .dayhead:focus-visible{filter:brightness(.96)}
+.sched.gantt thead th.picked .dayhead{box-shadow:0 0 0 2px var(--accent)}
 .sched.gantt tr:not(.jobrow) td[data-sday]{cursor:pointer}
 .sdpanel{border:2px solid var(--accent)}
 .mdov{position:fixed;inset:0;z-index:40;background:rgba(15,24,34,.55);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
@@ -296,30 +300,31 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt tr.jobrow{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 .sched.gantt tr.jobrow.dragging{cursor:grabbing}
 .sched.gantt tr.jobrow.dragging .jseg{opacity:.85}
-.jseg{background:var(--c);height:40px;display:flex;align-items:center;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
-.jseg.l{border-radius:3px 0 0 3px;z-index:2}
-.jseg.r{border-radius:0 3px 3px 0}
-.jseg.l.r{border-radius:3px}
-.jlabel{color:#fff;font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
+.jseg{background:color-mix(in srgb,var(--c) 18%,var(--surface));height:42px;display:flex;align-items:center;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;border-top:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-bottom:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
+.jseg.l{border-radius:6px 0 0 6px;z-index:2;border-left:5px solid var(--c)}
+.jseg.r{border-radius:0 6px 6px 0;border-right:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
+.jseg.l.r{border-radius:6px}
+.jlabel{color:var(--ink);font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
-.jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:rgba(255,255,255,.85);box-shadow:3px 0 0 rgba(255,255,255,.85)}
+.jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:color-mix(in srgb,var(--c) 70%,var(--ink));box-shadow:3px 0 0 color-mix(in srgb,var(--c) 70%,var(--ink))}
 .tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:none}
 .tev.mdrag,.vmark.mdrag{opacity:.55;cursor:grabbing}
 .sched.gantt td.mdrop{outline:2px dashed var(--info);outline-offset:-2px;background:color-mix(in srgb,var(--info) 12%,transparent)}
-.vmark{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
-.vmark.note{display:block;width:calc(100% - 6px);border:0;cursor:pointer;font-family:inherit;text-align:left;white-space:normal}
+.vmark{background:color-mix(in srgb,var(--c) 15%,var(--surface));color:var(--ink);border:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-left:4px solid var(--c);border-radius:6px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2}
+.vmark.note{display:block;width:calc(100% - 6px);cursor:pointer;font-family:inherit;text-align:left;white-space:normal}
 .cform{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .thanks{background:color-mix(in srgb,var(--good) 14%,var(--surface));border-top:1px solid var(--line);color:var(--ink)}
 .sched.gantt td.vcell{vertical-align:top;padding:3px}
-.tev{background:var(--c);color:#fff;border-radius:3px;padding:5px 7px;margin:2px 0;font-size:.76rem;line-height:1.18;box-shadow:inset 0 0 0 1px color-mix(in srgb,#000 14%,transparent)}
+.tev{background:color-mix(in srgb,var(--c) 15%,var(--surface));color:var(--ink);border:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-left:4px solid var(--c);border-radius:6px;padding:6px 7px;margin:3px 0;font-size:.76rem;line-height:1.2}
 .tev strong{font-weight:600;display:block}
-.tev .tnote{display:inline-block;margin:2px 0;padding:0 5px;border-radius:3px;background:rgba(255,255,255,.25);font-size:.68rem;font-weight:600}
+.tev .tnote{display:inline-block;margin:2px 0;padding:0 5px;border-radius:3px;background:color-mix(in srgb,var(--c) 30%,var(--surface));font-size:.68rem;font-weight:600}
 .vnotes{white-space:pre-wrap;color:var(--ink);background:var(--sunk);border-left:3px solid var(--info);border-radius:3px;padding:8px 10px;margin-top:6px}
 .vnotes-edit{margin-top:6px;display:flex;flex-direction:column;gap:8px}
 .vnotes-edit textarea{min-height:9em}
 .vnotes-h{display:block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-.tev .tsub{color:rgba(255,255,255,.85);display:block;font-size:.7rem}
+.tev .tsub{color:var(--muted);display:block;font-size:.7rem}
+.tev .maplink,.vmark .maplink{margin-left:0;background:var(--surface)}
 .slegend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .skey{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
 .skey i{width:14px;height:14px;border-radius:4px;background:var(--c)}
@@ -399,7 +404,7 @@ document.addEventListener('visibilitychange',foregroundSync);
 window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
-const ui={schedView:(()=>{try{const v=localStorage.getItem('dc-schedview');if(v==='days'||v==='grid')return v;}catch(e){}return (window.innerWidth||1000)<760?'days':'grid';})(),tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
+const ui={schedView:(()=>{try{const v=localStorage.getItem('dc-schedview');if(v==='days'||v==='grid')return v;}catch(e){}return 'grid';})(),tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
 const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
 
 /* ---------- store ---------- */
@@ -674,7 +679,7 @@ views.schedule=()=>{
   const days=[];for(let i=0;i<7;i++){const day=addDays(wk,i);days.push({day,i,we:i>4,isT:day===today});}
   const cls=d=>`day${d.we?' we':''}${d.isT?' today':''}`;
   const col=iso=>Math.max(0,Math.min(6,dayDiff(iso,wk)));
-  const th=`<th class="tcol"></th>`+days.map(d=>`<th class="${cls(d)}${ui.schedDay===d.day?' picked':''}"><button type="button" class="dayhead" data-act="schedDay" data-day="${d.day}" aria-label="See everything on ${DOW[d.i]} ${fmtD(d.day)}">${DOW[d.i]}<span class="sub"> ${parse(d.day).getUTCDate()} ${MON[parse(d.day).getUTCMonth()]}</span></button></th>`).join('');
+  const th=`<th class="tcol"></th>`+days.map(d=>`<th class="${cls(d)}${ui.schedDay===d.day?' picked':''}"><button type="button" class="dayhead" data-act="schedDay" data-day="${d.day}" aria-label="See everything on ${DOW[d.i]} ${fmtD(d.day)}"><span class="dh-dow">${DOW[d.i]}</span><span class="dh-day">${parse(d.day).getUTCDate()}</span><span class="dh-mon">${MON[parse(d.day).getUTCMonth()]}</span>${d.isT?'<span class="dh-today">Today</span>':''}</button></th>`).join('');
   // A horizontal bar spanning the days it covers, drawn across 7 individual day cells so every
   // day stays a drag target. jid makes the row a draggable job; otherwise it's a static span (holiday).
   const spanRow=(label,s,e,colorVar,opts)=>{
