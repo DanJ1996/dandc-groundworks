@@ -698,7 +698,7 @@ views.schedule=()=>{
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':'',ui.edit==='vnote/'+q.vkind+'/'+q.id
         ?`<form class="vnotes-edit" data-form="vnoteEdit"><label class="f full"><span>Meeting notes</span><textarea id="vnoteEdit-text" name="text" rows="7">${esc(dv('vnoteEdit','text',q.meetNotes))}</textarea></label><div class="go"><button class="btn sm">Save notes</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form>`
         :q.meetNotes?`<div class="vnotes"><span class="vnotes-h">Meeting notes</span>${esc(q.meetNotes)}</div>`:''],
-        (q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)+(ui.edit==='vnote/'+q.vkind+'/'+q.id?'':`<button type="button" class="btn sm ghost" data-act="vnoteEditOpen" data-key="vnote/${q.vkind}/${q.id}">${q.meetNotes?'Edit notes':'Add notes'}</button>`))))+
+        (q.visitDone?'':`<button type="button" class="btn sm" data-act="visitDone" data-id="${q.id}" data-vkind="${q.vkind}">Meeting done</button>`)+(ui.edit==='vnote/'+q.vkind+'/'+q.id?'':`<button type="button" class="btn sm ghost" data-act="vnoteEditOpen" data-key="vnote/${q.vkind}/${q.id}">${q.meetNotes?'Edit notes':'Add notes'}</button>`+(q.meetNotes?`<button type="button" class="btn sm ghost" data-act="vnoteCopy" data-id="${esc(q.id)}" data-vkind="${q.vkind}">Copy</button>`:'')))))+
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
     const dNote=(S.daynotes[sd]||{}).text||'';
@@ -1215,6 +1215,12 @@ const actions={
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
   undoMove(){undoMove();},
+  // Copy a visit's meeting notes, with the job and address on top, ready to paste to a lad.
+  vnoteCopy(d){const r=(d.vkind==='p'?S.projects:S.quotes)[d.id];if(!r)return;const v=asVisit(d.vkind==='p'?'p':'q',{...r,id:d.id});if(!v.meetNotes){toast('No notes to copy');return;}
+    const notes=v.meetNotes.split(/\n\s*\n/).map(x=>x.trim().replace(/^Site meeting [^:]{1,20}:\s*/,'')).join('\n\n');
+    const text=[[v.client,v.job].filter(x=>x&&x!=='—').join(' · '),v.site,'',notes].filter((x,i)=>x||i===2).join('\n').replace(/^\n+/,'');
+    const ok=()=>toast('Copied — paste it into a message');
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(ok).catch(()=>dwClipFallback(text,ok));else dwClipFallback(text,ok);},
   vnoteEditOpen(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.vnoteEdit;ui.focusNext='vnoteEdit-text';},
   dayNoteMove(d){const el=document.getElementById('dn-move');const to=el&&el.value;const from=d.day;const n=S.daynotes[from];if(!n||!to)return;if(to===from){toast('Pick a different day');return;}
     const text=String(n.text||'').trim();const had=String((S.daynotes[to]||{}).text||'').trim();
