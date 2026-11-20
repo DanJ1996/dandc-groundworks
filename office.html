@@ -79,6 +79,8 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .stat .k{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .stat .v{font:600 1.55rem/1.2 var(--display)}
 .stat.bad .v{color:var(--bad)}
+.dn-move{align-items:end;margin-top:8px}
+.dn-move .f{flex:1 1 170px}
 .wktag{align-self:center;white-space:nowrap}
 .pill.cd{background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--ink)}
 .cd-next{border-left:4px solid var(--c);padding:12px 16px}
@@ -690,7 +692,7 @@ views.schedule=()=>{
       sec('Quotes due',dDue.map(q=>li('--warn',`<strong>${esc(q.client||'Quote')}</strong>${q.job?' · '+esc(q.job):''}`,[contact(q.phone,q.site)])))+
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
     const dNote=(S.daynotes[sd]||{}).text||'';
-    const noteSec=`<div class="sdsec">Notes for this day</div><form class="panel-b form" data-form="dayNote">${area('dayNote','text','Jot anything — reminders, who to call, access codes, deliveries…',dNote)}<div class="go"><button class="btn">${dNote?'Save note':'Add note'}</button>${dNote?`<button type="button" class="btn ghost" data-act="dayNoteDel" data-day="${sd}">Remove</button>`:''}</div></form>`;
+    const noteSec=`<div class="sdsec">Notes for this day</div><form class="panel-b form" data-form="dayNote">${area('dayNote','text','Jot anything — reminders, who to call, access codes, deliveries…',dNote)}<div class="go"><button class="btn">${dNote?'Save note':'Add note'}</button>${dNote?`<button type="button" class="btn ghost" data-act="dayNoteDel" data-day="${sd}">Remove</button>`:''}</div>${dNote?`<div class="go dn-move"><label class="f"><span>Wrong day? Move this note to</span><input type="date" id="dn-move" value="${esc(sd)}"></label><button type="button" class="btn ghost" data-act="dayNoteMove" data-day="${sd}">Move note</button></div>`:''}</form>`;
     const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${evForm(sd)}`;
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
@@ -1200,6 +1202,12 @@ const actions={
   // Start a job straight from a tapped day: creates a live project already dated to that day
   // (shows as a one-day bar — drag the grip to extend) and opens it so you fill in the details.
   newDayJob(d){const id=uid();write('projects',id,'set',{name:'New job',client:'',site:'',status:'Live',startDate:d.day,endDate:d.day,lines:[],markup:0,docs:[],notes:'',created:todayISO()});ui.schedDay=null;ui.tab='projects';ui.project=id;window.scrollTo(0,0);toast('New job started on '+fmtD(d.day)+' — fill in the details');},
+  // Move a day note to another date (e.g. it went on next week by mistake). If that day already
+  // has a note, this one is added underneath rather than overwriting it.
+  dayNoteMove(d){const el=document.getElementById('dn-move');const to=el&&el.value;const from=d.day;const n=S.daynotes[from];if(!n||!to)return;if(to===from){toast('Pick a different day');return;}
+    const text=String(n.text||'').trim();const had=String((S.daynotes[to]||{}).text||'').trim();
+    write('daynotes',to,'set',{date:to,text:had?had+'\n'+text:text,updated:Date.now()});write('daynotes',from,'delete');delete ui.drafts.dayNote;
+    ui.schedDay=to;ui.schedWeek=mondayOf(to);ui.focusNext='sd-close';toast('Note moved to '+fmtD(to));},
   dayNoteDel(d){if(d.day&&S.daynotes[d.day])write('daynotes',d.day,'delete');delete ui.drafts.dayNote;toast('Note removed');},
   ovSec(d){ui.ovOpen[d.k]=!ui.ovOpen[d.k];},
   tsGrid(){ui.tsGridOpen=!ui.tsGridOpen;},
