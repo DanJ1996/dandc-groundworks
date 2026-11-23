@@ -976,11 +976,19 @@ views.dayworks=()=>{
     const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
     return `<section class="panel dwjob"><div class="dwjob-h"><div class="dwjob-t"><h3>${esc(title)}</h3>${invBadge(rows).replace(/^ · /,"")}</div>${client?`<div class="dwjob-c">${esc(client)}</div>`:''}${linkedP?'<div class="dwjob-link">Bills into project: <b>'+esc(linkedP.name)+'</b></div>':''}${linkSel}<div class="dwjob-main"><button type="button" class="btn" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div><div class="dwjob-more">${renameBtn}${pdfBtns}${combine}</div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','',{attrs:'list="dl-clients" autocomplete="off"'})}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
+  // Live search at the top — type any letter and the job folders filter instantly
+  // (matched on job name or client). Keeps focus across keystrokes via the id.
+  const q=String(ui.dwSearch||'').trim().toLowerCase();
+  const hit=(title,client)=>!q||String(title||'').toLowerCase().includes(q)||String(client||'').toLowerCase().includes(q);
+  const nJobs=jobs.length+Object.keys(byTitle).filter(t=>!jobs.some(j=>j.title===t)).length;
+  const search=nJobs?`<section class="panel"><div class="panel-b" style="display:flex;gap:8px;align-items:center"><input id="dwsearch" type="search" data-inp="dwSearch" value="${esc(ui.dwSearch||'')}" placeholder="🔍  Find a job — start typing its name or client…" style="flex:1;width:100%"${q?' autofocus':''}>${q?`<button type="button" class="btn sm ghost" data-act="dwClearSearch">Clear</button>`:''}</div></section>`:'';
   const seen={};
-  let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
-  Object.keys(byTitle).forEach(t=>{if(!seen[t])out+=section(t,'','',byTitle[t]);});
+  let out=jobs.map(j=>{seen[j.title]=1;return hit(j.title,j.client)?section(j.title,j.client,j.id,(byTitle[j.title]||[])):'';}).join('');
+  Object.keys(byTitle).forEach(t=>{if(!seen[t]){seen[t]=1;if(hit(t,''))out+=section(t,'','',byTitle[t]);}});
   if(!jobs.length&&!Object.keys(byTitle).length)return head+addJob+`<section class="panel">${empty('No day works yet','Add a job above, then tap “+ Day works” on it — or create a sheet straight away and it files itself.')}</section>`;
-  return head+addJob+out;
+  if(q&&!out)return head+search+`<section class="panel">${empty('No jobs match “'+esc(ui.dwSearch)+'”','Try a different spelling, or clear the search to see every job.')}</section>`;
+  // While searching, hide the "Add a job" form so the matches are front and centre.
+  return head+search+(q?'':addJob)+out;
 };
 
 const opt=a=>a.map(x=>[x,x]);
@@ -1511,6 +1519,7 @@ const actions={
   placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
     if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
     const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day));},
+  dwClearSearch(){ui.dwSearch='';},
   // Drop a single return visit off the schedule (the job itself is untouched).
   removeVisit(d){const p=S.projects[d.id];if(!p)return;const vi=+d.vi;const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.splice(vi,1);write('projects',d.id,'update',{visits});recordMove('Removed a return visit from '+(p.name||'job')+'.','projects',d.id,before);ui.jobPeek=null;toast('Return visit removed');},
   // Opened the job from the schedule → jump straight back to it (keeping the week you were on).
@@ -1561,6 +1570,8 @@ const actions={
   ics(d){const col=d.vkind==='p'?'projects':'quotes';const r=S[col][d.id];if(!r||!r.visitDate)return;const v=asVisit(d.vkind==='p'?'p':'q',r);const txt=icsForVisit(v);if(!txt)return;const nm='site-visit-'+((v.client||'visit').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'visit')+'.ics';dwDownload(new Blob([txt],{type:'text/calendar;charset=utf-8'}),nm);toast('Opening in Calendar…');}
 };
 const changes={
+  // Assign/change a job's gang from the schedule peek — recolours the bar into that gang's line; peek stays open.
+  peekGang(d,v){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{gang:v});const g=gangOf(v);toast(g?'“'+(p.name||'Job')+'” is now '+g.name:'Gang cleared');},
   ts(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].h=H(rows[i]);rows[i].h[+d.d]=Math.max(0,Math.min(24,num(v)));saveSheet(ui.week,d.e,rows);},
   tsp(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].p=v;saveSheet(ui.week,d.e,rows);},
   qstatus(d,v){
@@ -3442,12 +3453,14 @@ function jobPeekModal(){
   const when=ss?(ss===se?fmtD(ss,true):fmtD(ss,true)+' → '+fmtD(se,true)):'Not on the schedule yet';
   const visitsTxt=(p.visits||[]).filter(v=>v&&v.from).map(v=>fmtD(v.from)).join(', ');
   const tv=num(p.tender);
-  const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],['Gang',g?esc(g.name):'No gang yet'],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,[vi!=null?'This visit':'When',esc(when)],visitsTxt?['Return trips',esc(visitsTxt)]:null,tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
+  const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,[vi!=null?'This visit':'When',esc(when)],visitsTxt?['Return trips',esc(visitsTxt)]:null,tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
+  // Assign (or change) the gang right here — the bar recolours into that gang's line straight away.
+  const gangPick=`<label class="f"><span>Gang on this job</span><select data-chg="peekGang" data-id="${esc(id)}" aria-label="Assign a gang to this job">${[['','No gang yet']].concat(GANGS.map(gg=>[gg.k,gg.name])).map(([k,n])=>`<option value="${k}"${(p.gang||'')===k?' selected':''}>${esc(n)}</option>`).join('')}</select></label>`;
   const notes=p.notes?`<p class="sub" style="white-space:pre-wrap;margin:10px 0 0">${esc(p.notes)}</p>`:'';
   const title=esc(p.name||'Job')+(vi!=null?' <span class="sub">· return visit</span>':'');
   const viAttr=vi!=null?` data-vi="${vi}"`:'';
   const removeBtn=vi!=null?`<button type="button" class="btn sm ghost" data-act="removeVisit" data-id="${esc(id)}" data-vi="${vi}">Remove this visit</button>`:'';
-  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${title}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form"><label class="f"><span>Move ${vi!=null?'this visit':'it'} to another day (start date)</span><input type="date" id="jp-move" value="${esc(ss||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}"${viAttr}>Move ${vi!=null?'visit':'job'}</button>${removeBtn}</div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${title}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form">${gangPick}<label class="f"><span>Move ${vi!=null?'this visit':'it'} to another day (start date)</span><input type="date" id="jp-move" value="${esc(ss||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}"${viAttr}>Move ${vi!=null?'visit':'job'}</button>${removeBtn}</div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
 }
 // Pops up the moment an enquiry is marked Won (and from the "Set start date" pill on
 // a Ready-to-start job), so the start date is set there and then — no hunting the job
