@@ -188,9 +188,24 @@ textarea{min-height:64px;resize:vertical}
 .dw-weeks .sub{flex:1 1 100%;margin-bottom:2px}
 /* Dayworks: Job → Month → Week → sheets, nested dropdowns */
 .dw-months{border-top:1px solid var(--line)}
+.dwjob-h{padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.dwjob-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dwjob-t h3{margin:0}
+.dwjob-c{color:var(--muted);font-weight:600;margin-top:-4px}
+.dwjob-link{font-size:.86rem;color:var(--muted)}
+.dwjob-h select.dwmove{width:100%;max-width:100%;min-width:0;text-overflow:ellipsis}
+.dwjob-main{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dwjob-main .btn{width:100%;text-align:center}
+.dwjob-more{display:flex;flex-wrap:wrap;gap:6px}
+.dwjob-more:empty{display:none}
+.dwjob-more .btn{flex:0 0 auto}
 .subdrop{border-top:1px solid var(--line)}
 .dw-months>.subdrop:first-child{border-top:0}
 .subdrop>.dropdown-h .dropdown-t{font:600 .98rem var(--display)}
+.subdrop>.dropdown-h{flex-wrap:nowrap;gap:10px}
+.subdrop>.dropdown-h .dropdown-t{white-space:nowrap}
+.subdrop>.dropdown-h .dropdown-fig{flex:1;min-width:0;text-align:right}
+.subdrop>.dropdown-h .chev{flex:0 0 auto}
 .subdrop.month>.dropdown-h{background:color-mix(in srgb,var(--sunk) 35%,transparent)}
 .subdrop.week>.dropdown-h{padding-left:30px}
 .subdrop.week>.dropdown-h .dropdown-t{font-size:.9rem}
@@ -911,7 +926,7 @@ views.dayworks=()=>{
     const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`
       :dpick?`<div class="panel-b sub">Tick the days you want to send, then tap “Export days as PDF”. You choose with-costs or record-only on the export screen.</div>`:'';
     const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
-    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}${linkedP?'<div class="sub">Bills into project: '+esc(linkedP.name)+'</div>':''}</h3><div class="item-act">${linkSel}${renameBtn}${pdfBtns}${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
+    return `<section class="panel dwjob"><div class="dwjob-h"><div class="dwjob-t"><h3>${esc(title)}</h3>${invBadge(rows).replace(/^ · /,"")}</div>${client?`<div class="dwjob-c">${esc(client)}</div>`:''}${linkedP?'<div class="dwjob-link">Bills into project: <b>'+esc(linkedP.name)+'</b></div>':''}${linkSel}<div class="dwjob-main"><button type="button" class="btn" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div><div class="dwjob-more">${renameBtn}${pdfBtns}${combine}</div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','',{attrs:'list="dl-clients" autocomplete="off"'})}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
   const seen={};
   let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
@@ -3247,9 +3262,10 @@ function dwSheetDocHTML(rec){
     '<div class="foot">'+e(DC_CO.name)+' \u00b7 '+e(DC_CO.addr)+' \u00b7 Company Reg '+e(DC_CO.reg)+' \u00b7 VAT '+e(DC_CO.vat)+'</div>'+
   '</div>';
 }
-function dwOpenPdfWindow(recs,jobLabel){
-  var w=window.open('','_blank');
-  if(!w){toast('Allow pop-ups to make the PDF, or use Export to Excel');return;}
+function dwOpenPdfWindow(recs,jobLabel,w){
+  if(!w||w.closed){try{w=window.open('','_blank');}catch(e){w=null;}}
+  if(!w){toast('Your phone blocked the PDF window — allow pop-ups for this site in Settings › Safari, or use Export to Excel');return;}
+  try{w.document.open();}catch(e){}
   var title=(jobLabel?jobLabel+' \u2014 ':'')+'Day works'+(recs.length>1?' ('+recs.length+' days)':'');
   var body=recs.map(dwSheetDocHTML).join('');
   var toggle="document.body.classList.toggle('nocost');var n=document.body.classList.contains('nocost');this.textContent=n?'Show costs':'Remove costs';var h=document.getElementById('mode');if(h)h.textContent=n?'Record only \u2014 no prices shown. Tap \u201cSave as PDF / Print\u201d to send.':'With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.';";
@@ -3266,12 +3282,15 @@ function dwSheetsPdf(ids,jobLabel){
   ids=(ids||[]).slice();
   if(!ids.length){toast('No sheets to export');return;}
   toast(ids.length>1?'Building PDF of '+ids.length+' days…':'Building PDF…');
+  // Open the window NOW, on the tap — iPhone blocks one opened after the sheets have loaded.
+  var w=null;try{w=window.open('','_blank');}catch(e){}
+  if(w){try{w.document.write('<title>Building PDF…</title><body style="font:16px -apple-system,sans-serif;padding:24px;color:#555">Building your PDF…</body>');}catch(e){}}
   SB.from('sheets').select('data,work_date,day,project,client,sheet_no,mode:data->>mode').in('id',ids).then(function(res){
     if(res.error)throw new Error(res.error.message||'load failed');
     var recs=(res.data||[]).slice().sort(function(a,b){return String(a.work_date||'').localeCompare(String(b.work_date||''));});
     if(!recs.length)throw new Error('Nothing to export');
-    dwOpenPdfWindow(recs,jobLabel);
-  }).catch(function(ex){toast('Export failed: '+((ex&&ex.message)||'unknown'));});
+    dwOpenPdfWindow(recs,jobLabel,w);
+  }).catch(function(ex){if(w)try{w.close();}catch(e){}toast('Export failed: '+((ex&&ex.message)||'unknown'));});
 }
 function dwRestore(ov,s){
   s=s||{};
