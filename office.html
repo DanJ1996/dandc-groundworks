@@ -3117,7 +3117,7 @@ function certPrint(d){
   var w=window.open('','_blank');
   if(!w){toast('Allow pop-ups to save the PDF, or use Export Excel instead');return;}
   var btn='<div class="noprint" style="text-align:center;padding:16px"><button onclick="window.print()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}</style></head><body>'+btn+certInner(d)+btn+'</body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}</style></head><body>'+btn+certInner(d)+btn+'</body></html>');
   w.document.close();w.focus();
   setTimeout(function(){try{w.print();}catch(e){}},500);
 }
@@ -3256,7 +3256,7 @@ function stmtPrint(d){
   var w=window.open('','_blank');
   if(!w){toast('Allow pop-ups to save the PDF');return;}
   var btn='<div class="noprint" style="text-align:center;padding:16px"><button onclick="window.print()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}</style></head><body>'+btn+stmtInner(d)+btn+'</body></html>');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}</style></head><body>'+btn+stmtInner(d)+btn+'</body></html>');
   w.document.close();w.focus();
   setTimeout(function(){try{w.print();}catch(e){}},500);
 }
