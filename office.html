@@ -302,6 +302,10 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt .dayhead:hover,.sched.gantt .dayhead:focus-visible{filter:brightness(.96)}
 .sched.gantt thead th.picked .dayhead{box-shadow:0 0 0 2px var(--accent)}
 .sched.gantt tr:not(.jobrow) td[data-sday]{cursor:pointer}
+.sched.gantt tr.addrow td{height:auto;padding:4px 3px;vertical-align:middle}
+.sched.gantt tr.addrow th.tcol{color:var(--muted)}
+.sched.gantt .addjob{all:unset;box-sizing:border-box;display:block;width:100%;text-align:center;cursor:pointer;color:var(--muted);font-size:.72rem;font-weight:600;padding:5px 2px;border:1px dashed color-mix(in srgb,var(--line) 85%,transparent);border-radius:6px}
+.sched.gantt .addjob:hover,.sched.gantt .addjob:focus-visible{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 .sdpanel{border:2px solid var(--accent)}
 .mdov{position:fixed;inset:0;z-index:40;background:rgba(15,24,34,.55);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
 .mdbox{width:100%;max-width:560px;margin:0;box-shadow:0 18px 50px rgba(0,0,0,.35)}
@@ -800,9 +804,12 @@ views.schedule=()=>{
     if(note)L('--note',esc(note.length>90?note.slice(0,90)+'…':note),'Note');
     const f=parse(d.day);
     return `<li><button type="button" class="sdcard${d.isT?' today':''}${d.we?' we':''}${ui.schedDay===d.day?' picked':''}${it.length?'':' empty'}" data-act="schedDay" data-day="${d.day}"><div class="cd-date"><span class="cd-dow">${DOW[d.i]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="sd-body">${d.isT?'<span class="sd-today">Today</span>':''}${it.length?it.join(''):'<span class="sd-none">Nothing booked</span>'}</div><span class="sd-chev">›</span></button></li>`;}).join('');
+  // A tappable "+ Job" on every day so you can start a job straight from an empty day
+  // (job rows swallow taps for dragging, so this row gives a clear add target on each day).
+  const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="newDayJob" data-day="${d.day}" aria-label="Start a job on ${DOW[d.i]} ${fmtD(d.day)}">+ Job</button></td>`).join('')}</tr>`;
   const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
   if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.timesheets=()=>{
