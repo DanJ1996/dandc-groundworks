@@ -329,6 +329,10 @@ table.grid{border-collapse:collapse;width:100%}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
+.peek{margin:0;display:grid;gap:7px}
+.peek>div{display:flex;gap:10px;align-items:baseline}
+.peek dt{flex:0 0 76px;color:var(--muted);font-size:.82rem;margin:0}
+.peek dd{margin:0;font-size:.93rem}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:color-mix(in srgb,var(--c) 70%,var(--ink));box-shadow:3px 0 0 color-mix(in srgb,var(--c) 70%,var(--ink))}
@@ -803,7 +807,9 @@ views.schedule=()=>{
       sec("Who's off",dOff.map(h=>li('--muted',`<strong>${esc(h.name||'Crew')}</strong>`,[holSpan(h)+((h.time&&h.from===h.to)?' · part day '+esc(h.time):'')+(h.reason?' · '+esc(h.reason):'')])));
     const dNote=(S.daynotes[sd]||{}).text||'';
     const noteSec=`<div class="sdsec">Notes for this day</div><form class="panel-b form" data-form="dayNote">${area('dayNote','text','Jot anything — reminders, who to call, access codes, deliveries…',dNote)}<div class="go"><button class="btn">${dNote?'Save note':'Add note'}</button>${dNote?`<button type="button" class="btn ghost" data-act="dayNoteDel" data-day="${sd}">Remove</button>`:''}</div>${dNote?`<div class="go dn-move"><label class="f"><span>Wrong day? Move this note to</span><input type="date" id="dn-move" value="${esc(sd)}"></label><button type="button" class="btn ghost" data-act="dayNoteMove" data-day="${sd}">Move note</button></div>`:''}</form>`;
-    const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${evForm(sd)}`;
+    const retJobs=list('projects').filter(p=>p.status!=='Complete'&&!(p.startDate&&p.startDate<=sd&&((p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate)>=sd)).sort(byName);
+    const retPick=retJobs.length?`<div class="panel-b form"><label class="f wide"><span>Put an existing job on this day <span class="sub">— one you're going back to</span></span><select id="ret-${sd}" aria-label="Pick an existing job to put on this day"><option value="">Pick a job you're returning to…</option>${retJobs.map(p=>`<option value="${esc(p.id)}">${esc(p.name||'Job')}${p.client?' — '+esc(p.client):''}</option>`).join('')}</select></label><div class="go"><button type="button" class="btn sm" data-act="placeJobOnDay" data-day="${sd}">Put on this day</button></div></div>`:'';
+    const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${retPick}${evForm(sd)}`;
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
   /* ---- Days view: the week as a vertical list of day cards (phone-friendly, no sideways scroll) ---- */
@@ -824,7 +830,7 @@ views.schedule=()=>{
   const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="newDayJob" data-day="${d.day}" aria-label="Start a job on ${DOW[d.i]} ${fmtD(d.day)}">+ Job</button></td>`).join('')}</tr>`;
   const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
   if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job for a quick preview (open it or move it from there).</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.bin=()=>{
@@ -1481,7 +1487,15 @@ const actions={
   cancelXqPick(){ui.xqPick=null;},
   linkXeroQuote(d){const total=num(d.v);write('quotes',d.id,'update',{value:total,status:'Quoted',xeroQuote:d.ref||'',xeroQuoteNo:d.no||''});ui.xqPick=null;toast('Linked Xero quote'+(d.no?' '+d.no:'')+' — '+money(total)+', moved to Out on tender');},
   quoteToReminder(d){const q=S.quotes[d.id];if(!q)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[q.client,q.job].filter(Boolean).join(' · ')||'Reminder';const when=q.visitDate?q.visitDate+'T'+(q.visitTime||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});write('quotes',d.id,'delete');if(when)askNotify();toast('Moved to your reminders'+(when?' — pings '+fmtD(q.visitDate):''));},
-  openProject(d){ui.tab='projects';ui.project=d.id;ui.projectFrom=d.from||'';ui.confirm=null;window.scrollTo(0,0);},
+  openProject(d){ui.tab='projects';ui.project=d.id;ui.projectFrom=d.from||'';ui.confirm=null;ui.jobPeek=null;window.scrollTo(0,0);},
+  // Tapping a job bar on the schedule pops a quick preview instead of yanking you to the Projects tab.
+  jobPeek(d){ui.jobPeek=d.id;},
+  jobPeekClose(){ui.jobPeek=null;},
+  peekOpen(d){ui.jobPeek=null;actions.openProject({id:d.id,from:'schedule'});},
+  // Move any job to any day straight from its preview — picks the week for you if it's elsewhere.
+  peekMove(d){const el=document.getElementById('jp-move');const to=el&&el.value;if(!to){toast('Pick a date first');return;}const p=S.projects[d.id];if(!p)return;const before={startDate:p.startDate||'',endDate:p.endDate||''};const ne=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?addDays(to,dayDiff(p.endDate,p.startDate)):to;write('projects',d.id,'update',{startDate:to,endDate:ne});recordMove((p.name||'Job')+' moved to '+fmtD(to)+'.','projects',d.id,before);ui.jobPeek=null;ui.schedWeek=mondayOf(to);toast('“'+(p.name||'Job')+'” moved to '+fmtD(to));},
+  // Tap an empty day → drop an existing job (one you're returning to) onto that day, keeping its length.
+  placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const before={startDate:p.startDate||'',endDate:p.endDate||''};const ne=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?addDays(d.day,dayDiff(p.endDate,p.startDate)):d.day;write('projects',id,'update',{startDate:d.day,endDate:ne,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));},
   // Opened the job from the schedule → jump straight back to it (keeping the week you were on).
   backToSchedule(){ui.tab='schedule';ui.project=null;ui.projectFrom='';ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
@@ -3398,6 +3412,19 @@ function meetDoneModal(){
   const who=m.kind==='p'?(r.name||'Job'):(r.client||'Enquiry')+(r.job?' · '+r.job:'');
   return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="md-h"><div class="panel-h"><h3 id="md-h">Meeting done</h3></div><form class="panel-b form" data-form="meetDone"><p class="sub full" style="margin:0">${esc(who)}${r.site?' · '+esc(r.site):''}</p><label class="f full"><span>Notes from the meeting</span><textarea id="meetDone-notes" name="notes" rows="7" placeholder="What they want, measurements, levels, access, spoil, drainage, anything to price against…">${esc(dv('meetDone','notes',''))}</textarea></label><p class="sub full" style="margin:0">${m.kind==='p'?'Saved onto the job notes.':'Saved onto the enquiry, ready for you to price.'} Leave it blank to just mark it done.</p><div class="go"><button class="btn">Save &amp; mark done</button><button type="button" class="btn ghost" data-act="meetCancel">Cancel</button></div></form></section></div>`;
 }
+// Tap a job bar on the schedule → a quick preview, so a stray tap never throws you off the
+// schedule onto the Projects tab. Shows the essentials and lets you open it or move it to any day.
+function jobPeekModal(){
+  const id=ui.jobPeek;if(!id)return '';
+  const p=S.projects[id];if(!p){ui.jobPeek=null;return '';}
+  const g=gangOf(p.gang), lead=leadOf(p.gang);
+  const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;
+  const when=p.startDate?(p.startDate===e?fmtD(p.startDate,true):fmtD(p.startDate,true)+' → '+fmtD(e,true)):'Not on the schedule yet';
+  const tv=num(p.tender);
+  const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],['Gang',g?esc(g.name):'No gang yet'],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,['When',esc(when)],tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
+  const notes=p.notes?`<p class="sub" style="white-space:pre-wrap;margin:10px 0 0">${esc(p.notes)}</p>`:'';
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${esc(p.name||'Job')}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form"><label class="f"><span>Move it to another day (start date)</span><input type="date" id="jp-move" value="${esc(p.startDate||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}">Move job</button></div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
+}
 // Pops up the moment an enquiry is marked Won (and from the "Set start date" pill on
 // a Ready-to-start job), so the start date is set there and then — no hunting the job
 // down later. A date drops it into the schedule and it goes Live by itself on the day.
@@ -3441,7 +3468,7 @@ function render(){
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
-  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal()+setStartModal()+certModal();
+  view.innerHTML=mode==='connecting'?`<section class="panel">${empty('Loading your records','Timesheets, quotes, invoices, projects and rates will appear here.')}</section>`:banner+views[ui.tab]()+meetDoneModal()+setStartModal()+certModal()+jobPeekModal();
   sx.forEach(([id,l])=>{const el=$(id);if(el)el.scrollLeft=l;});
   // On a phone the week is wider than the screen — when the Schedule opens (or you change week),
   // slide the grid so today's column is fully in view instead of leaving Fri off the edge.
@@ -3562,7 +3589,7 @@ function endJobDrag(){
     else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
     recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,before);
   }else if(jd.onBar&&jd.kind!=='event'){
-    actions.openProject({id:jd.jid,from:'schedule'});   // tapped the job bar itself → open the job
+    ui.jobPeek=jd.jid;   // tapped the job bar itself → quick preview (stay on the schedule)
   }else if(jd.tapDay){
     ui.schedDay=jd.tapDay;ui.focusNext='sd-close'; // tapped an empty day (or an event bar) → open that day
   }
@@ -3570,8 +3597,8 @@ function endJobDrag(){
 }
 view.addEventListener('pointerup',e=>{endMarkerDrag();endJobDrag();});
 /* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
-view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;ui.cert=null;schedule();}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart||ui.cert)){ui.meetDone=null;ui.setStart=null;ui.cert=null;schedule();}});
+view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;ui.cert=null;ui.jobPeek=null;schedule();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart||ui.cert||ui.jobPeek)){ui.meetDone=null;ui.setStart=null;ui.cert=null;ui.jobPeek=null;schedule();}});
 /* tap an empty / visit / quote / off / hour cell on the schedule → open that day in full */
 view.addEventListener('click',e=>{
   if(_swallowClick){_swallowClick=false;return;}   // a marker was just dragged — don't also open the day
