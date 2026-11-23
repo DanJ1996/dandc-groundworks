@@ -726,7 +726,7 @@ views.schedule=()=>{
     for(let i=0;i<7;i++){const inSpan=i>=cs&&i<=ce;
       // Repeat the label in every day the bar covers so each day reads on its own, not just the colour.
       const grip=(i===ce&&opts.jid&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
-      const leadChip=(i===cs&&opts.lead)?`<span class="jlead">${esc(opts.lead)}</span>`:'';
+      const leadChip=opts.lead?`<span class="jlead">${esc(opts.lead)}</span>`:'';
       const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${leadChip}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${seg}</td>`;}
     return `<tr class="${opts.rowcls||''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
