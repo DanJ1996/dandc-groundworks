@@ -332,6 +332,10 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:color-mix(in srgb,var(--c) 70%,var(--ink));box-shadow:3px 0 0 color-mix(in srgb,var(--c) 70%,var(--ink))}
+.jbin{display:none}
+body.jdrag .jbin{display:flex;align-items:center;justify-content:center;gap:9px;margin:12px 0 0;padding:16px;border:2px dashed color-mix(in srgb,#b23b2c 55%,var(--line));border-radius:11px;color:#b23b2c;font-weight:700;background:color-mix(in srgb,#b23b2c 6%,transparent);transition:background .12s,border-color .12s,transform .12s}
+body.jdrag .jbin.hot{border-style:solid;border-color:#b23b2c;background:color-mix(in srgb,#b23b2c 15%,transparent);transform:scale(1.015)}
+.jbin-ic{font-size:1.15rem;line-height:1}
 .tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:none}
 .tev.mdrag,.vmark.mdrag{opacity:.55;cursor:grabbing}
 .sched.gantt td.mdrop{outline:2px dashed var(--info);outline-offset:-2px;background:color-mix(in srgb,var(--info) 12%,transparent)}
@@ -410,7 +414,7 @@ const byName=(a,b)=>String(a.name||'').localeCompare(String(b.name||''));
 const pill=(k,t)=>`<span class="pill ${k}">${esc(t)}</span>`;
 const size=b=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
 
-const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays']];
+const TABS=[['overview','Overview'],['schedule','Schedule'],['reminders','Reminders'],['timesheets','Timesheets'],['dayworks','Dayworks'],['quotes','Enquiries'],['projects','Projects'],['invoices','Invoices'],['rates','Rate card'],['team','Team'],['crew','Holidays'],['bin','Bin']];
 const COLS=['employees','projects','quotes','invoices','rates','timesheets','crew_hours','reminders','holidays','lead_reminders','events','dw_invoiced','daynotes','company_dates'];
 const S={};COLS.forEach(c=>S[c]={});
 const loaded={};
@@ -429,7 +433,11 @@ window.addEventListener('pageshow',foregroundSync);
 window.addEventListener('focus',foregroundSync);
 let PEOPLE=[];
 const ui={schedView:(()=>{try{const v=localStorage.getItem('dc-schedview');if(v==='days'||v==='grid')return v;}catch(e){}return 'grid';})(),tab:'overview',week:mondayOf(todayISO()),schedWeek:mondayOf(todayISO()),project:null,edit:null,confirm:null,drafts:{},rateFilter:'',quoteFilter:'open',busy:'',focusNext:null,skipKeep:null,crewOpen:null,xlink:null,ovOpen:{attention:true,diary:true,timeoff:false,projects:false,setup:true,projLive:true,projReady:true,projPrice:false,qNew:true},tsGridOpen:false};
-const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id}));
+// Binned jobs are a soft delete: they drop out of every projects list (schedule, projects,
+// overview, dropdowns) but still live in the data, so the Bin tab can show and restore them
+// until you empty it for good.
+const list=c=>Object.entries(S[c]).map(([id,d])=>({...d,id})).filter(d=>c!=='projects'||!d.binned);
+const binnedJobs=()=>Object.entries(S.projects).map(([id,d])=>({...d,id})).filter(d=>d.binned).sort((a,b)=>num(b.binned)-num(a.binned));
 
 /* ---------- store ---------- */
 function merge(a,b){const o={...a};for(const k in b){const v=b[k],w=a?a[k]:undefined;o[k]=(v&&typeof v==='object'&&!Array.isArray(v)&&w&&typeof w==='object'&&!Array.isArray(w))?merge(w,v):v;}return o;}
@@ -816,7 +824,19 @@ views.schedule=()=>{
   const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="newDayJob" data-day="${d.day}" aria-label="Start a job on ${DOW[d.i]} ${fmtD(d.day)}">+ Job</button></td>`).join('')}</tr>`;
   const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
   if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job to open it.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+};
+
+views.bin=()=>{
+  const jobs=binnedJobs();
+  const emptyCtl=jobs.length?(ui.confirm==='bin-empty'
+    ?`<span class="confirm"><button type="button" class="btn sm danger" id="cf-bin-empty" data-act="emptyBin">Delete all ${jobs.length} for good</button><button type="button" class="btn sm ghost" data-act="cancel">Keep</button></span>`
+    :`<button type="button" class="btn sm danger" data-act="emptyBinAsk">Empty bin</button>`):'';
+  const head=`<div class="head"><div><h2>Bin</h2><p class="sub">Jobs you've removed. Restore one to put it back, or empty the Bin to delete them for good — that can't be undone.</p></div>${emptyCtl?`<div class="item-act">${emptyCtl}</div>`:''}</div>`;
+  if(!jobs.length)return head+`<section class="panel">${empty('The Bin is empty','Drag a job onto the Bin on the schedule, or tap the bin icon on a job in Projects, and it lands here. Nothing is deleted for good until you empty the Bin.')}</section>`;
+  const row=p=>{const when=p.binned?fmtD(new Date(num(p.binned)).toISOString().slice(0,10),true):'';
+    return `<li class="item"><div class="item-main"><strong>${esc(p.name||'Job')}</strong><div class="sub">${[p.client,p.site,p.po?'PO '+p.po:''].filter(Boolean).map(esc).join(' · ')}${when?' · binned '+when:''}</div></div><div class="item-act"><button type="button" class="btn sm" data-act="restoreJob" data-id="${p.id}">Restore</button>${del('projects/'+p.id,'Delete now')}</div></li>`;};
+  return head+`<section class="panel"><div class="panel-h"><h3>In the Bin <span class="sub">${jobs.length}</span></h3></div><ul class="items">${jobs.map(row).join('')}</ul></section>`;
 };
 
 views.timesheets=()=>{
@@ -1064,6 +1084,8 @@ views.projects=()=>{
     if(sec==='done')acts=`<button type="button" class="btn sm ghost" data-act="projReopen" data-id="${q.id}">Reopen</button>`;
     else if(sec==='interim')acts=`<button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button><button type="button" class="btn sm ghost" data-act="projActive" data-id="${q.id}">Back to current</button>`;
     else if(hasInv(q))acts=`<button type="button" class="btn sm ghost" data-act="projInterim" data-id="${q.id}">Interim</button><button type="button" class="btn sm" data-act="projComplete" data-id="${q.id}">Complete</button>`;
+    // Bin button on every row — a recoverable soft-delete (lands in the Bin tab).
+    acts+=`<button type="button" class="btn sm ghost binbtn" data-act="binJob" data-id="${q.id}" aria-label="Move ${esc(q.name||'job')} to the Bin" title="Move to Bin">🗑</button>`;
     const isDW=q.basis==='dayworks';
     const amtMain=isDW?`<span class="amt">Day works</span><span class="sub">cost-plus · ${hrs(h.h)} h · ${money(h.cost)} labour</span>`:`<span class="amt">${q.tender?money(num(q.tender)):money(projTotals(q).total)}</span><span class="sub">${q.tender?'tender':(q.lines||[]).length+' lines'} · ${(q.docs||[]).length} docs</span>`;
     // Invoiced-to-date: a fixed-price job's real figure comes from its applications
@@ -1493,6 +1515,12 @@ const actions={
   appVoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:true}:a)});toast('Application voided — kept on file');},
   appUnvoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:false}:a)});toast('Application reinstated');},
   closeProject(){ui.project=null;ui.projectFrom='';ui.confirm=null;},
+  // Bin = recoverable soft-delete. The job drops off every list but stays in the data until
+  // the Bin tab is emptied. Restore clears the flag; Empty bin deletes for good (with confirm).
+  binJob(d){write('projects',d.id,'update',{binned:Date.now()});if(ui.project===d.id){ui.project=null;ui.projectFrom='';}toast('Moved to the Bin — restore it from the Bin tab');},
+  restoreJob(d){write('projects',d.id,'update',{binned:0});toast('Restored from the Bin');},
+  emptyBinAsk(){ui.confirm='bin-empty';ui.focusNext='cf-bin-empty';},
+  emptyBin(){binnedJobs().forEach(p=>{if(assets)(p.docs||[]).forEach(x=>assets.delete(x.id).catch(()=>{}));list('quotes').filter(q=>q.projectId===p.id).forEach(q=>write('quotes',q.id,'update',{projectId:''}));write('projects',p.id,'delete');});ui.confirm=null;toast('Bin emptied');},
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
   remPin(d){write('reminders',d.id,'update',{pri:d.pin==='1'?Date.now():0});},
   notifyOn(){askNotify(true);},
@@ -3409,7 +3437,7 @@ function render(){
   if(ae&&ae.id&&(view.contains(ae)||tabsEl.contains(ae)))keep={id:ae.id,value:ae.value,s:null,e:null,text:/^(INPUT|TEXTAREA)$/.test(ae.tagName)&&ae.type!=='checkbox'&&ae.type!=='file'};
   if(keep&&keep.text){try{keep.s=ae.selectionStart;keep.e=ae.selectionEnd;}catch(e){}}
   const sx=[...view.querySelectorAll('.scroll-x[id]')].map(el=>[el.id,el.scrollLeft]);
-  const nq=list('quotes').filter(needsPrice).length, ni=list('invoices').filter(i=>!i.sent&&!i.paid).length, np=list('projects').filter(p=>p.status!=='Complete').length, nh=list('holidays').filter(h=>h.status==='pending').length, badge={quotes:nq,invoices:ni,projects:np,crew:nh};
+  const nq=list('quotes').filter(needsPrice).length, ni=list('invoices').filter(i=>!i.sent&&!i.paid).length, np=list('projects').filter(p=>p.status!=='Complete').length, nh=list('holidays').filter(h=>h.status==='pending').length, nb=binnedJobs().length, badge={quotes:nq,invoices:ni,projects:np,crew:nh,bin:nb};
   tabsEl.innerHTML=TABS.map(([k,l])=>`<button type="button" id="tab-${k}" class="tab" data-act="tab" data-tab="${k}" aria-current="${ui.tab===k?'page':'false'}">${l}${badge[k]?`<span class="count">${badge[k]}</span>`:''}</button>`).join('');
   $('sync').textContent=mode==='live'?'Shared · saves automatically':mode==='local'?'Not saving in this view':'Connecting…';
   const banner=mode==='local'?`<div class="note bad"><strong>Not connected.</strong> This page can't reach the shared data right now. Check your connection and reload.</div>`:'';
@@ -3486,14 +3514,17 @@ view.addEventListener('pointerdown',e=>{
   // Did the press land on the actual job bar (a day it covers), or on an empty day in its row?
   // A tap on the bar opens the job; a tap on an empty day opens THAT day, not the job.
   const onBar=!!td.querySelector('.jseg');
-  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar};
+  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar,overBin:false};
   row.classList.add('dragging');
+  if(kind==='job')document.body.classList.add('jdrag');   // reveal the Bin drop-zone while dragging a job
   try{td.setPointerCapture(e.pointerId);}catch(_){}
 });
 view.addEventListener('pointermove',e=>{
   if(mDrag){const el=document.elementFromPoint(e.clientX,e.clientY);const td=el&&el.closest&&el.closest('.sched.gantt td[data-sday]');if(td&&td!==mDrag.lastCell){if(mDrag.lastCell)mDrag.lastCell.classList.remove('mdrop');mDrag.lastCell=td;td.classList.add('mdrop');mDrag.toDay=td.dataset.sday;}return;}
   if(!jobDrag)return;
   const el=document.elementFromPoint(e.clientX,e.clientY);
+  // Over the Bin drop-zone? Highlight it and hold off on painting days — a release here bins the job.
+  if(jobDrag.kind==='job'){const overBin=!!(el&&el.closest&&el.closest('#jbin'));if(overBin!==jobDrag.overBin){jobDrag.overBin=overBin;const bin=document.getElementById('jbin');if(bin)bin.classList.toggle('hot',overBin);}if(jobDrag.overBin)return;}
   const td=el&&el.closest&&el.closest('td.jcell[data-jday]');
   if(!td||td.closest('tr.jobrow')!==jobDrag.row)return;
   const d=+td.dataset.jday;let min,max,delta=0;
@@ -3506,6 +3537,14 @@ view.addEventListener('pointermove',e=>{
 });
 function endJobDrag(){
   if(!jobDrag)return;const jd=jobDrag;jobDrag=null;jd.row.classList.remove('dragging');
+  document.body.classList.remove('jdrag');
+  const binEl=document.getElementById('jbin');if(binEl)binEl.classList.remove('hot');
+  // Dropped on the Bin → soft-delete the job (recoverable from the Bin tab). Not a move.
+  if(jd.overBin&&jd.kind==='job'){
+    write('projects',jd.jid,'update',{binned:Date.now()});
+    toast('“'+(jd.text||'Job')+'” moved to the Bin — open the Bin tab to restore or empty it');
+    schedule();return;
+  }
   if(jd.moved){
     const wk=ui.schedWeek, wkEnd=addDays(wk,6);
     let ns,ne;
