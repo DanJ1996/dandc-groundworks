@@ -8,7 +8,7 @@
   --bg:#EDE7DF; --surface:#F9F6F1; --sunk:#E4DCD1; --ink:#1D2C3D; --muted:#586574; --line:#D3C9BB;
   --accent:#273E57; --on-accent:#F4EFE8; --band:#273E57; --on-band:#EDE7DF; --band-muted:#B4C0CC;
   --good:#2C7A4B; --warn:#9A5A08; --bad:#B23A2E; --info:#5AA7E0; --note:#7A5AA7;
-  --gang1:#273E57; --gang2:#2E6E8E; --gang3:#6B4E8E; --gang4:#8A6D1F; --nogang:#8C4A4A;
+  --gang1:#2458D6; --gang2:#0B8C7E; --gang3:#7C3AED; --gang4:#B45309; --nogang:#8C4A4A;
   --ev-emergency:#C0392B; --ev-meeting:#A23E8C; --ev-delivery:#C77D2E; --ev-plant:#1E8C8C;
   --display:'Poppins',system-ui,'Segoe UI',sans-serif; --body:'IBM Plex Sans',system-ui,'Segoe UI',sans-serif;
   --r:6px;
@@ -101,20 +101,20 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .tnote.sdl-note{display:inline-block;padding:0 6px;border-radius:3px;font-size:.68rem;font-weight:600;margin-left:6px;background:color-mix(in srgb,var(--info) 22%,transparent);color:var(--ink);vertical-align:1px}
 .seg{display:inline-flex;gap:4px}
 .cdlist{list-style:none;margin:0;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px}
-.cdcard{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);padding:12px 14px}
+.cdcard{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:var(--r);padding:8px 11px}
 .cdcard.past{opacity:.6}
 .cdcard.editing{display:block}
-.cd-date{flex:0 0 54px;text-align:center;border-radius:var(--r);padding:6px 0;background:color-mix(in srgb,var(--c) 14%,var(--surface));line-height:1.05}
-.cd-dow,.cd-mon{display:block;font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.cd-day{display:block;font:700 1.45rem/1.15 var(--display);color:var(--ink)}
-.cd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.cd-date{flex:0 0 42px;text-align:center;border-radius:var(--r);padding:4px 0;background:color-mix(in srgb,var(--c) 14%,var(--surface));line-height:1.05}
+.cd-dow,.cd-mon{display:block;font-size:.6rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.cd-day{display:block;font:700 1.15rem/1.1 var(--display);color:var(--ink)}
+.cd-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .cd-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.cd-kind{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
-.cd-when{font-size:.78rem;color:var(--muted);white-space:nowrap}
-.cd-title{font-weight:600;font-size:1.02rem;color:var(--ink)}
-.cd-meta{font-size:.88rem;color:var(--ink)}
-.cd-note{font-size:.86rem;color:var(--muted)}
-.cd-acts{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.cd-kind{font-size:.64rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--c) 75%,var(--ink))}
+.cd-when{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.cd-title{font-weight:600;font-size:.92rem;color:var(--ink)}
+.cd-meta{font-size:.8rem;color:var(--ink)}
+.cd-note{font-size:.78rem;color:var(--muted)}
+.cd-acts{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
 .cd-past-h{padding:4px 16px 0;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .cd-form{border-bottom:1px solid var(--line)}
 .pill.cd{background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--ink)}
@@ -203,6 +203,8 @@ textarea{min-height:64px;resize:vertical}
 .dwpick-cb{display:flex;align-items:center;padding:0 12px 0 16px;cursor:pointer}
 .dwpick-cb input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
 .dwpick-row>.subdrop{flex:1 1 auto;border-top:0}
+.item.dwpick-on{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.item .dwpick-cb{padding:0 8px 0 2px}
 .dwinv{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;white-space:nowrap}
 .dwinv input{width:17px;height:17px;accent-color:#2e9e5b;cursor:pointer}
 .dwinv.on{color:#2e9e5b;font-weight:600}
@@ -841,12 +843,18 @@ views.dayworks=()=>{
   const invOn=id=>!!(S.dw_invoiced[id]&&S.dw_invoiced[id].on);
   // Green "Invoiced" (all ticked), amber "Part-invoiced" (some), grey "Not invoiced" (none yet).
   const invBadge=rows=>{if(!rows.length)return'';const n=rows.filter(x=>invOn(x.id)).length;return n===rows.length?' · <span class="inv-badge">Invoiced</span>':n?' · <span class="inv-badge" style="background:#c9892b">Part-invoiced</span>':' · <span class="inv-badge" style="background:#8a8f99">Not invoiced</span>';};
-  const sRow=x=>{const k='dwdel/'+x.id;const act=ui.confirm===k
+  const pdfPicking=t=>!!(ui.dwPdfPick&&ui.dwPdfPick[t]);
+  const sRow=(x,job)=>{const k='dwdel/'+x.id;
+    const picking=!!(job&&pdfPicking(job));
+    const on=picking&&!!(ui.dwPdfSel&&ui.dwPdfSel[job]&&ui.dwPdfSel[job][x.id]);
+    const cb=picking?`<label class="dwpick-cb" style="margin-right:6px"><input type="checkbox" data-act="dwPdfPickDay" data-job="${esc(job)}" data-id="${esc(x.id)}"${on?' checked':''}></label>`:'';
+    const act=picking?''
+    :ui.confirm===k
     ?`<span class="confirm"><button type="button" class="btn sm danger" data-act="delDWSheet" data-id="${esc(x.id)}">Delete sheet</button><button type="button" class="btn sm ghost" data-act="cancel">Keep</button></span>`
     :ui.moveDW===x.id
     ?`<span class="confirm"><select class="dwmove" id="dwmove-${esc(x.id)}" aria-label="Move this sheet to another job"><option value="">Move to job…</option>${jobs.map(j=>`<option value="${esc(j.id)}"${x.project===j.title?' disabled':''}>${esc(j.title)}</option>`).join('')}</select><button type="button" class="btn sm" data-act="moveDWdo" data-id="${esc(x.id)}">Done</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></span>`
-    :`<label class="dwinv${invOn(x.id)?' on':''}" title="Tick once you've invoiced this day"><input type="checkbox" data-act="dwInv" data-id="${esc(x.id)}"${invOn(x.id)?' checked':''}> Invoiced</label><button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button>${jobs.length?`<button type="button" class="btn sm ghost" data-act="moveDWask" data-id="${esc(x.id)}">Move</button>`:''}<button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
-    return `<li class="item"><div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}${x.creator_name?' · '+esc(x.creator_name):''}</div></div><div class="item-amt"><span class="amt">${x.grand?money(num(x.grand)):''}</span></div><div class="item-act">${act}</div></li>`;};
+    :`<label class="dwinv${invOn(x.id)?' on':''}" title="Tick once you've invoiced this day"><input type="checkbox" data-act="dwInv" data-id="${esc(x.id)}"${invOn(x.id)?' checked':''}> Invoiced</label><button type="button" class="btn sm ghost" data-act="openDWSheet" data-id="${esc(x.id)}">Open</button><button type="button" class="btn sm ghost" data-act="dwRowPdf" data-id="${esc(x.id)}" title="Send this day to a client as PDF">PDF</button>${jobs.length?`<button type="button" class="btn sm ghost" data-act="moveDWask" data-id="${esc(x.id)}">Move</button>`:''}<button type="button" class="btn sm ghost" data-act="ask" data-key="${k}" aria-label="Delete sheet">Delete</button>`;
+    return `<li class="item${on?' dwpick-on':''}">${cb}<div class="item-main"><strong>${esc(x.sheet_no||(x.mode==='variation'?'Variation':'Sheet'))}</strong>${x.mode==='variation'?' · Variation':''}<div class="sub">${x.work_date?esc(fmtD(x.work_date)):''}${x.day?' ('+esc(x.day)+')':''}${x.creator_name?' · '+esc(x.creator_name):''}</div></div><div class="item-amt"><span class="amt">${x.grand?money(num(x.grand)):''}</span></div><div class="item-act">${act}</div></li>`;};
   // A collapsible sub-level (month / week) that reuses the dropdown styling but
   // sits inside the job panel rather than being its own panel.
   const subDrop=(key,cls,title,fig,body)=>{const o=!!ui.ovOpen[key];
@@ -863,7 +871,7 @@ views.dayworks=()=>{
     const fig=sheetsFig(wrows,tot)+invBadge(wrows);
     const invWk=`<div class="dw-weeks"><label class="dwinv wk${allInv?' on':''}" title="Mark every day in this week as invoiced"><input type="checkbox" data-act="dwInvWk" data-job="${esc(title)}" data-week="${wk}"${allInv?' checked':''}> Mark whole week invoiced</label></div>`;
     const exp=wk==='—'?'':`<div class="dw-weeks"><span class="sub">Export this week to Excel:</span><button type="button" class="btn sm ghost" data-act="dwWeek" data-job="${esc(title)}" data-week="${wk}">w/e ${fmtD(addDays(wk,6))}</button></div>`;
-    const drop=subDrop('dww/'+title+'/'+wk,'week',span,fig,`<ul class="items">${wrows.map(sRow).join('')}</ul>${invWk}${exp}`);
+    const drop=subDrop('dww/'+title+'/'+wk,'week',span,fig,`<ul class="items">${wrows.map(x=>sRow(x,title)).join('')}</ul>${invWk}${exp}`);
     if(ui.dwPick&&ui.dwPick[title]&&wk!=='—'){
       const on=!!(ui.dwSel&&ui.dwSel[title]&&ui.dwSel[title][wk]);
       return `<div class="dwpick-row${on?' on':''}"><label class="dwpick-cb"><input type="checkbox" data-act="dwPickWk" data-job="${esc(title)}" data-week="${wk}"${on?' checked':''}></label>${drop}</div>`;
@@ -895,9 +903,15 @@ views.dayworks=()=>{
     const combine=nWeeks>=2?(picking
       ?`<button type="button" class="btn sm" data-act="dwCombineDo" data-job="${esc(title)}"${selCount?'':' disabled'}>Export ${selCount||''} week${selCount===1?'':'s'} together</button><button type="button" class="btn sm ghost" data-act="dwCombineCancel" data-job="${esc(title)}">Cancel</button>`
       :`<button type="button" class="btn sm ghost" data-act="dwCombine" data-job="${esc(title)}">Combine weeks</button>`):'';
-    const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`:'';
+    const dpick=pdfPicking(title);
+    const pdfSel=dpick?Object.keys((ui.dwPdfSel&&ui.dwPdfSel[title])||{}).filter(k=>ui.dwPdfSel[title][k]).length:0;
+    const pdfBtns=rows.length?(dpick
+      ?`<button type="button" class="btn sm" data-act="dwPdfDaysDo" data-job="${esc(title)}"${pdfSel?'':' disabled'}>Export ${pdfSel||''} day${pdfSel===1?'':'s'} as PDF</button><button type="button" class="btn sm ghost" data-act="dwPdfDaysCancel" data-job="${esc(title)}">Cancel</button>`
+      :`<button type="button" class="btn sm ghost" data-act="dwPdfDays" data-job="${esc(title)}">Export days as PDF</button>`):'';
+    const hint=picking?`<div class="panel-b sub">Tick the weeks you want, then tap “Export weeks together”.</div>`
+      :dpick?`<div class="panel-b sub">Tick the days you want to send, then tap “Export days as PDF”. You choose with-costs or record-only on the export screen.</div>`:'';
     const body=rows.length?`${hint}<div class="dw-months">${months.map(mk=>monthBlock(title,mk,byMonth[mk])).join('')}</div>`:`<div class="panel-b sub">No sheets yet.</div>`;
-    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}${linkedP?'<div class="sub">Bills into project: '+esc(linkedP.name)+'</div>':''}</h3><div class="item-act">${linkSel}${renameBtn}${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
+    return `<section class="panel"><div class="panel-h"><h3>${esc(title)}${client?' <span class="sub">'+esc(client)+'</span>':''}${invBadge(rows)}${linkedP?'<div class="sub">Bills into project: '+esc(linkedP.name)+'</div>':''}</h3><div class="item-act">${linkSel}${renameBtn}${pdfBtns}${combine}<button type="button" class="btn sm" data-act="newDW" data-mode="dayworks" ${jb}>+ Day works</button><button type="button" class="btn sm ghost" data-act="newDW" data-mode="variation" ${jb}>+ Variation</button></div></div>${body}</section>`;};
   const addJob=`<section class="panel"><div class="panel-h"><h3>Add a job</h3><span class="sub">Create a job so day works &amp; variations can be filed under it.</span></div><form class="panel-b form" data-form="job">${fld('job','title','Job name',"",{attrs:'required',cls:'wide'})}${fld('job','client','Client','',{attrs:'list="dl-clients" autocomplete="off"'})}${fld('job','location','Site address','',{cls:'wide'})}<div class="go"><button class="btn">Add job</button></div></form></section>`;
   const seen={};
   let out=jobs.map(j=>{seen[j.title]=1;return section(j.title,j.client,j.id,(byTitle[j.title]||[]));}).join('');
@@ -1335,6 +1349,11 @@ const actions={
   dwCombineCancel(d){if(ui.dwPick)ui.dwPick[d.job]=false;if(ui.dwSel)ui.dwSel[d.job]={};},
   dwPickWk(d,el){ui.dwSel=ui.dwSel||{};const m=ui.dwSel[d.job]=ui.dwSel[d.job]||{};if(el&&el.checked)m[d.week]=true;else delete m[d.week];},
   dwCombineDo(d,el){const m=(ui.dwSel&&ui.dwSel[d.job])||{};const wks=Object.keys(m).filter(k=>m[k]);if(!wks.length){toast('Tick at least one week');return;}dwExportWeeks(d.job,wks,el);if(ui.dwPick)ui.dwPick[d.job]=false;},
+  dwRowPdf(d){dwSheetsPdf([d.id]);},
+  dwPdfDays(d){ui.dwPdfPick=ui.dwPdfPick||{};ui.dwPdfSel=ui.dwPdfSel||{};ui.dwPdfPick[d.job]=true;ui.dwPdfSel[d.job]={};if(ui.dwPick)ui.dwPick[d.job]=false;},
+  dwPdfDaysCancel(d){if(ui.dwPdfPick)ui.dwPdfPick[d.job]=false;if(ui.dwPdfSel)ui.dwPdfSel[d.job]={};},
+  dwPdfPickDay(d,el){ui.dwPdfSel=ui.dwPdfSel||{};const m=ui.dwPdfSel[d.job]=ui.dwPdfSel[d.job]||{};if(el&&el.checked)m[d.id]=true;else delete m[d.id];},
+  dwPdfDaysDo(d){const m=(ui.dwPdfSel&&ui.dwPdfSel[d.job])||{};const ids=Object.keys(m).filter(k=>m[k]);if(!ids.length){toast('Tick at least one day');return;}dwSheetsPdf(ids,d.job);if(ui.dwPdfPick)ui.dwPdfPick[d.job]=false;},
   holSet(d){const h=S.holidays[d.id];if(!h)return;write('holidays',d.id,'update',d.v==='pending'?{status:'pending',decidedBy:'',decidedAt:0}:{status:d.v,decidedBy:DWME.name||'Director',decidedAt:Date.now()});toast(d.v==='approved'?'Holiday approved':d.v==='declined'?'Holiday declined':'Request reopened');},
   crewWeek(d){ui.crewOpen=ui.crewOpen===d.key?null:d.key;},
   cwAdd(d){const doc=S.crew_hours[d.key];if(!doc||!doc.entries)return;const ents=doc.entries.map(e=>({...e}));ents.push({d:0,loc:'',h:0});write('crew_hours',d.key,'update',{entries:ents});},
@@ -2271,6 +2290,9 @@ function dwBuild(){
     #dw-ov.show{display:block}
     #dw-ov .dw-bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--band,#273E57);color:#fff}
     #dw-ov .dw-bar strong{font-size:1rem;font-family:var(--font-head,inherit)}
+    /* Ghost buttons default to dark ink — unreadable on the navy bar. Make them white with a visible outline. */
+    #dw-ov .dw-bar .btn.ghost{color:#fff;border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.1)}
+    #dw-ov .dw-bar .btn.ghost:hover{color:#fff;border-color:#fff;background:rgba(255,255,255,.22)}
     #dw-ov .dw-doc{max-width:880px;margin:0 auto;padding:16px 14px 130px}
     #dw-ov .dw-sec{background:#fff;border:1px solid var(--line,#e3ddd3);border-radius:14px;margin:0 0 14px;overflow:hidden}
     #dw-ov .dw-sec-h{background:var(--band,#273E57);color:#fff;font-weight:600;padding:10px 14px;font-family:var(--font-head,inherit);letter-spacing:.3px}
@@ -3144,6 +3166,112 @@ function dwExportWeeks(job,weekMons,btn){
       toast(msg);
     });
   }).catch(dwExportError).then(reset,reset);
+}
+var DW_PDF_CSS=[
+"*{box-sizing:border-box}",
+"body{margin:0;font:13px/1.45 Arial,Helvetica,sans-serif;color:#1D2C3D;background:#e9e3da}",
+".bar{position:sticky;top:0;z-index:5;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:12px;background:#273E57}",
+".bar button{font:600 14px Arial;border:0;border-radius:8px;padding:10px 18px;cursor:pointer}",
+".bar .save{background:#fff;color:#273E57}",
+".bar .tog{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.6)}",
+".note{max-width:820px;margin:0 auto;padding:10px 32px 0;font-size:12px;color:#586574}",
+".sheet{background:#fff;max-width:820px;margin:16px auto;padding:28px 32px;box-shadow:0 2px 12px rgba(0,0,0,.18)}",
+".hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #273E57;padding-bottom:12px;margin-bottom:14px}",
+".hd img{width:62px;height:62px;object-fit:contain}",
+".hd .t{flex:1}",
+".hd h1{margin:0;font-size:20px;letter-spacing:.04em;color:#273E57}",
+".hd .co{font-size:12px;color:#586574;margin-top:2px}",
+".hd .meta{text-align:right;font-size:12px;color:#586574}",
+".hd .meta b{display:block;font-size:15px;color:#1D2C3D}",
+".grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;margin:6px 0 4px}",
+".grid .full{grid-column:1 / -1}",
+".f label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#586574}",
+".f span{font-size:13px;font-weight:600}",
+".sec-h{font:700 12px Arial;color:#273E57;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 4px;border-bottom:2px solid #273E57;padding-bottom:3px}",
+".desc{white-space:pre-wrap;font-size:13px;margin:2px 0 4px}",
+"table{width:100%;border-collapse:collapse;margin:4px 0 2px}",
+"th,td{border:1px solid #d3c9bb;padding:5px 7px;text-align:left;vertical-align:top;font-size:12px}",
+"th{background:#f1ece4;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#586574}",
+"td.n,th.n{text-align:right;white-space:nowrap}",
+".hired{display:inline-block;font-size:9px;font-weight:700;color:#fff;background:#B45309;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}",
+".tot{margin:10px 0 2px auto;width:300px;max-width:100%}",
+".tot .r{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}",
+".tot .r.grand{font-weight:700;font-size:15px;border-top:2px solid #273E57;margin-top:4px;padding-top:6px}",
+".sigs{display:flex;gap:18px;margin-top:14px}",
+".sigbox{flex:1;border:1px solid #d3c9bb;border-radius:6px;padding:10px 12px}",
+".sigbox h4{margin:0 0 6px;font-size:11px;color:#586574;text-transform:uppercase;letter-spacing:.04em}",
+".sigbox .pad{height:70px;border-bottom:1px solid #a9a195;margin-bottom:6px;display:flex;align-items:flex-end}",
+".sigbox .pad img{max-height:68px;max-width:100%}",
+".sigbox .sm{display:flex;justify-content:space-between;font-size:12px}",
+".consent{font-size:11px;color:#586574;margin-top:10px}",
+".foot{margin-top:16px;border-top:1px solid #d3c9bb;padding-top:8px;font-size:11px;color:#586574}",
+"body.nocost .cost{display:none}",
+"@page{size:A4;margin:11mm}",
+"@media print{.bar,.note{display:none}body{background:#fff}.sheet{box-shadow:none;margin:0;max-width:none;padding:0}.sheet+.sheet{page-break-before:always}}"
+].join("");
+function dwSheetDocHTML(rec){
+  var data=rec.data||{},f=data.fields||{},L=data.lines||{};
+  var isVar=(rec.mode||data.mode)==='variation';
+  var e=function(s){return esc(s==null?'':String(s));};
+  var fld=function(lab,v){return v?('<div class="f"><label>'+e(lab)+'</label><span>'+e(v)+'</span></div>'):'';};
+  var lab=(L.labour||[]).filter(function(r){return r&&(r.name||r.role||r.hours||r.rate);});
+  var pl=(L.plant||[]).filter(function(r){return r&&(r.desc||r.hours||r.rate||r.hiredfrom);});
+  var mat=(L.mat||[]).filter(function(r){return r&&(r.desc||r.qty||r.cost);});
+  var labT=0,plT=0,matT=0;
+  var labTbl=lab.length?('<div class="sec-h">Labour</div><table><thead><tr><th>Operative</th><th>Role / Trade</th><th class="n">Hours</th><th class="n cost">Rate (£)</th><th class="n cost">Total (£)</th></tr></thead><tbody>'+lab.map(function(r){var t=num(r.hours)*num(r.rate);labT+=t;return '<tr><td>'+e(r.name)+'</td><td>'+e(r.role)+'</td><td class="n">'+e(r.hours)+'</td><td class="n cost">'+(r.rate?money(num(r.rate)):'')+'</td><td class="n cost">'+(t?money(t):'')+'</td></tr>';}).join('')+'</tbody></table>'):'';
+  var plTbl=pl.length?('<div class="sec-h">Plant / Machinery</div><table><thead><tr><th>Plant / Machine</th><th class="n">Days</th><th class="n cost">Rate (£)</th><th class="n cost">Total (£)</th><th>Hired from</th></tr></thead><tbody>'+pl.map(function(r){var t=num(r.hours)*num(r.rate);plT+=t;var hired=(r.hired&&r.hired!=='0');return '<tr><td>'+e(r.desc)+(hired?'<span class="hired">HIRED</span>':'')+'</td><td class="n">'+e(r.hours)+'</td><td class="n cost">'+(r.rate?money(num(r.rate)):'')+'</td><td class="n cost">'+(t?money(t):'')+'</td><td>'+e(r.hiredfrom)+'</td></tr>';}).join('')+'</tbody></table>'):'';
+  var matTbl=mat.length?('<div class="sec-h">Materials</div><table><thead><tr><th>Material</th><th class="n">Qty</th><th>Unit</th><th class="n cost">Unit Cost (£)</th><th class="n cost">Total (£)</th></tr></thead><tbody>'+mat.map(function(r){var t=num(r.qty)*num(r.cost);matT+=t;return '<tr><td>'+e(r.desc)+'</td><td class="n">'+e(r.qty)+'</td><td>'+e(r.unit)+'</td><td class="n cost">'+(r.cost?money(num(r.cost)):'')+'</td><td class="n cost">'+(t?money(t):'')+'</td></tr>';}).join('')+'</tbody></table>'):'';
+  var sub=labT+plT+matT,mk=num(f.f_markup),grand=sub*(1+mk/100);
+  var tot='<div class="cost"><div class="tot">'+
+    '<div class="r"><span>Labour</span><span>'+money(labT)+'</span></div>'+
+    '<div class="r"><span>Plant / Machinery</span><span>'+money(plT)+'</span></div>'+
+    '<div class="r"><span>Materials</span><span>'+money(matT)+'</span></div>'+
+    '<div class="r"><span>Sub-total</span><span>'+money(sub)+'</span></div>'+
+    (mk?'<div class="r"><span>Overheads &amp; profit ('+e(nf(f.f_markup))+'%)</span><span>'+money(grand-sub)+'</span></div>':'')+
+    '<div class="r grand"><span>Grand Total</span><span>'+money(grand)+'</span></div>'+
+  '</div></div>';
+  var sigBox=function(title,img,name,date){return '<div class="sigbox"><h4>'+e(title)+'</h4><div class="pad">'+(img?'<img src="'+e(img)+'" alt="">':'')+'</div><div class="sm"><span>'+(name?e(name):'&nbsp;')+'</span><span>'+(date?e(fmtD(date,true)):'')+'</span></div></div>';};
+  var dateStr=fmtD(rec.work_date||f.f_date||'',true),dayStr=f.f_day||'';
+  return '<div class="sheet">'+
+    '<div class="hd"><img src="https://dandcgroundworks.com/assets/logo.png" alt=""><div class="t"><h1>'+(isVar?'VARIATION SHEET':'DAY WORKS SHEET')+'</h1><div class="co">'+e(DC_CO.name)+'</div></div><div class="meta"><b>'+e(rec.sheet_no||f.f_sheet||'')+'</b>'+e(dateStr)+(dayStr?' · '+e(dayStr):'')+'</div></div>'+
+    '<div class="grid">'+fld('Contract / Project',f.f_project)+fld('Client',f.f_client)+'<div class="full">'+fld('Site / Location of Works',f.f_site)+'</div>'+fld('Instructed / Requested By',f.f_by)+fld('Role / Company',f.f_byrole)+fld('Site Requisition / PO No.',f.f_po)+'</div>'+
+    (f.f_desc?'<div class="sec-h">Description of Works</div><div class="desc">'+e(f.f_desc)+'</div>':'')+
+    (isVar&&f.f_reason?'<div class="sec-h">Reason for Variation</div><div class="desc">'+e(f.f_reason)+'</div>':'')+
+    labTbl+plTbl+matTbl+
+    ((lab.length||pl.length||mat.length)?tot:'')+
+    (f.f_notes?'<div class="sec-h">Additional Notes</div><div class="desc">'+e(f.f_notes)+'</div>':'')+
+    '<div class="sec-h">Authorisation &amp; Signatures</div><div class="sigs">'+
+      sigBox('For D&C Groundworks & Civils Ltd',data.sig1,f.f_sig1name,f.f_sig1date)+
+      sigBox('For the Client / Main Contractor',data.sig2,f.f_sig2name,f.f_sig2date)+
+    '</div><div class="consent">By signing, both parties acknowledge that the works described have been instructed and are to be paid in addition to the original contract sum.</div>'+
+    '<div class="foot">'+e(DC_CO.name)+' \u00b7 '+e(DC_CO.addr)+' \u00b7 Company Reg '+e(DC_CO.reg)+' \u00b7 VAT '+e(DC_CO.vat)+'</div>'+
+  '</div>';
+}
+function dwOpenPdfWindow(recs,jobLabel){
+  var w=window.open('','_blank');
+  if(!w){toast('Allow pop-ups to make the PDF, or use Export to Excel');return;}
+  var title=(jobLabel?jobLabel+' \u2014 ':'')+'Day works'+(recs.length>1?' ('+recs.length+' days)':'');
+  var body=recs.map(dwSheetDocHTML).join('');
+  var toggle="document.body.classList.toggle('nocost');var n=document.body.classList.contains('nocost');this.textContent=n?'Show costs':'Remove costs';var h=document.getElementById('mode');if(h)h.textContent=n?'Record only \u2014 no prices shown. Tap \u201cSave as PDF / Print\u201d to send.':'With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.';";
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+DW_PDF_CSS+'</style></head><body>'+
+    '<div class="bar"><button type="button" class="save" onclick="window.print()">Save as PDF / Print</button>'+
+    '<button type="button" class="tog" onclick="'+esc(toggle)+'">Remove costs</button></div>'+
+    '<div class="note" id="mode">With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.</div>'+
+    body+'</body></html>');
+  w.document.close();w.focus();
+}
+/* Load full sheet data for the given ids, order by work date, open the PDF window. */
+function dwSheetsPdf(ids,jobLabel){
+  if(!SB){toast('Not connected — check your connection');return;}
+  ids=(ids||[]).slice();
+  if(!ids.length){toast('No sheets to export');return;}
+  toast(ids.length>1?'Building PDF of '+ids.length+' days…':'Building PDF…');
+  SB.from('sheets').select('data,work_date,day,project,client,sheet_no,mode:data->>mode').in('id',ids).then(function(res){
+    if(res.error)throw new Error(res.error.message||'load failed');
+    var recs=(res.data||[]).slice().sort(function(a,b){return String(a.work_date||'').localeCompare(String(b.work_date||''));});
+    if(!recs.length)throw new Error('Nothing to export');
+    dwOpenPdfWindow(recs,jobLabel);
+  }).catch(function(ex){toast('Export failed: '+((ex&&ex.message)||'unknown'));});
 }
 function dwRestore(ov,s){
   s=s||{};
