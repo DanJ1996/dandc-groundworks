@@ -575,6 +575,17 @@ function invPill(i,st,today){
 const projName=id=>(S.projects[id]||{}).name||'';
 const quoteValue=q=>{const p=q.projectId&&S.projects[q.projectId];const t=p?(num(p.tender)||projTotals(p).total):0;return t>0?t:num(q.value);};
 const VAT={std:'20% VAT',drc:'Reverse charge',zero:'Zero rated'};
+// A project's VAT treatment. Stored on the project as vatRate — now a code (std/red/drc/zero);
+// older projects stored a bare number (20/5/0) so those are mapped for back-compat. Reverse
+// charge and zero-rated are BOTH 0% on the total but are different treatments, so they read
+// differently on the certificate (applies=false means no VAT line is added).
+function vatInfo(p){
+  var raw=(p.vatRate===''||p.vatRate==null)?'std':String(p.vatRate);
+  if(raw==='20'||raw==='std')return {kind:'std',rate:20,applies:true,text:'20% standard rate'};
+  if(raw==='5'||raw==='red')return {kind:'red',rate:5,applies:true,text:'5% reduced rate'};
+  if(raw==='zero')return {kind:'zero',rate:0,applies:false,text:'Zero-rated — no VAT chargeable'};
+  return {kind:'drc',rate:0,applies:false,text:'Domestic reverse charge — customer to account for VAT'};
+}
 // Issuer block printed on every Application for Payment certificate — the registered office.
 const DC_CO={name:'D&C Groundworks and Civils Limited',addr:'42a Fairfield, Christchurch, BH23 1QX',reg:'15548081',vat:'GB 474 1001 27'};
 const certPct=n=>(num(n)).toFixed(num(n)%1?1:0);
@@ -1206,8 +1217,8 @@ function vProject(p){
   const boq=ui.boqScan&&ui.boqScan.pid===p.id?ui.boqScan:null;
   const tv=num(p.tender);
   // VAT rate on the tender is a dropdown of the UK rates (default 20%). Pick 0% for reverse charge
-  // / zero rated, 5% reduced rate, or 20% standard. Stored per project as vatRate.
-  const vr=p.vatRate===''||p.vatRate==null?20:num(p.vatRate);
+  // / reverse charge / zero rated, 5% reduced rate, or 20% standard. Stored per project as vatRate.
+  const V=vatInfo(p), vr=V.rate;
   // Quotes priced up in Xero (pulled by the sync into XERO.quotes). Offer the ones for
   // this job's client first, else the most recent — tap one to set the tender (ex VAT),
   // the same path the PDF reader uses. Only directors ever have XERO.quotes (RLS).
@@ -1216,7 +1227,7 @@ function vProject(p){
   const _mine=_cl?_qs.filter(q=>{const c=(q.contact||'').trim().toLowerCase();return c&&(c.includes(_cl)||_cl.includes(c));}):[];
   const _qlist=(_mine.length?_mine:_qs).slice(0,8);
   const xeroQuotes=_qlist.length?`<div class="panel-b"><p class="dw-xhint" style="margin:0 0 8px"><strong>From Xero</strong> — ${_mine.length?'quotes for '+esc(p.client):'your most recent quotes'}. Tap one to set the tender (ex VAT).</p><div class="dw-xbtns">${_qlist.map(q=>`<button type="button" class="btn sm ghost" data-act="useTender" data-id="${p.id}" data-v="${num(q.total)}">${money(num(q.total))}<span class="sub" style="display:block;font-weight:400">${esc([q.number,q.contact,q.date?fmtD(q.date):''].filter(Boolean).join(' · '))}</span></button>`).join('')}</div></div>`:'';
-  const tenderBox=`<section class="panel" data-droptender="${p.id}"><div class="panel-h"><h3>Tender</h3><span class="sub">Type the figure, or drop a tender PDF or Excel here to read it.</span></div><div class="panel-b form"><label class="f"><span>Tender price (ex VAT) £</span><input id="pf-tender" value="${esc(nf(p.tender||''))}" inputmode="decimal" placeholder="e.g. 12500" data-chg="pf" data-id="${p.id}" data-k="tender"></label><label class="f"><span>VAT rate</span><select id="pf-vatRate" data-chg="pf" data-id="${p.id}" data-k="vatRate">${[[20,'20% — standard'],[5,'5% — reduced rate'],[0,'0% — zero / reverse charge']].map(([r,l])=>`<option value="${r}"${vr===r?' selected':''}>${l}</option>`).join('')}</select></label></div>${tv?`<div class="panel-b"><div class="totals"><div><span>Tender (ex VAT)</span><strong>${money(tv)}</strong></div><div class="sub"><span>VAT at ${vr}%</span><span>${money(tv*vr/100)}</span></div><div class="grand"><span>Total inc VAT</span><span>${money(tv*(1+vr/100))}</span></div></div></div>`:''}${xeroQuotes}<div class="panel-b">${assets?`<label class="btn sm filebtn">${scan&&scan.busy?'Reading the file…':'Read a PDF or Excel'}<input class="vh" type="file" accept=".pdf,.xlsx,.xlsm,application/pdf" data-chg="tenderFile" data-id="${p.id}"${scan&&scan.busy?' disabled':''}></label><p class="dw-xhint" style="margin-top:8px">Or drag a tender PDF or Excel onto this panel.</p>`:'<p class="dw-xhint">This view cannot read files here — type the tender figure above.</p>'}${scan&&!scan.busy?(scan.amounts.length?(()=>{const bottom=pickBottom(scan.amounts);return `<p class="dw-xhint" style="margin:14px 0 6px">The bottom line is the final total ex VAT (your "plus VAT" figure). Tap it to set the tender, or pick another figure.</p><button type="button" class="btn" data-act="useTender" data-id="${p.id}" data-v="${bottom.val}" style="width:100%">Bottom line — ${money(bottom.val)}</button><div class="dw-xbtns" style="margin-top:10px">${scan.amounts.map(a=>`<button type="button" class="btn sm ghost" data-act="useTender" data-id="${p.id}" data-v="${a.val}">${money(a.val)}${a.ctx?`<span class="sub" style="display:block;font-weight:400">${esc(a.ctx)}</span>`:''}</button>`).join('')}</div>`;})():`<p class="dw-xhint" style="margin-top:12px">${scan.error==='fail'?'Could not read that file. If a PDF is a scan/photo it has no text — type the figure in manually above.':'No £ figures found. Type the tender figure above.'}</p>`):''}</div></section>`;
+  const tenderBox=`<section class="panel" data-droptender="${p.id}"><div class="panel-h"><h3>Tender</h3><span class="sub">Type the figure, or drop a tender PDF or Excel here to read it.</span></div><div class="panel-b form"><label class="f"><span>Tender price (ex VAT) £</span><input id="pf-tender" value="${esc(nf(p.tender||''))}" inputmode="decimal" placeholder="e.g. 12500" data-chg="pf" data-id="${p.id}" data-k="tender"></label><label class="f"><span>VAT treatment</span><select id="pf-vatRate" data-chg="pf" data-id="${p.id}" data-k="vatRate">${[['std','20% — standard'],['red','5% — reduced rate'],['drc','0% — reverse charge (CIS)'],['zero','0% — zero-rated']].map(([k,l])=>`<option value="${k}"${V.kind===k?' selected':''}>${l}</option>`).join('')}</select></label></div>${tv?`<div class="panel-b"><div class="totals"><div><span>Tender (ex VAT)</span><strong>${money(tv)}</strong></div><div class="sub"><span>${V.applies?'VAT at '+vr+'%':esc(V.text)}</span><span>${money(tv*vr/100)}</span></div><div class="grand"><span>Total inc VAT</span><span>${money(tv*(1+vr/100))}</span></div></div></div>`:''}${xeroQuotes}<div class="panel-b">${assets?`<label class="btn sm filebtn">${scan&&scan.busy?'Reading the file…':'Read a PDF or Excel'}<input class="vh" type="file" accept=".pdf,.xlsx,.xlsm,application/pdf" data-chg="tenderFile" data-id="${p.id}"${scan&&scan.busy?' disabled':''}></label><p class="dw-xhint" style="margin-top:8px">Or drag a tender PDF or Excel onto this panel.</p>`:'<p class="dw-xhint">This view cannot read files here — type the tender figure above.</p>'}${scan&&!scan.busy?(scan.amounts.length?(()=>{const bottom=pickBottom(scan.amounts);return `<p class="dw-xhint" style="margin:14px 0 6px">The bottom line is the final total ex VAT (your "plus VAT" figure). Tap it to set the tender, or pick another figure.</p><button type="button" class="btn" data-act="useTender" data-id="${p.id}" data-v="${bottom.val}" style="width:100%">Bottom line — ${money(bottom.val)}</button><div class="dw-xbtns" style="margin-top:10px">${scan.amounts.map(a=>`<button type="button" class="btn sm ghost" data-act="useTender" data-id="${p.id}" data-v="${a.val}">${money(a.val)}${a.ctx?`<span class="sub" style="display:block;font-weight:400">${esc(a.ctx)}</span>`:''}</button>`).join('')}</div>`;})():`<p class="dw-xhint" style="margin-top:12px">${scan.error==='fail'?'Could not read that file. If a PDF is a scan/photo it has no text — type the figure in manually above.':'No £ figures found. Type the tender figure above.'}</p>`):''}</div></section>`;
   // Itemised variations — extras/changes the client can see line by line. Each line's
   // claim = (qty × rate) × claimed%. The claimed total feeds the application's variations
   // figure and prints as a schedule on the certificate.
@@ -2994,10 +3005,10 @@ function certModel(p,aid){
   var A=appCalc(p);
   var a=A.rows.find(function(r){return r.id===aid;});
   if(!a)return null;
-  var vr=(p.vatRate===''||p.vatRate==null)?20:num(p.vatRate);
+  var V=vatInfo(p), vr=V.rate;
   var notice=num(p.noticeDays)||7, due=num(p.dueDays)||14;
   var prior=A.rows.filter(function(r){return num(r.n)<num(a.n)&&!r.void;});
-  var vatAmt=vr>0?a.thisApp*vr/100:0;
+  var vatAmt=V.applies?a.thisApp*vr/100:0;
   var block=(p.appTo&&p.appTo.trim())?p.appTo:(p.client||'');
   // Itemised variations the client can see line by line. Claim = (qty × rate) × claimed%.
   // Only lines with a claim > 0 are printed. (The application's `vars` figure stays the
@@ -3018,8 +3029,8 @@ function certModel(p,aid){
     remaining:Math.max(0,A.tender-a.worksVal),
     vars:a.vars, subtotal:a.subtotal, retPct:a.retPct, retention:a.retention,
     netToDate:a.netToDate, prior:prior, thisApp:a.thisApp,
-    vr:vr, vatApplies:vr>0, vatText:vr===0?'Domestic reverse charge — customer to account for VAT':(certPct(vr)+'% standard rate'),
-    vatAmt:vatAmt, totalDue:a.thisApp+(vr>0?vatAmt:0),
+    vr:vr, vatApplies:V.applies, vatText:V.text,
+    vatAmt:vatAmt, totalDue:a.thisApp+(V.applies?vatAmt:0),
     noticeStr:fmtD(addDays(a.date,notice),true), dueStr:fmtD(addDays(a.date,due),true),
     issuer:DC_CO, fileBase:('Application '+a.n+' - '+(p.name||'Job')).replace(/[^\w\- ]+/g,'').replace(/\s+/g,' ').trim()
   };
