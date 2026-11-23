@@ -326,6 +326,9 @@ table.grid{border-collapse:collapse;width:100%}
 .jseg.r{border-radius:0 6px 6px 0;border-right:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
 .jseg.l.r{border-radius:6px}
 .jlabel{color:var(--ink);font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
+.jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
+.jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
+.lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
 .jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:color-mix(in srgb,var(--c) 70%,var(--ink));box-shadow:3px 0 0 color-mix(in srgb,var(--c) 70%,var(--ink))}
@@ -575,6 +578,9 @@ const PSTATUS=['Pricing','Ready to start','Live','Complete'];
 // Reassign a job to a different gang any time by changing its gang on the project.
 const GANGS=[{k:'g1',name:'Gang 1 - Chris',c:'--gang1'},{k:'g2',name:'Gang 2 - Matt',c:'--gang2'},{k:'g3',name:'Gang 3 - Dan',c:'--gang3'},{k:'g4',name:'Gang 4',c:'--gang4'}];
 const gangOf=k=>GANGS.find(g=>g.k===k);
+// The lead hand on a job = the name a gang is known by (e.g. "Gang 1 - Chris" → "Chris").
+// Gang 4 has no named lead, and an unassigned job has none, so this returns '' for those.
+const leadOf=k=>{const g=gangOf(k);if(!g)return '';const m=g.name.match(/-\s*(.+)$/);return m?m[1].trim():'';};
 const projPill=s=>s==='Live'?'good':s==='Ready to start'?'info':s==='Complete'?'neutral':'warn';
 const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
 /* Duration label — a single day with a time is a PART day (e.g. a morning doctor's
@@ -720,13 +726,14 @@ views.schedule=()=>{
     for(let i=0;i<7;i++){const inSpan=i>=cs&&i<=ce;
       // Repeat the label in every day the bar covers so each day reads on its own, not just the colour.
       const grip=(i===ce&&opts.jid&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
-      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
+      const leadChip=(i===cs&&!contL&&opts.lead)?`<span class="jlead">${esc(opts.lead)}</span>`:'';
+      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${leadChip}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${seg}</td>`;}
     return `<tr class="${opts.rowcls||''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
   };
   // Jobs = draggable bars. Any non-complete project with a start date that overlaps this week.
   const jobs=list('projects').filter(p=>p.status!=='Complete'&&p.startDate).map(p=>({p,s:p.startDate,e:(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate})).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
-  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,lead:leadOf(j.p.gang),jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
@@ -778,7 +785,7 @@ views.schedule=()=>{
     const sec=(t,arr)=>arr.length?`<div class="sdsec">${t}</div><ul class="items">${arr.join('')}</ul>`:'';
     const spanTxt=(a,b)=>a===b?'':'Runs '+holSpan({from:a,to:b});
     const body=
-      sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}">Open job</button>`);}))+
+      sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}" data-from="schedule">Open job</button>`);}))+
       sec('Diary',dEvs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);return li(g?g.c:evCat(e).c,`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],evActs(e));}))+
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':'',ui.edit==='vnote/'+q.vkind+'/'+q.id
         ?`<form class="vnotes-edit" data-form="vnoteEdit"><label class="f full"><span>Meeting notes</span><textarea id="vnoteEdit-text" name="text" rows="7">${esc(dv('vnoteEdit','text',q.meetNotes))}</textarea></label><div class="go"><button class="btn sm">Save notes</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form>`
@@ -1149,7 +1156,11 @@ function vProject(p){
   const xeroBtn=xHere.length
     ?`<a class="btn sm" href="https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${encodeURIComponent(xHere[0].xero_id)}" target="_blank" rel="noopener">Open ${esc(xHere[0].number||'invoice')} in Xero</a>`
     :`<button type="button" class="btn sm" data-act="findInvoice" data-q="${esc(p.client||p.name)}">Find invoice</button>`;
-  return `<div class="head"><div><button type="button" class="btn ghost sm" id="p-back" data-act="closeProject">‹ All projects</button></div></div><div class="head"><div><h2>${esc(p.name)}</h2><p class="sub">${[p.client,p.site].filter(Boolean).map(esc).join(' · ')}</p></div><div class="item-act">${xeroBtn}${pill(projPill(p.status),p.status||'Pricing')}</div></div>${details}${tenderBox}${variations}${appsBox}${pricing}${documents}`;
+  const backBtn=ui.projectFrom==='schedule'
+    ?`<button type="button" class="btn ghost sm" id="p-back" data-act="backToSchedule">‹ Back to schedule</button>`
+    :`<button type="button" class="btn ghost sm" id="p-back" data-act="closeProject">‹ All projects</button>`;
+  const lead=leadOf(p.gang);
+  return `<div class="head"><div>${backBtn}</div></div><div class="head"><div><h2>${esc(p.name)}</h2><p class="sub">${[p.client,p.site].filter(Boolean).map(esc).join(' · ')}</p>${lead?`<p class="sub lead-line">Lead hand · <strong>${esc(lead)}</strong></p>`:''}</div><div class="item-act">${xeroBtn}${pill(projPill(p.status),p.status||'Pricing')}</div></div>${details}${tenderBox}${variations}${appsBox}${pricing}${documents}`;
 }
 
 const invFields=(f,i,edit)=>{
@@ -1321,7 +1332,7 @@ views.crew=()=>{
 // Set by connect() once Supabase is up, so an action can fetch a stored PDF to share.
 let signDocUrl=null;
 const actions={
-  tab(d){ui.tab=d.tab;ui.edit=null;ui.confirm=null;if(d.tab==='projects')ui.project=null;try{localStorage.setItem('dc-tab',d.tab);}catch(e){}try{history.replaceState(null,'','#'+d.tab);}catch(e){}window.scrollTo(0,0);},
+  tab(d){ui.tab=d.tab;ui.edit=null;ui.confirm=null;ui.projectFrom='';if(d.tab==='projects')ui.project=null;try{localStorage.setItem('dc-tab',d.tab);}catch(e){}try{history.replaceState(null,'','#'+d.tab);}catch(e){}window.scrollTo(0,0);},
   week(d){ui.week=+d.d?addDays(ui.week,+d.d):mondayOf(todayISO());},
   schedWeek(d){ui.schedWeek=+d.d?addDays(ui.schedWeek,+d.d):mondayOf(todayISO());ui.schedDay=null;delete ui.drafts.event;},
   schedDay(d){ui.schedDay=(d.day&&d.day!==ui.schedDay)?d.day:null;if(ui.schedDay)ui.focusNext='sd-close';},
@@ -1448,7 +1459,9 @@ const actions={
   cancelXqPick(){ui.xqPick=null;},
   linkXeroQuote(d){const total=num(d.v);write('quotes',d.id,'update',{value:total,status:'Quoted',xeroQuote:d.ref||'',xeroQuoteNo:d.no||''});ui.xqPick=null;toast('Linked Xero quote'+(d.no?' '+d.no:'')+' — '+money(total)+', moved to Out on tender');},
   quoteToReminder(d){const q=S.quotes[d.id];if(!q)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[q.client,q.job].filter(Boolean).join(' · ')||'Reminder';const when=q.visitDate?q.visitDate+'T'+(q.visitTime||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});write('quotes',d.id,'delete');if(when)askNotify();toast('Moved to your reminders'+(when?' — pings '+fmtD(q.visitDate):''));},
-  openProject(d){ui.tab='projects';ui.project=d.id;ui.confirm=null;window.scrollTo(0,0);},
+  openProject(d){ui.tab='projects';ui.project=d.id;ui.projectFrom=d.from||'';ui.confirm=null;window.scrollTo(0,0);},
+  // Opened the job from the schedule → jump straight back to it (keeping the week you were on).
+  backToSchedule(){ui.tab='schedule';ui.project=null;ui.projectFrom='';ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
   findInvoice(d){ui.tab='invoices';ui.xfind=d.q||'';ui.xlink=null;window.scrollTo(0,0);},
   // Move a job between the Current / Interim (part-billed, still on site) / Completed sections.
@@ -1479,7 +1492,7 @@ const actions={
   certXl(){const c=ui.cert;if(!c)return;const p=S.projects[c.pid];if(!p)return;const d=certModel(p,c.aid);if(d)certExcel(d);},
   appVoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:true}:a)});toast('Application voided — kept on file');},
   appUnvoid(d){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{apps:(p.apps||[]).map(a=>a.id===d.a?{...a,void:false}:a)});toast('Application reinstated');},
-  closeProject(){ui.project=null;ui.confirm=null;},
+  closeProject(){ui.project=null;ui.projectFrom='';ui.confirm=null;},
   invSet(d){write('invoices',d.id,'update',{[d.k]:d.v==='today'?todayISO():''});toast(d.v?(d.k==='sent'?'Marked sent today':'Marked paid today'):'Updated');},
   remPin(d){write('reminders',d.id,'update',{pri:d.pin==='1'?Date.now():0});},
   notifyOn(){askNotify(true);},
@@ -3510,7 +3523,7 @@ function endJobDrag(){
     else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
     recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,before);
   }else if(jd.onBar&&jd.kind!=='event'){
-    actions.openProject({id:jd.jid});           // tapped the job bar itself → open the job
+    actions.openProject({id:jd.jid,from:'schedule'});   // tapped the job bar itself → open the job
   }else if(jd.tapDay){
     ui.schedDay=jd.tapDay;ui.focusNext='sd-close'; // tapped an empty day (or an event bar) → open that day
   }
