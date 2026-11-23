@@ -328,6 +328,8 @@ table.grid{border-collapse:collapse;width:100%}
 .jlabel{color:var(--ink);font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
+.jret{font-weight:700;margin-right:4px;opacity:.85}
+.jobrow.retvisit .jseg{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
 .peek{margin:0;display:grid;gap:7px}
 .peek>div{display:flex;gap:10px;align-items:baseline}
@@ -593,6 +595,10 @@ const gangOf=k=>GANGS.find(g=>g.k===k);
 // The lead hand on a job = the name a gang is known by (e.g. "Gang 1 - Chris" → "Chris").
 // Gang 4 has no named lead, and an unassigned job has none, so this returns '' for those.
 const leadOf=k=>{const g=gangOf(k);if(!g)return '';const m=g.name.match(/-\s*(.+)$/);return m?m[1].trim():'';};
+// A job can sit on the schedule more than once: its primary span (startDate→endDate) plus any
+// return visits in p.visits (going back to a finished/ongoing site). vi=null is the primary bar;
+// vi=0,1,… is the matching entry in p.visits. Everything else (gang, lead, client) is shared.
+const jobSpans=p=>{const out=[];if(p.startDate)out.push({p,s:p.startDate,e:(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate,vi:null});(p.visits||[]).forEach((v,i)=>{if(v&&v.from)out.push({p,s:v.from,e:(v.to&&v.to>=v.from)?v.to:v.from,vi:i});});return out;};
 const projPill=s=>s==='Live'?'good':s==='Ready to start'?'info':s==='Complete'?'neutral':'warn';
 const holSpan=h=>h.from===h.to?fmtD(h.from):fmtD(h.from)+' – '+fmtD(h.to);
 /* Duration label — a single day with a time is a PART day (e.g. a morning doctor's
@@ -739,13 +745,15 @@ views.schedule=()=>{
       // Repeat the label in every day the bar covers so each day reads on its own, not just the colour.
       const grip=(i===ce&&opts.jid&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
       const leadChip=opts.lead?`<span class="jlead">${esc(opts.lead)}</span>`:'';
-      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${leadChip}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
-      cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${seg}</td>`;}
-    return `<tr class="${opts.rowcls||''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
+      const retChip=opts.ret?`<span class="jret" title="Return visit">↩</span>`:'';
+      const seg=inSpan?`<div class="jseg${i===cs?' l':''}${i===ce?' r':''}" style="--c:var(${colorVar})"><span class="jlabel">${i===cs&&contL?'‹ ':''}${retChip}${leadChip}${esc(opts.text||'')}${i===ce&&contR?' ›':''}</span>${grip}</div>`:'';
+      cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"${opts.vi!=null?` data-jvi="${opts.vi}"`:''}`:''}>${seg}</td>`;}
+    return `<tr class="${opts.rowcls||''}${opts.ret?' retvisit':''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
   };
   // Jobs = draggable bars. Any non-complete project with a start date that overlaps this week.
-  const jobs=list('projects').filter(p=>p.status!=='Complete'&&p.startDate).map(p=>({p,s:p.startDate,e:(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate})).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
-  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,lead:leadOf(j.p.gang),jid:j.p.id,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  // Each job = its primary span, plus one bar per return visit (same job, going back to site).
+  const jobs=list('projects').filter(p=>p.status!=='Complete').flatMap(jobSpans).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
+  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,lead:leadOf(j.p.gang),jid:j.p.id,vi:j.vi,ret:j.vi!=null,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
@@ -789,7 +797,7 @@ views.schedule=()=>{
     const dw=DOW[(parse(sd).getUTCDay()+6)%7];
     const li=(c,main,subs,act)=>`<li class="item"><div><span class="sdot" style="--c:var(${c})"></span></div><div class="item-main">${main}${subs.filter(Boolean).map(x=>'<div class="sub">'+x+'</div>').join('')}</div>${act?`<div class="item-act">${act}</div>`:''}</li>`;
     const contact=(ph,site)=>[ph?`<a href="${esc(telHref(ph))}">${esc(ph)}</a>`:'',site?esc(site)+mapLink(site):''].filter(Boolean).join(' · ');
-    const dJobs=list('projects').filter(p=>p.status!=='Complete'&&p.startDate&&p.startDate<=sd&&((p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate)>=sd).sort(byName);
+    const dJobs=list('projects').filter(p=>p.status!=='Complete').flatMap(jobSpans).filter(j=>j.s<=sd&&j.e>=sd).sort((a,b)=>byName(a.p,b.p));
     const dEvs=list('events').filter(e=>e.from&&e.from<=sd&&evEnd(e)>=sd).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''))||String(a.title||'').localeCompare(String(b.title||'')));
     const dVis=schedVisits.filter(q=>q.visitDate===sd).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||'')));
     const dDue=list('quotes').filter(q=>q.due===sd&&needsPrice(q));
@@ -797,7 +805,7 @@ views.schedule=()=>{
     const sec=(t,arr)=>arr.length?`<div class="sdsec">${t}</div><ul class="items">${arr.join('')}</ul>`:'';
     const spanTxt=(a,b)=>a===b?'':'Runs '+holSpan({from:a,to:b});
     const body=
-      sec('Jobs',dJobs.map(p=>{const g=gangOf(p.gang);const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(p.startDate,e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}" data-from="schedule">Open job</button>`);}))+
+      sec('Jobs',dJobs.map(j=>{const p=j.p,g=gangOf(p.gang);return li(g?g.c:'--nogang',`<strong>${esc(p.name||'Job')}</strong>${j.vi!=null?' <span class="sub">· return visit</span>':''}${p.client?' · '+esc(p.client):''}`,[g?esc(g.name):'Unassigned gang',p.site?esc(p.site)+mapLink(p.site):'',spanTxt(j.s,j.e),p.notes?esc(p.notes):''],`<button type="button" class="btn ghost sm" data-act="openProject" data-id="${p.id}" data-from="schedule">Open job</button>${j.vi!=null?`<button type="button" class="btn ghost sm" data-act="removeVisit" data-id="${p.id}" data-vi="${j.vi}">Remove visit</button>`:''}`);}))+
       sec('Diary',dEvs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);return li(g?g.c:evCat(e).c,`<strong>${e.time?esc(e.time)+' · ':''}${esc(e.title||'Diary')}</strong>${e.client?' · '+esc(e.client):''}`,[[g?esc(g.name):'',e.who?'With '+esc(e.who):''].filter(Boolean).join(' · '),contact(e.phone,e.site),spanTxt(e.from,evEnd(e))],evActs(e));}))+
       sec('Site visits',dVis.map(q=>li('--info',`<strong>${q.visitTime?esc(q.visitTime)+' · ':''}${esc(q.client||'Visit')}</strong>${q.job?' · '+esc(q.job):''}`,[q.visitBy?'Going: '+esc(q.visitBy):'',contact(q.phone,q.site),q.visitNotes?esc(q.visitNotes):'',q.visitDone?'Done':'',ui.edit==='vnote/'+q.vkind+'/'+q.id
         ?`<form class="vnotes-edit" data-form="vnoteEdit"><label class="f full"><span>Meeting notes</span><textarea id="vnoteEdit-text" name="text" rows="7">${esc(dv('vnoteEdit','text',q.meetNotes))}</textarea></label><div class="go"><button class="btn sm">Save notes</button><button type="button" class="btn sm ghost" data-act="cancel">Cancel</button></div></form>`
@@ -816,7 +824,7 @@ views.schedule=()=>{
   const dayCards=days.map(d=>{
     const it=[];const L=(c,txt,sub,tag)=>it.push(`<div class="sdl" style="--c:var(${c})"><i></i><div><span class="sdl-t">${txt}</span>${tag||''}${sub?`<span class="sdl-s">${sub}</span>`:''}</div></div>`);
     list('company_dates').filter(c=>c.from&&c.from<=d.day&&cdEnd(c)>=d.day).forEach(c=>{const k=cdKind(c.kind);L(k[2],esc(c.title||k[1]),esc(k[1])+(cdTime(c)?' · '+esc(cdTime(c)):''));});
-    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;L(g?g.c:'--nogang',esc(j.p.name||'Job'),[g?esc(g.name):'No gang yet',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '));});
+    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;L(g?g.c:'--nogang',esc(j.p.name||'Job')+(j.vi!=null?' ↩':''),[g?esc(g.name):'No gang yet',j.vi!=null?'return visit':'',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '));});
     evs.filter(e=>e.from<=d.day&&evEnd(e)>=d.day).forEach(e=>{const g=gangOf(e.gang);L(g?g.c:evCat(e).c,esc(evLabel(e)),e.site?esc(e.site):'');});
     schedVisits.filter(q=>q.visitDate===d.day).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).forEach(q=>L('--info',(q.visitTime?esc(q.visitTime)+' · ':'')+esc(q.client||'Visit'),['Site visit'+(q.visitBy?' · '+esc(q.visitBy):''),q.site?esc(q.site):'',q.visitDone?'Done':''].filter(Boolean).join(' · '),q.meetNotes?'<span class="tnote sdl-note">Notes</span>':''));
     list('quotes').filter(q=>q.due===d.day&&needsPrice(q)).forEach(q=>L('--warn',esc(q.client||'Quote'),'Quote due'));
@@ -1489,13 +1497,22 @@ const actions={
   quoteToReminder(d){const q=S.quotes[d.id];if(!q)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[q.client,q.job].filter(Boolean).join(' · ')||'Reminder';const when=q.visitDate?q.visitDate+'T'+(q.visitTime||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});write('quotes',d.id,'delete');if(when)askNotify();toast('Moved to your reminders'+(when?' — pings '+fmtD(q.visitDate):''));},
   openProject(d){ui.tab='projects';ui.project=d.id;ui.projectFrom=d.from||'';ui.confirm=null;ui.jobPeek=null;window.scrollTo(0,0);},
   // Tapping a job bar on the schedule pops a quick preview instead of yanking you to the Projects tab.
-  jobPeek(d){ui.jobPeek=d.id;},
+  jobPeek(d){ui.jobPeek={id:d.id,vi:null};},
   jobPeekClose(){ui.jobPeek=null;},
   peekOpen(d){ui.jobPeek=null;actions.openProject({id:d.id,from:'schedule'});},
-  // Move any job to any day straight from its preview — picks the week for you if it's elsewhere.
-  peekMove(d){const el=document.getElementById('jp-move');const to=el&&el.value;if(!to){toast('Pick a date first');return;}const p=S.projects[d.id];if(!p)return;const before={startDate:p.startDate||'',endDate:p.endDate||''};const ne=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?addDays(to,dayDiff(p.endDate,p.startDate)):to;write('projects',d.id,'update',{startDate:to,endDate:ne});recordMove((p.name||'Job')+' moved to '+fmtD(to)+'.','projects',d.id,before);ui.jobPeek=null;ui.schedWeek=mondayOf(to);toast('“'+(p.name||'Job')+'” moved to '+fmtD(to));},
-  // Tap an empty day → drop an existing job (one you're returning to) onto that day, keeping its length.
-  placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const before={startDate:p.startDate||'',endDate:p.endDate||''};const ne=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?addDays(d.day,dayDiff(p.endDate,p.startDate)):d.day;write('projects',id,'update',{startDate:d.day,endDate:ne,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));},
+  // Move the span you were looking at (primary, or the return visit you tapped) to any day —
+  // picks the week for you if it's elsewhere, keeping the span's length.
+  peekMove(d){const el=document.getElementById('jp-move');const to=el&&el.value;if(!to){toast('Pick a date first');return;}const p=S.projects[d.id];if(!p)return;const vi=('vi'in d)?+d.vi:null;let patch,before;
+    if(vi!=null){const v=(p.visits||[])[vi]||{};const len=(v.from&&v.to&&v.to>=v.from)?dayDiff(v.to,v.from):0;const visits=(p.visits||[]).map(x=>({...x}));if(visits[vi])visits[vi]={...visits[vi],from:to,to:addDays(to,len)};patch={visits};before={visits:(p.visits||[]).map(x=>({...x}))};}
+    else{const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;patch={startDate:to,endDate:addDays(to,len)};before={startDate:p.startDate||'',endDate:p.endDate||''};}
+    write('projects',d.id,'update',patch);recordMove((p.name||'Job')+(vi!=null?' (return visit)':'')+' moved to '+fmtD(to)+'.','projects',d.id,before);ui.jobPeek=null;ui.schedWeek=mondayOf(to);toast('“'+(p.name||'Job')+'” moved to '+fmtD(to));},
+  // Tap an empty day → put an existing job on it as a RETURN VISIT, keeping where it already is.
+  // (If the job has no start date yet, this becomes its first/primary span instead.)
+  placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
+    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
+    const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day));},
+  // Drop a single return visit off the schedule (the job itself is untouched).
+  removeVisit(d){const p=S.projects[d.id];if(!p)return;const vi=+d.vi;const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.splice(vi,1);write('projects',d.id,'update',{visits});recordMove('Removed a return visit from '+(p.name||'job')+'.','projects',d.id,before);ui.jobPeek=null;toast('Return visit removed');},
   // Opened the job from the schedule → jump straight back to it (keeping the week you were on).
   backToSchedule(){ui.tab='schedule';ui.project=null;ui.projectFrom='';ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
@@ -3415,15 +3432,22 @@ function meetDoneModal(){
 // Tap a job bar on the schedule → a quick preview, so a stray tap never throws you off the
 // schedule onto the Projects tab. Shows the essentials and lets you open it or move it to any day.
 function jobPeekModal(){
-  const id=ui.jobPeek;if(!id)return '';
+  const pk=ui.jobPeek;if(!pk)return '';
+  const id=pk.id, vi=pk.vi;
   const p=S.projects[id];if(!p){ui.jobPeek=null;return '';}
   const g=gangOf(p.gang), lead=leadOf(p.gang);
-  const e=(p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate;
-  const when=p.startDate?(p.startDate===e?fmtD(p.startDate,true):fmtD(p.startDate,true)+' → '+fmtD(e,true)):'Not on the schedule yet';
+  // Which span are we looking at — the primary, or the return visit that was tapped?
+  const span=vi!=null?((p.visits||[])[vi]||{from:p.startDate,to:p.endDate}):{from:p.startDate,to:p.endDate};
+  const ss=span.from, se=(span.to&&span.to>=ss)?span.to:ss;
+  const when=ss?(ss===se?fmtD(ss,true):fmtD(ss,true)+' → '+fmtD(se,true)):'Not on the schedule yet';
+  const visitsTxt=(p.visits||[]).filter(v=>v&&v.from).map(v=>fmtD(v.from)).join(', ');
   const tv=num(p.tender);
-  const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],['Gang',g?esc(g.name):'No gang yet'],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,['When',esc(when)],tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
+  const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],['Gang',g?esc(g.name):'No gang yet'],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,[vi!=null?'This visit':'When',esc(when)],visitsTxt?['Return trips',esc(visitsTxt)]:null,tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
   const notes=p.notes?`<p class="sub" style="white-space:pre-wrap;margin:10px 0 0">${esc(p.notes)}</p>`:'';
-  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${esc(p.name||'Job')}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form"><label class="f"><span>Move it to another day (start date)</span><input type="date" id="jp-move" value="${esc(p.startDate||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}">Move job</button></div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
+  const title=esc(p.name||'Job')+(vi!=null?' <span class="sub">· return visit</span>':'');
+  const viAttr=vi!=null?` data-vi="${vi}"`:'';
+  const removeBtn=vi!=null?`<button type="button" class="btn sm ghost" data-act="removeVisit" data-id="${esc(id)}" data-vi="${vi}">Remove this visit</button>`:'';
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${title}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form"><label class="f"><span>Move ${vi!=null?'this visit':'it'} to another day (start date)</span><input type="date" id="jp-move" value="${esc(ss||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}"${viAttr}>Move ${vi!=null?'visit':'job'}</button>${removeBtn}</div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
 }
 // Pops up the moment an enquiry is marked Won (and from the "Set start date" pill on
 // a Ready-to-start job), so the start date is set there and then — no hunting the job
@@ -3531,9 +3555,14 @@ view.addEventListener('pointerdown',e=>{
   const tds=[...row.querySelectorAll('td.jcell')];let lo=7,hi=-1;
   tds.forEach((c,i)=>{if(c.querySelector('.jseg')){lo=Math.min(lo,i);hi=Math.max(hi,i);}});
   if(hi<0){lo=hi=+td.dataset.jday;}
-  const label=((row.querySelector('.jlabel')||{}).textContent||'').replace(/^‹\s*/,'').replace(/\s*›$/,'');
+  const label=((row.querySelector('.jlabel')||{}).textContent||'').replace(/^‹\s*/,'').replace(/^↩\s*/,'').replace(/\s*›$/,'');
+  // Which span was grabbed? A return-visit bar carries data-jvi; the primary bar has none.
+  const vi=('jvi' in td.dataset)?+td.dataset.jvi:null;
   const r=(kind==='event'?S.events[jid]:S.projects[jid])||{};
-  const oS=kind==='event'?r.from:r.startDate, oE=kind==='event'?(r.from?evEnd(r):''):(r.endDate||r.startDate);
+  let oS,oE;
+  if(kind==='event'){oS=r.from;oE=r.from?evEnd(r):'';}
+  else if(vi!=null){const v=(r.visits||[])[vi]||{};oS=v.from;oE=v.to||v.from;}
+  else {oS=r.startDate;oE=r.endDate||r.startDate;}
   // Grabbing the right-edge grip = stretch the end (more days). Grabbing anywhere else on the
   // bar = pick the whole job up and move it (keeps the same number of days). Tap = open.
   const mode=e.target.closest('[data-jgrip]')?'resize':'move';
@@ -3541,7 +3570,7 @@ view.addEventListener('pointerdown',e=>{
   // Did the press land on the actual job bar (a day it covers), or on an empty day in its row?
   // A tap on the bar opens the job; a tap on an empty day opens THAT day, not the job.
   const onBar=!!td.querySelector('.jseg');
-  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar,overBin:false};
+  jobDrag={jid,kind,vi,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar,overBin:false};
   row.classList.add('dragging');
   if(kind==='job')document.body.classList.add('jdrag');   // reveal the Bin drop-zone while dragging a job
   try{td.setPointerCapture(e.pointerId);}catch(_){}
@@ -3566,10 +3595,19 @@ function endJobDrag(){
   if(!jobDrag)return;const jd=jobDrag;jobDrag=null;jd.row.classList.remove('dragging');
   document.body.classList.remove('jdrag');
   const binEl=document.getElementById('jbin');if(binEl)binEl.classList.remove('hot');
-  // Dropped on the Bin → soft-delete the job (recoverable from the Bin tab). Not a move.
+  // Dropped on the Bin. A return-visit bar → just drop that visit (the job itself stays put).
+  // A primary bar → soft-delete the whole job (recoverable from the Bin tab).
   if(jd.overBin&&jd.kind==='job'){
-    write('projects',jd.jid,'update',{binned:Date.now()});
-    toast('“'+(jd.text||'Job')+'” moved to the Bin — open the Bin tab to restore or empty it');
+    const r=S.projects[jd.jid]||{};
+    if(jd.vi!=null){
+      const before={visits:(r.visits||[]).map(v=>({...v}))};
+      const visits=(r.visits||[]).map(v=>({...v}));visits.splice(jd.vi,1);
+      write('projects',jd.jid,'update',{visits});
+      recordMove('Removed a return visit from '+(jd.text||'job')+'.','projects',jd.jid,before);
+    }else{
+      write('projects',jd.jid,'update',{binned:Date.now()});
+      toast('“'+(jd.text||'Job')+'” moved to the Bin — open the Bin tab to restore or empty it');
+    }
     schedule();return;
   }
   if(jd.moved){
@@ -3584,12 +3622,21 @@ function endJobDrag(){
       ne=jd.origEnd?addDays(jd.origEnd,jd.delta):ns;
     }
     const col=jd.kind==='event'?'events':'projects', r=S[col][jd.jid]||{};
-    const before=jd.kind==='event'?{from:r.from||'',to:r.to||''}:{startDate:r.startDate||'',endDate:r.endDate||''};
-    if(jd.kind==='event')write('events',jd.jid,'update',{from:ns,to:ne});
-    else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
-    recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,before);
+    if(jd.kind==='event'){
+      write('events',jd.jid,'update',{from:ns,to:ne});
+      recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,{from:r.from||'',to:r.to||''});
+    }else if(jd.vi!=null){                               // dragging a return-visit bar → move only that visit
+      const before={visits:(r.visits||[]).map(v=>({...v}))};
+      const visits=(r.visits||[]).map(v=>({...v}));
+      if(visits[jd.vi])visits[jd.vi]={...visits[jd.vi],from:ns,to:ne};
+      write('projects',jd.jid,'update',{visits});
+      recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+' (return visit).',col,jd.jid,before);
+    }else{
+      write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
+      recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,{startDate:r.startDate||'',endDate:r.endDate||''});
+    }
   }else if(jd.onBar&&jd.kind!=='event'){
-    ui.jobPeek=jd.jid;   // tapped the job bar itself → quick preview (stay on the schedule)
+    ui.jobPeek={id:jd.jid,vi:jd.vi};   // tapped the job bar itself → quick preview (stay on the schedule)
   }else if(jd.tapDay){
     ui.schedDay=jd.tapDay;ui.focusNext='sd-close'; // tapped an empty day (or an event bar) → open that day
   }
