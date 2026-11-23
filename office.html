@@ -3470,7 +3470,10 @@ view.addEventListener('pointerdown',e=>{
   // bar = pick the whole job up and move it (keeps the same number of days). Tap = open.
   const mode=e.target.closest('[data-jgrip]')?'resize':'move';
   const grab=+td.dataset.jday;
-  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||''};
+  // Did the press land on the actual job bar (a day it covers), or on an empty day in its row?
+  // A tap on the bar opens the job; a tap on an empty day opens THAT day, not the job.
+  const onBar=!!td.querySelector('.jseg');
+  jobDrag={jid,kind,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar};
   row.classList.add('dragging');
   try{td.setPointerCapture(e.pointerId);}catch(_){}
 });
@@ -3506,10 +3509,10 @@ function endJobDrag(){
     if(jd.kind==='event')write('events',jd.jid,'update',{from:ns,to:ne});
     else write('projects',jd.jid,'update',{startDate:ns,endDate:ne});
     recordMove((jd.mode==='resize'?'Resized ':'Moved ')+(jd.text||'job')+'.',col,jd.jid,before);
-  }else if(jd.kind!=='event'){
-    actions.openProject({id:jd.jid});
+  }else if(jd.onBar&&jd.kind!=='event'){
+    actions.openProject({id:jd.jid});           // tapped the job bar itself → open the job
   }else if(jd.tapDay){
-    ui.schedDay=jd.tapDay;ui.focusNext='sd-close';
+    ui.schedDay=jd.tapDay;ui.focusNext='sd-close'; // tapped an empty day (or an event bar) → open that day
   }
   schedule();
 }
