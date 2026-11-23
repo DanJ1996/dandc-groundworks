@@ -329,7 +329,7 @@ table.grid{border-collapse:collapse;width:100%}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .jret{font-weight:700;margin-right:4px;opacity:.85}
-.jobrow.retvisit .jseg{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
+.jobrow.retvisit .jseg,.jseg.ret{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
 .peek{margin:0;display:grid;gap:7px}
 .peek>div{display:flex;gap:10px;align-items:baseline}
@@ -342,6 +342,16 @@ table.grid{border-collapse:collapse;width:100%}
 body.jdrag .jbin{display:flex;align-items:center;justify-content:center;gap:9px;margin:12px 0 0;padding:16px;border:2px dashed color-mix(in srgb,#b23b2c 55%,var(--line));border-radius:11px;color:#b23b2c;font-weight:700;background:color-mix(in srgb,#b23b2c 6%,transparent);transition:background .12s,border-color .12s,transform .12s}
 body.jdrag .jbin.hot{border-style:solid;border-color:#b23b2c;background:color-mix(in srgb,#b23b2c 15%,transparent);transform:scale(1.015)}
 .jbin-ic{font-size:1.15rem;line-height:1}
+/* Desktop only: give the schedule a bit more room so the days and job bars read clearer. */
+@media(min-width:900px){
+  .sched.gantt .jseg{height:56px}
+  .sched.gantt .jlabel{font-size:.92rem;-webkit-line-clamp:3}
+  .sched.gantt .dayhead{padding:11px 6px}
+  .sched.gantt .dh-dow,.sched.gantt .dh-mon{font-size:.74rem}
+  .sched.gantt .dh-day{font-size:1.6rem}
+  .sched.gantt th.tcol{font-size:.88rem;font-weight:700}
+  .sched.gantt .addjob{font-size:.82rem;padding:8px 2px}
+}
 .tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:none}
 .tev.mdrag,.vmark.mdrag{opacity:.55;cursor:grabbing}
 .sched.gantt td.mdrop{outline:2px dashed var(--info);outline-offset:-2px;background:color-mix(in srgb,var(--info) 12%,transparent)}
@@ -750,10 +760,41 @@ views.schedule=()=>{
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${days[i].day}"${opts.jid?` data-jday="${i}" data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"${opts.vi!=null?` data-jvi="${opts.vi}"`:''}`:''}>${seg}</td>`;}
     return `<tr class="${opts.rowcls||''}${opts.ret?' retvisit':''}"${opts.jid?` data-jid="${esc(opts.jid)}" data-jkind="${opts.kind||'job'}"`:''}>${cells}</tr>`;
   };
-  // Jobs = draggable bars. Any non-complete project with a start date that overlaps this week.
-  // Each job = its primary span, plus one bar per return visit (same job, going back to site).
+  // Jobs = draggable bars, grouped into GANG LANES: one row per gang, every job for that
+  // gang sitting on the same line across the week (they're on different days, so no clash).
+  // Un-ganged jobs get a "No gang" lane. Return visits ride their job's gang.
   const jobs=list('projects').filter(p=>p.status!=='Complete').flatMap(jobSpans).filter(j=>j.e>=wk&&j.s<=wkEnd).sort((a,b)=>String(a.s).localeCompare(String(b.s))||byName(a.p,b.p));
-  const jobRows=jobs.length?jobs.map((j,idx)=>{const g=gangOf(j.p.gang);return spanRow(idx===0?'Jobs':'',j.s,j.e,g?g.c:'--nogang',{text:j.p.name,lead:leadOf(j.p.gang),jid:j.p.id,vi:j.vi,ret:j.vi!=null,rowcls:'jobrow'});}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  // Lay a gang's spans across 7 day cells. Every cell is a drop target (data-jday); only the
+  // days a job covers carry its data-jid, so a drag starts on the bar but can land on any day.
+  // Distinct shades of a gang colour so two jobs for the same gang in one week read as clearly
+  // different bars (the gang is still shown by the lane + lead name). Return visits share their job's shade.
+  const SHADES=[g=>`var(${g})`,
+    g=>`color-mix(in srgb,var(${g}) 55%,#ffffff)`,
+    g=>`color-mix(in srgb,var(${g}) 70%,#0b2036)`,
+    g=>`color-mix(in srgb,var(${g}) 33%,#ffffff)`,
+    g=>`color-mix(in srgb,var(${g}) 90%,#0b2036)`,
+    g=>`color-mix(in srgb,var(${g}) 78%,#ffffff)`];
+  const laneRow=(label,colorVar,spans)=>{
+    const order=[...new Set(spans.map(x=>x.p.id))];           // one shade per distinct job, in start order
+    const shadeFor=id=>SHADES[Math.max(0,order.indexOf(id))%SHADES.length](colorVar);
+    let cells=`<th class="tcol">${label||''}</th>`;
+    for(let i=0;i<7;i++){
+      const sp=spans.find(x=>{const cs=col(x.s<wk?wk:x.s),ce=col(x.e>wkEnd?wkEnd:x.e);return i>=cs&&i<=ce;});
+      let seg='',data=` data-jday="${i}" data-sday="${days[i].day}"`;
+      if(sp){const cs=col(sp.s<wk?wk:sp.s),ce=col(sp.e>wkEnd?wkEnd:sp.e),contL=sp.s<wk,contR=sp.e>wkEnd,isCs=i===cs,isCe=i===ce;
+        const grip=(isCe&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
+        const retChip=sp.vi!=null?'<span class="jret" title="Return visit">↩</span>':'';
+        const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
+        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${isCe&&contR?' ›':''}</span>${grip}</div>`;
+        data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
+      }
+      cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}"${data}>${seg}</td>`;
+    }
+    return `<tr class="jobrow lanerow">${cells}</tr>`;
+  };
+  const laneKeys=GANGS.map(g=>g.k).concat(['']);   // gangs in order, then the "no gang" lane last
+  const byGang={};jobs.forEach(j=>{const k=gangOf(j.p.gang)?j.p.gang:'';(byGang[k]=byGang[k]||[]).push(j);});
+  const jobRows=jobs.length?laneKeys.filter(k=>byGang[k]&&byGang[k].length).map(k=>{const g=gangOf(k);return laneRow(g?(leadOf(k)||g.name):'No gang',g?g.c:'--nogang',byGang[k]);}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
@@ -3553,7 +3594,8 @@ function paintJobDrag(){
   const tds=[...jobDrag.row.querySelectorAll('td.jcell')];
   tds.forEach((td,i)=>{
     const inSpan=i>=jobDrag.min&&i<=jobDrag.max;
-    td.innerHTML=inSpan?`<div class="jseg${i===jobDrag.min?' l':''}${i===jobDrag.max?' r':''}" style="--c:var(${jobDrag.color})">${i===jobDrag.min?`<span class="jlabel">${esc(jobDrag.text)}</span>`:''}</div>`:'';
+    // Paint the dragged job where it now sits; everywhere else, restore the lane's OTHER jobs.
+    td.innerHTML=inSpan?`<div class="jseg${i===jobDrag.min?' l':''}${i===jobDrag.max?' r':''}" style="--c:${jobDrag.color}">${i===jobDrag.min?`<span class="jlabel">${esc(jobDrag.text)}</span>`:''}</div>`:(jobDrag.others[i]||'');
   });
 }
 view.addEventListener('pointerdown',e=>{
@@ -3565,12 +3607,19 @@ view.addEventListener('pointerdown',e=>{
   const td=e.target.closest('tr.jobrow td.jcell[data-jday][data-jid]');if(!td)return;
   const row=td.closest('tr.jobrow');if(!row)return;
   const jid=td.dataset.jid, kind=td.dataset.jkind||'job';
-  const tds=[...row.querySelectorAll('td.jcell')];let lo=7,hi=-1;
-  tds.forEach((c,i)=>{if(c.querySelector('.jseg')){lo=Math.min(lo,i);hi=Math.max(hi,i);}});
-  if(hi<0){lo=hi=+td.dataset.jday;}
-  const label=((row.querySelector('.jlabel')||{}).textContent||'').replace(/^‹\s*/,'').replace(/^↩\s*/,'').replace(/\s*›$/,'');
   // Which span was grabbed? A return-visit bar carries data-jvi; the primary bar has none.
   const vi=('jvi' in td.dataset)?+td.dataset.jvi:null;
+  // A gang lane can hold several jobs — only the cells of THIS job (same id + visit) belong to the drag.
+  const mine=c=>c.dataset.jid===jid&&((('jvi'in c.dataset)?+c.dataset.jvi:null)===vi);
+  const tds=[...row.querySelectorAll('td.jcell')];let lo=7,hi=-1;
+  tds.forEach((c,i)=>{if(mine(c)&&c.querySelector('.jseg')){lo=Math.min(lo,i);hi=Math.max(hi,i);}});
+  if(hi<0){lo=hi=+td.dataset.jday;}
+  // Keep the lane's OTHER jobs so repainting the drag never wipes them off the line.
+  const others=tds.map(c=>(!mine(c)&&c.querySelector('.jseg'))?c.innerHTML:null);
+  const lc=tds.find(c=>mine(c)&&c.querySelector('.jlabel'));
+  const label=((lc&&lc.querySelector('.jlabel').textContent)||'').replace(/^‹\s*/,'').replace(/^↩\s*/,'').replace(/\s*›$/,'');
+  const segEl=(tds.find(c=>mine(c)&&c.querySelector('.jseg'))||td).querySelector('.jseg');
+  const color=(segEl&&segEl.style.getPropertyValue('--c'))||(kind==='event'?'var(--good)':'var(--accent)');
   const r=(kind==='event'?S.events[jid]:S.projects[jid])||{};
   let oS,oE;
   if(kind==='event'){oS=r.from;oE=r.from?evEnd(r):'';}
@@ -3583,7 +3632,7 @@ view.addEventListener('pointerdown',e=>{
   // Did the press land on the actual job bar (a day it covers), or on an empty day in its row?
   // A tap on the bar opens the job; a tap on an empty day opens THAT day, not the job.
   const onBar=!!td.querySelector('.jseg');
-  jobDrag={jid,kind,vi,mode,grab,color:kind==='event'?'--good':'--accent',row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar,overBin:false};
+  jobDrag={jid,kind,vi,mode,grab,color,row,startLo:lo,startHi:hi,min:lo,max:hi,delta:0,text:label,others,moved:false,origStart:oS,origEnd:oE,tapDay:td.dataset.sday||'',onBar,overBin:false};
   row.classList.add('dragging');
   if(kind==='job')document.body.classList.add('jdrag');   // reveal the Bin drop-zone while dragging a job
   try{td.setPointerCapture(e.pointerId);}catch(_){}
