@@ -1576,6 +1576,7 @@ const actions={
   jobPeek(d){ui.jobPeek={id:d.id,vi:null};},
   jobPeekClose(){ui.jobPeek=null;},
   peekOpen(d){ui.jobPeek=null;actions.openProject({id:d.id,from:'schedule'});},
+  peekNote(d){const p=S.projects[d.id];if(!p)return;const el=document.getElementById('jp-note');const text=el?el.value.trim():'';write('projects',d.id,'update',{notes:text});toast(text?'Note saved on “'+(p.name||'job')+'”':'Note cleared');},
   // Move the span you were looking at (primary, or the return visit you tapped) to any day —
   // picks the week for you if it's elsewhere, keeping the span's length.
   peekMove(d){const el=document.getElementById('jp-move');const to=el&&el.value;if(!to){toast('Pick a date first');return;}const p=S.projects[d.id];if(!p)return;const vi=('vi'in d)?+d.vi:null;let patch,before;
@@ -1641,7 +1642,6 @@ const actions={
 const changes={
   // Assign/change a job's gang from the schedule peek — recolours the bar into that gang's line; peek stays open.
   peekGang(d,v){const p=S.projects[d.id];if(!p)return;write('projects',d.id,'update',{gang:v});const g=gangOf(v);toast(g?'“'+(p.name||'Job')+'” is now '+g.name:'Gang cleared');},
-  peekNote(d){const p=S.projects[d.id];if(!p)return;const el=document.getElementById('jp-note');const text=el?el.value.trim():'';write('projects',d.id,'update',{notes:text});toast(text?'Note saved on “'+(p.name||'job')+'”':'Note cleared');},
   ts(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].h=H(rows[i]);rows[i].h[+d.d]=Math.max(0,Math.min(24,num(v)));saveSheet(ui.week,d.e,rows);},
   tsp(d,v){const rows=rowsOf(ui.week,d.e),i=+d.r;while(rows.length<=i)rows.push(blankRow());rows[i].p=v;saveSheet(ui.week,d.e,rows);},
   qstatus(d,v){
