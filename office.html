@@ -806,7 +806,7 @@ views.schedule=()=>{
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
       }else{
         // Empty slot in this gang's row — tap it to start a job for THIS gang on THIS day.
-        seg=`<button type="button" class="celladd" data-act="newDayJob" data-day="${days[i].day}" data-gang="${esc(gangKey||'')}" aria-label="Add a job for ${esc(label||'this gang')} on ${DOW[days[i].i]} ${fmtD(days[i].day)}">+</button>`;
+        seg=`<button type="button" class="celladd" data-act="slotAdd" data-day="${days[i].day}" data-gang="${esc(gangKey||'')}" aria-label="Add a job for ${esc(label||'this gang')} on ${DOW[days[i].i]} ${fmtD(days[i].day)}">+</button>`;
       }
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}"${data}>${seg}</td>`;
     }
@@ -878,7 +878,9 @@ views.schedule=()=>{
     const noteSec=`<div class="sdsec">Notes for this day</div><form class="panel-b form" data-form="dayNote">${area('dayNote','text','Jot anything — reminders, who to call, access codes, deliveries…',dNote)}<div class="go"><button class="btn">${dNote?'Save note':'Add note'}</button>${dNote?`<button type="button" class="btn ghost" data-act="dayNoteDel" data-day="${sd}">Remove</button>`:''}</div>${dNote?`<div class="go dn-move"><label class="f"><span>Wrong day? Move this note to</span><input type="date" id="dn-move" value="${esc(sd)}"></label><button type="button" class="btn ghost" data-act="dayNoteMove" data-day="${sd}">Move note</button></div>`:''}</form>`;
     const retJobs=list('projects').filter(p=>p.status!=='Complete'&&!(p.startDate&&p.startDate<=sd&&((p.endDate&&p.endDate>=p.startDate)?p.endDate:p.startDate)>=sd)).sort(byName);
     const retPick=retJobs.length?`<div class="panel-b form"><label class="f wide"><span>Put an existing job on this day <span class="sub">— one you're going back to</span></span><select id="ret-${sd}" aria-label="Pick an existing job to put on this day"><option value="">Pick a job you're returning to…</option>${retJobs.map(p=>`<option value="${esc(p.id)}">${esc(p.name||'Job')}${p.client?' — '+esc(p.client):''}</option>`).join('')}</select></label><div class="go"><button type="button" class="btn sm" data-act="placeJobOnDay" data-day="${sd}">Put on this day</button></div></div>`:'';
-    const dayAdd=`<div class="sdsec">Add to this day</div><div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}">Start a job on this day</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${retPick}${evForm(sd)}`;
+    const addG=ui.addGang&&gangOf(ui.addGang)?ui.addGang:'';
+    const addGName=addG?(leadOf(addG)||gangOf(addG).name):'';
+    const dayAdd=`<div class="sdsec">Add to this day${addGName?` <span class="sub">— for ${esc(addGName)}</span>`:''}</div>${addGName?`<div class="panel-b sub">Pick an existing job below to put on ${esc(addGName)}’s day, or start a new one.</div>`:''}<div class="panel-b"><button type="button" class="btn sm" data-act="newDayJob" data-day="${sd}" data-gang="${esc(addG)}">Start a job on this day${addGName?' for '+esc(addGName):''}</button> <span class="sub">For a meeting, delivery, emergency or site visit, use the form below — the date is already set. After adding, tap “Make it a site visit” if it is a visit.</span></div>${retPick}${evForm(sd)}`;
     dayPanel=`<section class="panel sdpanel" id="sd-panel"><div class="panel-h"><div class="week"><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="-1" aria-label="Previous day">‹</button><h3>${dw} ${fmtD(sd,true)}</h3><button type="button" class="btn ghost sm" data-act="schedDayStep" data-d="1" aria-label="Next day">›</button></div><button type="button" class="btn ghost sm" id="sd-close" data-act="schedDay" data-day="">Close</button></div>${body||`<div class="panel-b sub">Nothing booked on this day.</div>`}${noteSec}${dayAdd}</section>`;
   }
   /* ---- Days view: the week as a vertical list of day cards (phone-friendly, no sideways scroll) ---- */
@@ -1442,7 +1444,10 @@ const actions={
   tab(d){ui.tab=d.tab;ui.edit=null;ui.confirm=null;ui.projectFrom='';if(d.tab==='projects')ui.project=null;try{localStorage.setItem('dc-tab',d.tab);}catch(e){}try{history.replaceState(null,'','#'+d.tab);}catch(e){}window.scrollTo(0,0);},
   week(d){ui.week=+d.d?addDays(ui.week,+d.d):mondayOf(todayISO());},
   schedWeek(d){ui.schedWeek=+d.d?addDays(ui.schedWeek,+d.d):mondayOf(todayISO());ui.schedDay=null;delete ui.drafts.event;},
-  schedDay(d){ui.schedDay=(d.day&&d.day!==ui.schedDay)?d.day:null;if(ui.schedDay)ui.focusNext='sd-close';},
+  schedDay(d){ui.addGang=null;ui.schedDay=(d.day&&d.day!==ui.schedDay)?d.day:null;if(ui.schedDay)ui.focusNext='sd-close';},
+  // Tap an empty slot in a gang's row → open that day, remembering the gang, so you can
+  // either pick an EXISTING job or start a new one (not forced straight into a new job).
+  slotAdd(d){ui.addGang=d.gang||'';ui.schedDay=d.day;ui.focusNext='sd-close';},
   schedDayStep(d){if(!ui.schedDay)return;ui.schedDay=addDays(ui.schedDay,+d.d);ui.schedWeek=mondayOf(ui.schedDay);ui.focusNext='sd-close';},
   // Start a job straight from a tapped day: creates a live project already dated to that day
   // (shows as a one-day bar — drag the grip to extend) and opens it so you fill in the details.
@@ -1579,8 +1584,8 @@ const actions={
     write('projects',d.id,'update',patch);recordMove((p.name||'Job')+(vi!=null?' (return visit)':'')+' moved to '+fmtD(to)+'.','projects',d.id,before);ui.jobPeek=null;ui.schedWeek=mondayOf(to);toast('“'+(p.name||'Job')+'” moved to '+fmtD(to));},
   // Tap an empty day → put an existing job on it as a RETURN VISIT, keeping where it already is.
   // (If the job has no start date yet, this becomes its first/primary span instead.)
-  placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
-    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
+  placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const g=(!p.gang&&ui.addGang)?ui.addGang:(p.gang||'');ui.addGang=null;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
+    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,gang:g,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
     const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day));},
   dwClearSearch(){ui.dwSearch='';},
   // Drop a single return visit off the schedule (the job itself is untouched).
