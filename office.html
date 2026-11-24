@@ -297,6 +297,8 @@ table.grid{border-collapse:collapse;width:100%}
 .sched.gantt td.jcell{padding:3px 2px;height:48px;vertical-align:middle;position:relative;overflow:visible}
 .sched.gantt td.jcell.we{background:color-mix(in srgb,var(--sunk) 45%,transparent)}
 .sched.gantt td.jcell.today{background:color-mix(in srgb,var(--good) 7%,var(--surface))}
+.celladd{display:block;width:100%;height:100%;min-height:42px;border:0;background:transparent;color:color-mix(in srgb,var(--ink) 18%,transparent);font:600 18px Arial;line-height:1;cursor:pointer;border-radius:6px;transition:background .12s,color .12s}
+.celladd:hover,.celladd:focus-visible{background:color-mix(in srgb,var(--ink) 6%,transparent);color:color-mix(in srgb,var(--ink) 50%,transparent);outline:none}
 .sched.gantt thead th:not(.tcol){padding:0}
 .sched.gantt .dayhead{all:unset;box-sizing:border-box;display:block;width:100%;padding:7px 4px;cursor:pointer;text-align:center;font-weight:700;border-radius:var(--r);background:var(--sunk)}
 .sched.gantt .dayhead:hover,.sched.gantt .dayhead:focus-visible{filter:brightness(.96)}
@@ -789,7 +791,7 @@ views.schedule=()=>{
     g=>`color-mix(in srgb,var(${g}) 33%,#ffffff)`,
     g=>`color-mix(in srgb,var(${g}) 90%,#0b2036)`,
     g=>`color-mix(in srgb,var(${g}) 78%,#ffffff)`];
-  const laneRow=(label,colorVar,spans)=>{
+  const laneRow=(label,colorVar,spans,gangKey)=>{
     const order=[...new Set(spans.map(x=>x.p.id))];           // one shade per distinct job, in start order
     const shadeFor=id=>SHADES[Math.max(0,order.indexOf(id))%SHADES.length](colorVar);
     let cells=`<th class="tcol">${label||''}</th>`;
@@ -802,6 +804,9 @@ views.schedule=()=>{
         const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
         seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${isCe&&contR?' ›':''}</span>${grip}</div>`;
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
+      }else{
+        // Empty slot in this gang's row — tap it to start a job for THIS gang on THIS day.
+        seg=`<button type="button" class="celladd" data-act="newDayJob" data-day="${days[i].day}" data-gang="${esc(gangKey||'')}" aria-label="Add a job for ${esc(label||'this gang')} on ${DOW[days[i].i]} ${fmtD(days[i].day)}">+</button>`;
       }
       cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}"${data}>${seg}</td>`;
     }
@@ -809,7 +814,7 @@ views.schedule=()=>{
   };
   const laneKeys=GANGS.map(g=>g.k).concat(['']);   // gangs in order, then the "no gang" lane last
   const byGang={};jobs.forEach(j=>{const k=gangOf(j.p.gang)?j.p.gang:'';(byGang[k]=byGang[k]||[]).push(j);});
-  const jobRows=jobs.length?laneKeys.filter(k=>byGang[k]&&byGang[k].length).map(k=>{const g=gangOf(k);return laneRow(g?(leadOf(k)||g.name):'No gang',g?g.c:'--nogang',byGang[k]);}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
+  const jobRows=jobs.length?laneKeys.filter(k=>byGang[k]&&byGang[k].length).map(k=>{const g=gangOf(k);return laneRow(g?(leadOf(k)||g.name):'No gang',g?g.c:'--nogang',byGang[k],k);}).join(''):`<tr class="jobrow-empty"><th class="tcol">Jobs</th><td colspan="7"><span class="sub" style="padding:6px 10px;display:inline-block">No jobs this week. Set a start date on a project, then drag it across the days here.</span></td></tr>`;
   // Timed site visits — small markers on their day. Booked against an enquiry or a job.
   const schedVisits=list('quotes').filter(q=>q.visitDate).map(q=>asVisit('q',q)).concat(list('projects').filter(p=>p.visitDate).map(p=>asVisit('p',p)));
   const dayVisits=days.map(d=>schedVisits.filter(q=>q.visitDate===d.day));
@@ -1441,7 +1446,7 @@ const actions={
   schedDayStep(d){if(!ui.schedDay)return;ui.schedDay=addDays(ui.schedDay,+d.d);ui.schedWeek=mondayOf(ui.schedDay);ui.focusNext='sd-close';},
   // Start a job straight from a tapped day: creates a live project already dated to that day
   // (shows as a one-day bar — drag the grip to extend) and opens it so you fill in the details.
-  newDayJob(d){const id=uid();write('projects',id,'set',{name:'New job',client:'',site:'',status:'Live',startDate:d.day,endDate:d.day,lines:[],markup:0,docs:[],notes:'',created:todayISO()});ui.schedDay=null;ui.tab='projects';ui.project=id;window.scrollTo(0,0);toast('New job started on '+fmtD(d.day)+' — fill in the details');},
+  newDayJob(d){const id=uid();write('projects',id,'set',{name:'New job',client:'',site:'',status:'Live',startDate:d.day,endDate:d.day,gang:d.gang||'',lines:[],markup:0,docs:[],notes:'',created:todayISO()});ui.schedDay=null;ui.tab='projects';ui.project=id;window.scrollTo(0,0);toast('New job started on '+fmtD(d.day)+(d.gang&&gangOf(d.gang)?' for '+(leadOf(d.gang)||gangOf(d.gang).name):'')+' — fill in the details');},
   // Move a day note to another date (e.g. it went on next week by mistake). If that day already
   // has a note, this one is added underneath rather than overwriting it.
   undoMove(){undoMove();},
