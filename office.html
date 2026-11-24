@@ -331,6 +331,8 @@ table.grid{border-collapse:collapse;width:100%}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .jret{font-weight:700;margin-right:4px;opacity:.85}
+.jnote-in{font-weight:500;color:color-mix(in srgb,var(--ink) 60%,transparent)}
+.sdl-note-txt{color:var(--muted);font-style:italic}
 .jobrow.retvisit .jseg,.jseg.ret{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
 .peek{margin:0;display:grid;gap:7px}
@@ -791,6 +793,9 @@ views.schedule=()=>{
     g=>`color-mix(in srgb,var(${g}) 33%,#ffffff)`,
     g=>`color-mix(in srgb,var(${g}) 90%,#0b2036)`,
     g=>`color-mix(in srgb,var(${g}) 78%,#ffffff)`];
+  // First line of a job's notes, trimmed to a snippet — shown on the bar/day card so the
+  // important bits (access, materials, who to call) are visible without opening the job.
+  const noteSnip=(s,n)=>{s=String(s||'').replace(/\s+/g,' ').trim();return s?(s.length>(n||48)?s.slice(0,n||48).trim()+'…':s):'';};
   const laneRow=(label,colorVar,spans,gangKey)=>{
     const order=[...new Set(spans.map(x=>x.p.id))];           // one shade per distinct job, in start order
     const shadeFor=id=>SHADES[Math.max(0,order.indexOf(id))%SHADES.length](colorVar);
@@ -802,7 +807,8 @@ views.schedule=()=>{
         const grip=(isCe&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
         const retChip=sp.vi!=null?'<span class="jret" title="Return visit">↩</span>':'';
         const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
-        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${isCe&&contR?' ›':''}</span>${grip}</div>`;
+        const noteBit=(isCs&&sp.vi==null&&sp.p.notes)?` <span class="jnote-in">— ${esc(noteSnip(sp.p.notes))}</span>`:'';
+        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${noteBit}${isCe&&contR?' ›':''}</span>${grip}</div>`;
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
       }else{
         // Empty slot in this gang's row — tap it to start a job for THIS gang on THIS day.
@@ -887,7 +893,7 @@ views.schedule=()=>{
   const dayCards=days.map(d=>{
     const it=[];const L=(c,txt,sub,tag)=>it.push(`<div class="sdl" style="--c:var(${c})"><i></i><div><span class="sdl-t">${txt}</span>${tag||''}${sub?`<span class="sdl-s">${sub}</span>`:''}</div></div>`);
     list('company_dates').filter(c=>c.from&&c.from<=d.day&&cdEnd(c)>=d.day).forEach(c=>{const k=cdKind(c.kind);L(k[2],esc(c.title||k[1]),esc(k[1])+(cdTime(c)?' · '+esc(cdTime(c)):''));});
-    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;L(g?g.c:'--nogang',esc(j.p.name||'Job')+(j.vi!=null?' ↩':''),[g?esc(g.name):'No gang yet',j.vi!=null?'return visit':'',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '));});
+    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;const nt=(j.vi==null&&j.p.notes)?noteSnip(j.p.notes,60):'';L(g?g.c:'--nogang',esc(j.p.name||'Job')+(j.vi!=null?' ↩':''),[[g?esc(g.name):'No gang yet',j.vi!=null?'return visit':'',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '),nt?'<span class="sdl-note-txt">'+esc(nt)+'</span>':''].filter(Boolean).join('<br>'));});
     evs.filter(e=>e.from<=d.day&&evEnd(e)>=d.day).forEach(e=>{const g=gangOf(e.gang);L(g?g.c:evCat(e).c,esc(evLabel(e)),e.site?esc(e.site):'');});
     schedVisits.filter(q=>q.visitDate===d.day).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).forEach(q=>L('--info',(q.visitTime?esc(q.visitTime)+' · ':'')+esc(q.client||'Visit'),['Site visit'+(q.visitBy?' · '+esc(q.visitBy):''),q.site?esc(q.site):'',q.visitDone?'Done':''].filter(Boolean).join(' · '),q.meetNotes?'<span class="tnote sdl-note">Notes</span>':''));
     list('quotes').filter(q=>q.due===d.day&&needsPrice(q)).forEach(q=>L('--warn',esc(q.client||'Quote'),'Quote due'));
@@ -1586,8 +1592,10 @@ const actions={
   // Tap an empty day → put an existing job on it as a RETURN VISIT, keeping where it already is.
   // (If the job has no start date yet, this becomes its first/primary span instead.)
   placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const g=(!p.gang&&ui.addGang)?ui.addGang:(p.gang||'');ui.addGang=null;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
-    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,gang:g,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
-    const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day));},
+    // No gang on it yet → after placing, pop the job preview open so a gang can be picked there and then.
+    const needGang=!g;const popGang=()=>{if(needGang){ui.schedDay=null;ui.jobPeek={id,vi:null};}};
+    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,gang:g,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});popGang();toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day)+(needGang?' — now pick a gang for it':''));return;}
+    const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);popGang();toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day)+(needGang?' — now pick a gang for it':''));},
   dwClearSearch(){ui.dwSearch='';},
   // Drop a single return visit off the schedule (the job itself is untouched).
   removeVisit(d){const p=S.projects[d.id];if(!p)return;const vi=+d.vi;const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.splice(vi,1);write('projects',d.id,'update',{visits});recordMove('Removed a return visit from '+(p.name||'job')+'.','projects',d.id,before);ui.jobPeek=null;toast('Return visit removed');},
