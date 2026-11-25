@@ -331,6 +331,8 @@ table.grid{border-collapse:collapse;width:100%}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .jret{font-weight:700;margin-right:4px;opacity:.85}
+.jnote-in{font-weight:500;color:color-mix(in srgb,var(--ink) 60%,transparent)}
+.sdl-note-txt{color:var(--muted);font-style:italic}
 .jobrow.retvisit .jseg,.jseg.ret{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
 .peek{margin:0;display:grid;gap:7px}
@@ -791,6 +793,9 @@ views.schedule=()=>{
     g=>`color-mix(in srgb,var(${g}) 33%,#ffffff)`,
     g=>`color-mix(in srgb,var(${g}) 90%,#0b2036)`,
     g=>`color-mix(in srgb,var(${g}) 78%,#ffffff)`];
+  // First line of a job's notes, trimmed to a snippet — shown on the bar/day card so the
+  // important bits (access, materials, who to call) are visible without opening the job.
+  const noteSnip=(s,n)=>{s=String(s||'').replace(/\s+/g,' ').trim();return s?(s.length>(n||48)?s.slice(0,n||48).trim()+'…':s):'';};
   const laneRow=(label,colorVar,spans,gangKey)=>{
     const order=[...new Set(spans.map(x=>x.p.id))];           // one shade per distinct job, in start order
     const shadeFor=id=>SHADES[Math.max(0,order.indexOf(id))%SHADES.length](colorVar);
@@ -802,7 +807,8 @@ views.schedule=()=>{
         const grip=(isCe&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
         const retChip=sp.vi!=null?'<span class="jret" title="Return visit">↩</span>':'';
         const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
-        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${isCe&&contR?' ›':''}</span>${grip}</div>`;
+        const noteBit=(isCs&&sp.vi==null&&sp.p.notes)?` <span class="jnote-in">— ${esc(noteSnip(sp.p.notes))}</span>`:'';
+        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${noteBit}${isCe&&contR?' ›':''}</span>${grip}</div>`;
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
       }else{
         // Empty slot in this gang's row — tap it to start a job for THIS gang on THIS day.
@@ -887,7 +893,7 @@ views.schedule=()=>{
   const dayCards=days.map(d=>{
     const it=[];const L=(c,txt,sub,tag)=>it.push(`<div class="sdl" style="--c:var(${c})"><i></i><div><span class="sdl-t">${txt}</span>${tag||''}${sub?`<span class="sdl-s">${sub}</span>`:''}</div></div>`);
     list('company_dates').filter(c=>c.from&&c.from<=d.day&&cdEnd(c)>=d.day).forEach(c=>{const k=cdKind(c.kind);L(k[2],esc(c.title||k[1]),esc(k[1])+(cdTime(c)?' · '+esc(cdTime(c)):''));});
-    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;L(g?g.c:'--nogang',esc(j.p.name||'Job')+(j.vi!=null?' ↩':''),[g?esc(g.name):'No gang yet',j.vi!=null?'return visit':'',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '));});
+    jobs.filter(j=>j.s<=d.day&&j.e>=d.day).forEach(j=>{const g=gangOf(j.p.gang);const n=dayDiff(j.e,j.s)+1,k=dayDiff(d.day,j.s)+1;const nt=(j.vi==null&&j.p.notes)?noteSnip(j.p.notes,60):'';L(g?g.c:'--nogang',esc(j.p.name||'Job')+(j.vi!=null?' ↩':''),[[g?esc(g.name):'No gang yet',j.vi!=null?'return visit':'',n>1?'day '+k+' of '+n:''].filter(Boolean).join(' · '),nt?'<span class="sdl-note-txt">'+esc(nt)+'</span>':''].filter(Boolean).join('<br>'));});
     evs.filter(e=>e.from<=d.day&&evEnd(e)>=d.day).forEach(e=>{const g=gangOf(e.gang);L(g?g.c:evCat(e).c,esc(evLabel(e)),e.site?esc(e.site):'');});
     schedVisits.filter(q=>q.visitDate===d.day).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||''))).forEach(q=>L('--info',(q.visitTime?esc(q.visitTime)+' · ':'')+esc(q.client||'Visit'),['Site visit'+(q.visitBy?' · '+esc(q.visitBy):''),q.site?esc(q.site):'',q.visitDone?'Done':''].filter(Boolean).join(' · '),q.meetNotes?'<span class="tnote sdl-note">Notes</span>':''));
     list('quotes').filter(q=>q.due===d.day&&needsPrice(q)).forEach(q=>L('--warn',esc(q.client||'Quote'),'Quote due'));
@@ -896,9 +902,9 @@ views.schedule=()=>{
     if(note)L('--note',esc(note.length>90?note.slice(0,90)+'…':note),'Note');
     const f=parse(d.day);
     return `<li><button type="button" class="sdcard${d.isT?' today':''}${d.we?' we':''}${ui.schedDay===d.day?' picked':''}${it.length?'':' empty'}" data-act="schedDay" data-day="${d.day}"><div class="cd-date"><span class="cd-dow">${DOW[d.i]}</span><span class="cd-day">${f.getUTCDate()}</span><span class="cd-mon">${MON[f.getUTCMonth()]}</span></div><div class="sd-body">${d.isT?'<span class="sd-today">Today</span>':''}${it.length?it.join(''):'<span class="sd-none">Nothing booked</span>'}</div><span class="sd-chev">›</span></button></li>`;}).join('');
-  // A tappable "+ Job" on every day so you can start a job straight from an empty day
-  // (job rows swallow taps for dragging, so this row gives a clear add target on each day).
-  const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="newDayJob" data-day="${d.day}" aria-label="Start a job on ${DOW[d.i]} ${fmtD(d.day)}">+ Job</button></td>`).join('')}</tr>`;
+  // A tappable "+" on every day → opens that day so you can PICK an existing job or start a new
+  // one (job rows swallow taps for dragging, so this row gives a clear add target on each day).
+  const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="slotAdd" data-day="${d.day}" aria-label="Add to ${DOW[d.i]} ${fmtD(d.day)} — put an existing job on this day or start a new one">+ Add</button></td>`).join('')}</tr>`;
   const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
   if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
   return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job for a quick preview (open it or move it from there).</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
@@ -1576,6 +1582,7 @@ const actions={
   jobPeek(d){ui.jobPeek={id:d.id,vi:null};},
   jobPeekClose(){ui.jobPeek=null;},
   peekOpen(d){ui.jobPeek=null;actions.openProject({id:d.id,from:'schedule'});},
+  peekNote(d){const p=S.projects[d.id];if(!p)return;const el=document.getElementById('jp-note');const text=el?el.value.trim():'';write('projects',d.id,'update',{notes:text});toast(text?'Note saved on “'+(p.name||'job')+'”':'Note cleared');},
   // Move the span you were looking at (primary, or the return visit you tapped) to any day —
   // picks the week for you if it's elsewhere, keeping the span's length.
   peekMove(d){const el=document.getElementById('jp-move');const to=el&&el.value;if(!to){toast('Pick a date first');return;}const p=S.projects[d.id];if(!p)return;const vi=('vi'in d)?+d.vi:null;let patch,before;
@@ -1585,8 +1592,10 @@ const actions={
   // Tap an empty day → put an existing job on it as a RETURN VISIT, keeping where it already is.
   // (If the job has no start date yet, this becomes its first/primary span instead.)
   placeJobOnDay(d){const el=document.getElementById('ret-'+d.day);const id=el&&el.value;if(!id){toast('Pick a job first');return;}const p=S.projects[id];if(!p)return;const g=(!p.gang&&ui.addGang)?ui.addGang:(p.gang||'');ui.addGang=null;const len=(p.startDate&&p.endDate&&p.endDate>=p.startDate)?dayDiff(p.endDate,p.startDate):0;const ne=addDays(d.day,len);
-    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,gang:g,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day));return;}
-    const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day));},
+    // No gang on it yet → after placing, pop the job preview open so a gang can be picked there and then.
+    const needGang=!g;const popGang=()=>{if(needGang){ui.schedDay=null;ui.jobPeek={id,vi:null};}};
+    if(!p.startDate){write('projects',id,'update',{startDate:d.day,endDate:ne,gang:g,status:p.status==='Complete'?'Live':p.status});recordMove((p.name||'Job')+' put on '+fmtD(d.day)+'.','projects',id,{startDate:'',endDate:''});popGang();toast('“'+(p.name||'Job')+'” is on '+fmtD(d.day)+(needGang?' — now pick a gang for it':''));return;}
+    const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.push({from:d.day,to:ne});write('projects',id,'update',{visits});recordMove((p.name||'Job')+' — return visit on '+fmtD(d.day)+'.','projects',id,before);popGang();toast('“'+(p.name||'Job')+'” added as a return visit on '+fmtD(d.day)+(needGang?' — now pick a gang for it':''));},
   dwClearSearch(){ui.dwSearch='';},
   // Drop a single return visit off the schedule (the job itself is untouched).
   removeVisit(d){const p=S.projects[d.id];if(!p)return;const vi=+d.vi;const before={visits:(p.visits||[]).map(v=>({...v}))};const visits=(p.visits||[]).map(v=>({...v}));visits.splice(vi,1);write('projects',d.id,'update',{visits});recordMove('Removed a return visit from '+(p.name||'job')+'.','projects',d.id,before);ui.jobPeek=null;toast('Return visit removed');},
@@ -3644,11 +3653,12 @@ function jobPeekModal(){
   const rows=[['Client',p.client?esc(p.client):''],['Site',p.site?esc(p.site)+mapLink(p.site):''],lead?['Lead hand','<strong>'+esc(lead)+'</strong>']:null,[vi!=null?'This visit':'When',esc(when)],visitsTxt?['Return trips',esc(visitsTxt)]:null,tv?['Tender',money(tv)]:null,p.po?['PO',esc(p.po)]:null].filter(Boolean).filter(r=>r[1]);
   // Assign (or change) the gang right here — the bar recolours into that gang's line straight away.
   const gangPick=`<label class="f"><span>Gang on this job</span><select data-chg="peekGang" data-id="${esc(id)}" aria-label="Assign a gang to this job">${[['','No gang yet']].concat(GANGS.map(gg=>[gg.k,gg.name])).map(([k,n])=>`<option value="${k}"${(p.gang||'')===k?' selected':''}>${esc(n)}</option>`).join('')}</select></label>`;
-  const notes=p.notes?`<p class="sub" style="white-space:pre-wrap;margin:10px 0 0">${esc(p.notes)}</p>`:'';
+  // Jot notes straight onto the job from here — no need to open the full job first.
+  const noteBox=`<div class="panel-b form"><label class="f full"><span>Notes for this job</span><textarea id="jp-note" rows="4" placeholder="Jot anything — access, materials, who to call, site notes…">${esc(p.notes||'')}</textarea></label><div class="go"><button type="button" class="btn sm" data-act="peekNote" data-id="${esc(id)}">${p.notes?'Save note':'Add note'}</button></div></div>`;
   const title=esc(p.name||'Job')+(vi!=null?' <span class="sub">· return visit</span>':'');
   const viAttr=vi!=null?` data-vi="${vi}"`:'';
   const removeBtn=vi!=null?`<button type="button" class="btn sm ghost" data-act="removeVisit" data-id="${esc(id)}" data-vi="${vi}">Remove this visit</button>`:'';
-  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${title}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>${notes}</div><div class="panel-b form">${gangPick}<label class="f"><span>Move ${vi!=null?'this visit':'it'} to another day (start date)</span><input type="date" id="jp-move" value="${esc(ss||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}"${viAttr}>Move ${vi!=null?'visit':'job'}</button>${removeBtn}</div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="jp-h" style="max-width:520px"><div class="panel-h"><h3 id="jp-h">${title}</h3><span class="item-act">${pill(projPill(p.status),p.status||'Pricing')}</span></div><div class="panel-b"><dl class="peek">${rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></div>${noteBox}<div class="panel-b form">${gangPick}<label class="f"><span>Move ${vi!=null?'this visit':'it'} to another day (start date)</span><input type="date" id="jp-move" value="${esc(ss||'')}"></label><div class="go"><button type="button" class="btn sm ghost" data-act="peekMove" data-id="${esc(id)}"${viAttr}>Move ${vi!=null?'visit':'job'}</button>${removeBtn}</div></div><div class="panel-b go"><button type="button" class="btn" data-act="peekOpen" data-id="${esc(id)}">Open full job</button><button type="button" class="btn ghost" data-act="jobPeekClose">Close</button></div></section></div>`;
 }
 // Pops up the moment an enquiry is marked Won (and from the "Set start date" pill on
 // a Ready-to-start job), so the start date is set there and then — no hunting the job
