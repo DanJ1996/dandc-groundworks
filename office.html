@@ -2605,7 +2605,15 @@ function dwBuild(){
   dwCombo(ov.querySelector('[data-f="f_site"]'),()=>DW_SITES);
   ov.querySelector('[data-dwclose]').addEventListener('click',closeDW);
   ov.querySelector('[data-dwsave]').addEventListener('click',()=>dwSave(ov));
-  ov.querySelector('[data-dwpdf]').addEventListener('click',()=>{setTimeout(()=>window.print(),50);});
+  // Export PDF: open the PDF page (window opened on the tap so iPhone allows it) from what's on
+  // screen now, saved or not. Printing straight from the app does nothing on an iPhone home-screen app.
+  ov.querySelector('[data-dwpdf]').addEventListener('click',()=>{
+    let w=null;try{w=window.open('','_blank');}catch(e){}
+    if(!w){setTimeout(()=>window.print(),50);return;}
+    const data=dwCollect(ov),f=data.fields||{};
+    const rec={data,work_date:f.f_date||'',day:f.f_day||'',project:f.f_project||'',client:f.f_client||'',sheet_no:f.f_sheet||'',mode:data.mode};
+    dwOpenPdfWindow([rec],f.f_project||'',w,{noCost:DWME.role!=='director'});
+  });
   ov.querySelectorAll('[data-dwadd]').forEach(b=>b.addEventListener('click',()=>{ov.querySelector('[data-rows="'+b.dataset.dwadd+'"]').appendChild(dwMakeRow(ov,b.dataset.dwadd));}));
   ov.querySelectorAll('[data-dwxl]').forEach(b=>b.addEventListener('click',()=>dwCopyExcel(ov,b.dataset.dwxl)));
   ov.querySelector('[data-dwexport]').addEventListener('click',()=>dwExportExcel(ov));
@@ -3531,17 +3539,18 @@ function dwSheetDocHTML(rec){
     '<div class="foot">'+e(DC_CO.name)+' \u00b7 '+e(DC_CO.addr)+' \u00b7 Company Reg '+e(DC_CO.reg)+' \u00b7 VAT '+e(DC_CO.vat)+'</div>'+
   '</div>';
 }
-function dwOpenPdfWindow(recs,jobLabel,w){
+function dwOpenPdfWindow(recs,jobLabel,w,opts){
+  opts=opts||{};
   if(!w||w.closed){try{w=window.open('','_blank');}catch(e){w=null;}}
   if(!w){toast('Your phone blocked the PDF window — allow pop-ups for this site in Settings › Safari, or use Export to Excel');return;}
   try{w.document.open();}catch(e){}
   var title=(jobLabel?jobLabel+' \u2014 ':'')+'Day works'+(recs.length>1?' ('+recs.length+' days)':'');
   var body=recs.map(dwSheetDocHTML).join('');
   var toggle="document.body.classList.toggle('nocost');var n=document.body.classList.contains('nocost');this.textContent=n?'Show costs':'Remove costs';var h=document.getElementById('mode');if(h)h.textContent=n?'Record only \u2014 no prices shown. Tap \u201cSave as PDF / Print\u201d to send.':'With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.';";
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+DW_PDF_CSS+'</style></head><body>'+
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+DW_PDF_CSS+'</style></head><body'+(opts.noCost?' class="nocost"':'')+'>'+
     '<div class="bar"><button type="button" class="tog" aria-label="Back to Site Office" style="font-size:22px;line-height:1;padding:4px 12px" onclick="'+esc(printBack())+'">\u2190</button><button type="button" class="save" onclick="window.print()">Save as PDF / Print</button>'+
-    '<button type="button" class="tog" onclick="'+esc(toggle)+'">Remove costs</button></div>'+
-    '<div class="note" id="mode">With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.</div>'+
+    (opts.noCost?'</div>':'<button type="button" class="tog" onclick="'+esc(toggle)+'">Remove costs</button></div>')+
+    (opts.noCost?'<div class="note" id="mode">Tap \u201cSave as PDF / Print\u201d to save or send this sheet.</div>':'<div class="note" id="mode">With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.</div>')+
     body+'</body></html>');
   w.document.close();w.focus();
 }
