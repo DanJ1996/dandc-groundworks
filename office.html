@@ -122,6 +122,7 @@ main{display:flex;flex-direction:column;gap:20px;padding-block:22px 56px}
 .stat[data-act]{cursor:pointer;transition:background .15s}
 .stat[data-act]:hover,.stat[data-act]:focus-visible{background:var(--sunk)}
 .stat[data-act]:active{opacity:.8}
+.stat.on{background:var(--sunk);box-shadow:inset 0 0 0 2px var(--accent)}
 
 .btn{font:500 .9rem var(--body);background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:var(--r);padding:8px 14px;cursor:pointer;white-space:nowrap}
 .btn:hover{opacity:.9}
@@ -1186,7 +1187,10 @@ views.projects=()=>{
     // for payment (if any are raised) — the same number the project page shows — not
     // just the separate 'invoices' records. Fall back to those when no application exists.
     const appInv=appCalc(q).invoicedToDate;
-    const invAmt=appInv>0?appInv:(invBy[q.id]||0);
+    // Count the Xero invoices linked to this job too — otherwise a fixed-price job that's been
+    // invoiced in Xero (and is just awaiting payment) wrongly shows £0 invoiced here.
+    const xInv=xeroInvoicedFor(q.id);
+    const invAmt=appInv>0?appInv:(xInv>0?xInv:(invBy[q.id]||0));
     const amtRight=isDW?costPlusTally(q):`<span>${money(invAmt)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
     return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow"><button type="button" data-act="setStartAsk" data-id="${q.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</button></div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
   // Current jobs split into their own collapsible dropdowns by stage, so the live jobs are
@@ -1208,7 +1212,7 @@ function vProject(p){
   const inv=list('invoices').filter(i=>i.projectId===p.id), paid=sum(inv.filter(i=>i.paid).map(i=>i.net));
   // Invoiced shown in Details = the applications-for-payment total when any are raised
   // (matches the Applications box below), else the separate 'invoices' records.
-  const _appInv=appCalc(p).invoicedToDate, invNet=_appInv>0?_appInv:sum(inv.map(i=>i.net));
+  const _appInv=appCalc(p).invoicedToDate, _xInvFP=xeroInvoicedFor(p.id), invNet=_appInv>0?_appInv:(_xInvFP>0?_xInvFP:sum(inv.map(i=>i.net)));
   // Cost-plus job: pull in the day-works figures (lazy-load if needed) and the Xero
   // invoiced/paid totals so the whole money picture sits on the job itself.
   const isDW=p.basis==='dayworks';
@@ -1303,7 +1307,11 @@ views.invoices=()=>{
   const xDraftSum=xDraft.reduce((t,x)=>t+num(x.total),0);
   const xAwaitSum=xSent.reduce((t,x)=>t+num(x.amount_due),0);
   const xPaidSum=xPaidM.reduce((t,x)=>t+num(x.amount_paid),0);
-  const stats=`<div class="stats"><div class="stat"><span class="k">To send</span><span class="v">${money0(g(toSend)+xDraftSum)}</span><span class="sub">${toSend.length+xDraft.length} to go out</span></div><div class="stat"><span class="k">Awaiting payment</span><span class="v">${money0(g(awaiting)+xAwaitSum)}</span><span class="sub">${awaiting.length+xSent.length} sent</span></div><div class="stat${overdue.length?' bad':''}"><span class="k">Overdue</span><span class="v">${money0(g(overdue))}</span><span class="sub">${overdue.length} past terms</span></div><div class="stat"><span class="k">Paid in ${MON[+month.slice(5)-1]}</span><span class="v">${money0(g(paidM)+xPaidSum)}</span><span class="sub">${paidM.length+xPaidM.length} received</span></div></div>`;
+  // Each card is a tap target — tap it to see exactly those invoices (app + Xero) in one
+  // focused list; tap again (or "Show everything") to go back to the full page.
+  const sf=ui.invFilter||'';
+  const stat=(f,k,v,sub,bad)=>`<div class="stat${bad?' bad':''}${sf===f?' on':''}" data-act="invFilter" data-f="${f}" role="button" tabindex="0" title="Show ${esc(k)}"><span class="k">${k}</span><span class="v">${v}</span><span class="sub">${sub}</span></div>`;
+  const stats=`<div class="stats">${stat('tosend','To send',money0(g(toSend)+xDraftSum),(toSend.length+xDraft.length)+' to go out')}${stat('awaiting','Awaiting payment',money0(g(awaiting)+xAwaitSum),(awaiting.length+xSent.length)+' sent')}${stat('overdue','Overdue',money0(g(overdue)),overdue.length+' past terms',overdue.length)}${stat('paid','Paid in '+MON[+month.slice(5)-1],money0(g(paidM)+xPaidSum),(paidM.length+xPaidM.length)+' received')}</div>`;
   const add=`<section class="panel"><div class="panel-h"><h3>Add an invoice to send</h3></div><form class="panel-b form" data-form="invoice">${invFields('invoice',{sendBy:today},false)}<div class="go"><button class="btn">Add invoice</button></div></form></section>`;
   const xPill=s=>{s=String(s||'').toUpperCase();const paid=s==='PAID',sent=s==='AUTHORISED'||s==='SUBMITTED';return `<span class="inv-badge" style="background:${paid?'#2e9e5b':sent?'#c9892b':'#8a8f99'}">${paid?'Paid':sent?'Sent':s==='DRAFT'?'Draft':s==='VOIDED'?'Voided':esc(s||'—')}</span>`;};
   // Show the client alongside the job so near-identical descriptions (two "Patio works",
@@ -1353,7 +1361,24 @@ views.invoices=()=>{
     return `<li class="item"><div class="item-main"><strong>${esc(i.number||'No number')}</strong> · ${esc(i.client||'No client')}<div class="sub">${[projName(i.projectId),i.desc].filter(Boolean).map(esc).join(' · ')}</div></div><div>${invPill(i,i.st,today)}</div><div class="item-amt"><span class="amt">${money(num(i.net))}</span><span class="sub">${i.vat==='std'?money(gross(i))+' inc VAT':VAT[i.vat]||''}</span></div><div class="item-act">${act}<button type="button" class="btn sm ghost" id="ie-${i.id}" data-act="edit" data-key="${key}">Edit</button>${del(key)}</div></li>`;
   };
   const sec=(title,rows,emptyT,emptyD)=>`<section class="panel"><div class="panel-h"><h3>${title}</h3><span class="sub">${rows.length?money(rows.reduce((t,i)=>t+num(i.net),0))+' net':''}</span></div>${rows.length?`<ul class="items">${rows.map(row).join('')}</ul>`:empty(emptyT,emptyD)}</section>`;
-  return `<div class="head"><div><h2>Invoices</h2><p class="sub">What needs sending, what has been sent, and what has been paid.</p></div></div>${stats}${xero}${add}${sec('To send',toSend,'Nothing waiting to go out','Add an invoice above with the date it should be sent.')}${sec('Sent, awaiting payment',awaiting,'Nothing awaiting payment','Invoices move here when you mark them sent.')}${paid.length?sec('Paid',paid.slice(0,25),'',''):''}`;
+  const headHtml=`<div class="head"><div><h2>Invoices</h2><p class="sub">What needs sending, what has been sent, and what has been paid.</p></div></div>`;
+  // A card was tapped — show just those invoices (both the app's own and the live Xero ones)
+  // in one focused list, newest/most-relevant first, with a clear way back to the full page.
+  if(ui.invFilter){
+    const M={
+      tosend:{t:'To send',app:toSend,x:xDraft,tot:g(toSend)+xDraftSum,note:'Drafts in Xero plus any invoices you still need to send.'},
+      awaiting:{t:'Awaiting payment',app:awaiting,x:xSent,tot:g(awaiting)+xAwaitSum,note:'Sent and still owed to you.'},
+      overdue:{t:'Overdue',app:overdue,x:[],tot:g(overdue),note:'Past their payment terms.'},
+      paid:{t:'Paid in '+MON[+month.slice(5)-1],app:paidM,x:xPaidM,tot:g(paidM)+xPaidSum,note:'Money received this month.'}
+    }[ui.invFilter];
+    if(M){
+      const n=M.app.length+M.x.length;
+      const body=n?`<ul class="items">${M.app.map(row).join('')}${M.x.map(xRow).join('')}</ul>`:empty('Nothing here','No invoices in "'+M.t+'" right now.');
+      const focusSec=`<section class="panel"><div class="panel-h"><h3>${M.t} <span class="sub">${money0(M.tot)} · ${n} invoice${n===1?'':'s'}</span></h3><button type="button" class="btn sm ghost" data-act="invFilter" data-f="${ui.invFilter}">← Show everything</button></div><p class="dw-xhint" style="padding:0 16px 4px">${M.note}</p>${body}</section>`;
+      return `${headHtml}${stats}${focusSec}`;
+    }
+  }
+  return `${headHtml}${stats}${xero}${add}${sec('To send',toSend,'Nothing waiting to go out','Add an invoice above with the date it should be sent.')}${sec('Sent, awaiting payment',awaiting,'Nothing awaiting payment','Invoices move here when you mark them sent.')}${paid.length?sec('Paid',paid.slice(0,25),'',''):''}`;
 };
 
 const UNITS=['hr','day','week','m','m²','m³','t','nr','item','load','sum'];
@@ -1606,6 +1631,8 @@ const actions={
   backToSchedule(){ui.tab='schedule';ui.project=null;ui.projectFrom='';ui.confirm=null;window.scrollTo(0,0);},
   // Jump to Invoices with this job's client pre-searched, so its Xero invoices surface ready to link.
   findInvoice(d){ui.tab='invoices';ui.xfind=d.q||'';ui.xlink=null;window.scrollTo(0,0);},
+  // Tap an Invoices summary card to focus on just those invoices; tap the same one again to clear.
+  invFilter(d){ui.invFilter=ui.invFilter===d.f?null:d.f;window.scrollTo(0,0);},
   // Move a job between the Current / Interim (part-billed, still on site) / Completed sections.
   projComplete(d){write('projects',d.id,'update',{status:'Complete',interim:false});toast('Marked complete');},
   projInterim(d){write('projects',d.id,'update',{interim:true});toast('Marked interim — still on site');},
@@ -1872,7 +1899,8 @@ const forms={
     const id=ui.setStart;if(!id){return true;}
     const p=S.projects[id];if(!p){ui.setStart=null;return true;}
     const d=String(f.date||'').trim();
-    if(d){write('projects',id,'update',{startDate:d});toast('"'+(p.name||'Job')+'" starts '+fmtD(d)+' — now in the schedule');}
+    const e=String(f.end||'').trim();
+    if(d){const end=(e&&e>=d)?e:d;write('projects',id,'update',{startDate:d,endDate:end});toast('"'+(p.name||'Job')+'" '+(end>d?fmtD(d)+'–'+fmtD(end):'starts '+fmtD(d))+' — now in the schedule');}
     else toast('"'+(p.name||'Job')+'" is ready to start — set its date whenever you like');
     ui.setStart=null;return true;
   },
@@ -3669,7 +3697,7 @@ function jobPeekModal(){
 function setStartModal(){
   const id=ui.setStart;if(!id)return '';
   const p=S.projects[id];if(!p)return '';
-  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="ss-h"><div class="panel-h"><h3 id="ss-h">When does it start?</h3></div><form class="panel-b form" data-form="setStart"><p class="sub full" style="margin:0">${esc(p.name||'Job')}${p.client?' · '+esc(p.client):''} — won and ready to start.</p><label class="f full"><span>Start date</span><input id="setStart-date" name="date" type="date" value="${esc(p.startDate||'')}"></label><p class="sub full" style="margin:0">Give it a date and it drops straight into the schedule — and goes live by itself on the day. Leave it blank to set it later.</p><div class="go"><button class="btn">Set start date</button><button type="button" class="btn ghost" data-act="setStartCancel">Skip for now</button></div></form></section></div>`;
+  return `<div class="mdov" data-mdov><section class="panel mdbox" role="dialog" aria-modal="true" aria-labelledby="ss-h"><div class="panel-h"><h3 id="ss-h">When does it start?</h3></div><form class="panel-b form" data-form="setStart"><p class="sub full" style="margin:0">${esc(p.name||'Job')}${p.client?' · '+esc(p.client):''} — won and ready to start.</p><label class="f full"><span>Start date</span><input id="setStart-date" name="date" type="date" value="${esc(p.startDate||'')}"></label><label class="f full"><span>End date</span><input id="setStart-end" name="end" type="date" value="${esc(p.endDate||'')}"></label><p class="sub full" style="margin:0">Give it both dates and it drops straight into the schedule as a bar across those days — and goes live by itself on the start day. Leave the end blank for a single day; leave both blank to set later.</p><div class="go"><button class="btn">Set start date</button><button type="button" class="btn ghost" data-act="setStartCancel">Skip for now</button></div></form></section></div>`;
 }
 // A Ready-to-start job with a start date goes live by itself the day it begins —
 // nobody has to flip it. Runs on each render; once promoted it's Live so it's never
