@@ -332,6 +332,8 @@ table.grid{border-collapse:collapse;width:100%}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .jret{font-weight:700;margin-right:4px;opacity:.85}
 .jnote-in{font-weight:500;color:color-mix(in srgb,var(--ink) 60%,transparent)}
+.offcell{vertical-align:middle;padding:4px}
+.offchip{display:inline-block;margin:2px;padding:3px 8px;border-radius:999px;font-size:.74rem;font-weight:700;color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--muted) 28%,var(--line))}
 .sdl-note-txt{color:var(--muted);font-style:italic}
 .jobrow.retvisit .jseg,.jseg.ret{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
@@ -831,9 +833,10 @@ views.schedule=()=>{
   // Free-text day notes — a coloured marker on each day that has one; tap to open that day.
   const dayNotes=days.map(d=>String((S.daynotes[d.day]||{}).text||'').trim());
   const notesRow=dayNotes.some(t=>t)?`<tr><th class="tcol">Notes</th>${days.map((d,i)=>`<td class="jcell ${d.we?'we':''}${d.isT?' today':''}" data-sday="${d.day}">${dayNotes[i]?`<button type="button" class="vmark note" data-act="schedDay" data-day="${d.day}" style="--c:var(--note)" title="${esc(dayNotes[i])}">${esc(dayNotes[i].length>44?dayNotes[i].slice(0,44)+'…':dayNotes[i])}</button>`:''}</td>`).join('')}</tr>`:'';
-  // Approved holidays — static spanning bars.
+  // Approved holidays — everyone off on a SINGLE "Off" row. Each day lists whoever's off that
+  // day as a chip, so two people off at once sit on the same line (not a row each).
   const hols=list('holidays').filter(h=>h.status==='approved'&&h.from&&h.to&&h.to>=wk&&h.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from)));
-  const holRows=hols.map((h,idx)=>spanRow(idx===0?'Off':'',h.from,h.to,'--muted',{text:(h.name||'Crew')+' off'+((h.time&&h.from===h.to)?' '+h.time:''),rowcls:'offrow'})).join('');
+  const holRows=hols.length?(()=>{let cells=`<th class="tcol">Off</th>`;for(let i=0;i<7;i++){const d=days[i].day;const on=hols.filter(h=>h.from<=d&&h.to>=d);const chips=on.map(h=>`<span class="offchip">${esc(h.name||'Crew')}${(h.time&&h.from===h.to)?' '+esc(h.time):''}</span>`).join('');cells+=`<td class="jcell offcell ${days[i].we?'we':''}${days[i].isT?' today':''}" data-sday="${d}">${chips}</td>`;}return `<tr class="offrow">${cells}</tr>`;})():'';
   // Company dates (works do, break up, back to work) — static bars, same as the lads see.
   const cdRows=list('company_dates').filter(c=>c.from&&cdEnd(c)>=wk&&c.from<=wkEnd).sort((a,b)=>String(a.from).localeCompare(String(b.from))).map((c,idx)=>{const k=cdKind(c.kind);return spanRow(idx===0?'Company':'',c.from,cdEnd(c),k[2],{text:(c.title||k[1])+(cdTime(c)?' '+cdTime(c):''),rowcls:'offrow'});}).join('');
   // Anything typed straight onto the schedule — meetings, deliveries, plant hire. Draggable like jobs.
