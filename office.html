@@ -1156,8 +1156,13 @@ function costPlusTally(p){
 views.projects=()=>{
   const p=ui.project&&S.projects[ui.project];
   if(p)return vProject({...p,id:ui.project});
-  const hb=hoursByProject(), invBy={};
-  list('invoices').forEach(i=>{if(i.projectId)invBy[i.projectId]=(invBy[i.projectId]||0)+num(i.net);});
+  const hb=hoursByProject(), invBy={}, invDueBy={};
+  list('invoices').forEach(i=>{if(i.projectId){invBy[i.projectId]=(invBy[i.projectId]||0)+num(i.net);if(!i.paid)invDueBy[i.projectId]=(invDueBy[i.projectId]||0)+num(i.net);}});
+  // Money still owed per job = unpaid Xero amount-due + unpaid app invoices. Drives the
+  // "Awaiting £X / Paid" marker so a finished-but-unpaid job reads its money status at a glance.
+  const xDueBy={},xPaidBy={};
+  XERO.rows.forEach(x=>{if(x.project_id){xDueBy[x.project_id]=(xDueBy[x.project_id]||0)+num(x.amount_due);xPaidBy[x.project_id]=(xPaidBy[x.project_id]||0)+num(x.amount_paid);}});
+  const owedFor=id=>(xDueBy[id]||0)+(invDueBy[id]||0);
   // Enquiries still being priced live a "project" record (created by Price it) linked from an
   // open quote. Those belong in Dayworks/enquiries, not here — only show them as projects once
   // the enquiry is Won.
@@ -1195,13 +1200,18 @@ views.projects=()=>{
     const xInv=xeroInvoicedFor(q.id);
     const invAmt=appInv>0?appInv:(xInv>0?xInv:(invBy[q.id]||0));
     const amtRight=isDW?costPlusTally(q):`<span>${money(invAmt)} invoiced</span><span class="sub">${hrs(h.h)} h · ${money(h.cost)} labour</span>`;
-    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${q.status==='Ready to start'?`<div class="startrow"><button type="button" data-act="setStartAsk" data-id="${q.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</button></div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
+    // Money marker: once a job has an invoice (Xero or app), show amber "Awaiting £X" while any
+    // money's still owed, or "Paid" when it's all in — so a done-but-unpaid job reads at a glance.
+    const hasInvoice=(xDueBy[q.id]!=null||xPaidBy[q.id]!=null||(invBy[q.id]||0)>0);
+    const owed=owedFor(q.id);
+    const moneyPill=hasInvoice?(owed>0.5?pill('warn','Awaiting '+money0(owed)):pill('info','Paid')):'';
+    return `<li class="item"><div class="item-main"><button type="button" class="link" id="po-${q.id}" data-act="openProject" data-id="${q.id}">${esc(q.name)}</button><div class="sub">${[q.client,q.site,q.po?'PO '+q.po:''].filter(Boolean).map(esc).join(' · ')}${mapLink(q.site)}</div></div><div>${pill(projPill(q.status),q.status||'Pricing')}${isDW?' '+pill('info','Cost-plus'):''}${moneyPill?' '+moneyPill:''}${q.status==='Ready to start'?`<div class="startrow"><button type="button" data-act="setStartAsk" data-id="${q.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">${q.startDate?pill('good','Starts '+fmtD(q.startDate)):pill('warn','Set start date')}</button></div>`:''}</div><div class="item-amt">${amtMain}</div><div class="item-amt">${amtRight}</div>${acts?`<div class="item-act">${acts}</div>`:''}</li>`;};
   // Current jobs split into their own collapsible dropdowns by stage, so the live jobs are
   // clearly apart from ones still being priced (a "Pricing" job is still a tender, not on site).
   const liveP=active.filter(p=>p.status==='Live');
   const readyP=active.filter(p=>p.status==='Ready to start');
   const priceP=active.filter(p=>p.status!=='Live'&&p.status!=='Ready to start');
-  const projSec=(key,title,arr)=>{if(!arr.length)return '';const tot=arr.reduce((s,p)=>s+(num(p.tender)||projTotals(p).total),0);return dropSec(key,title+' <span class="sub">'+arr.length+'</span>',tot>0?'<span class="sub">'+money(tot)+'</span>':'',`<ul class="items">${arr.map(q=>projRow(q,'active')).join('')}</ul>`);};
+  const projSec=(key,title,arr)=>{if(!arr.length)return '';const tot=arr.reduce((s,p)=>s+(num(p.tender)||projTotals(p).total),0);const owedTot=arr.reduce((s,p)=>s+owedFor(p.id),0);const sum=(tot>0?'<span class="sub">'+money(tot)+'</span>':'')+(owedTot>0.5?'<span class="sub" style="color:var(--warn)"> · '+money0(owedTot)+' owed</span>':'');return dropSec(key,title+' <span class="sub">'+arr.length+'</span>',sum,`<ul class="items">${arr.map(q=>projRow(q,'active')).join('')}</ul>`);};
   const liveSec=projSec('projLive','Live projects',liveP);
   const readySec=projSec('projReady','Ready to start',readyP);
   const priceSec=projSec('projPrice','Pricing &amp; tenders',priceP);
