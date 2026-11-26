@@ -335,6 +335,7 @@ table.grid{border-collapse:collapse;width:100%}
 .jnote-in{font-weight:500;color:color-mix(in srgb,var(--ink) 60%,transparent)}
 .offcell{vertical-align:middle;padding:4px}
 .offchip{display:inline-block;margin:2px;padding:3px 8px;border-radius:999px;font-size:.74rem;font-weight:700;color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--muted) 28%,var(--line))}
+.joblink{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:700;color:var(--info);background:color-mix(in srgb,var(--info) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--info) 30%,var(--line))}
 .sdl-note-txt{color:var(--muted);font-style:italic}
 .jobrow.retvisit .jseg,.jseg.ret{background-image:repeating-linear-gradient(135deg,transparent 0 7px,color-mix(in srgb,var(--c) 10%,transparent) 7px 14px)}
 .lead-line{margin-top:2px}.lead-line strong{color:var(--ink)}
@@ -804,20 +805,26 @@ views.schedule=()=>{
     const shadeFor=id=>SHADES[Math.max(0,order.indexOf(id))%SHADES.length](colorVar);
     let cells=`<th class="tcol">${label||''}</th>`;
     for(let i=0;i<7;i++){
-      const sp=spans.find(x=>{const cs=col(x.s<wk?wk:x.s),ce=col(x.e>wkEnd?wkEnd:x.e);return i>=cs&&i<=ce;});
+      // Groundworks don't run at the weekend — a job bar never covers Sat/Sun. It picks up
+      // again on the Monday, so a multi-week job reads as Mon–Fri blocks, not one solid strip.
+      const we=days[i].we;
+      const sp=we?null:spans.find(x=>{const cs=col(x.s<wk?wk:x.s),ce=col(x.e>wkEnd?wkEnd:x.e);return i>=cs&&i<=ce;});
       let seg='',data=` data-jday="${i}" data-sday="${days[i].day}"`;
-      if(sp){const cs=col(sp.s<wk?wk:sp.s),ce=col(sp.e>wkEnd?wkEnd:sp.e),contL=sp.s<wk,contR=sp.e>wkEnd,isCs=i===cs,isCe=i===ce;
+      if(sp){const cs=col(sp.s<wk?wk:sp.s),ce=col(sp.e>wkEnd?wkEnd:sp.e),contL=sp.s<wk,contR=sp.e>wkEnd,endWd=Math.min(ce,4),isCs=i===cs,isCe=i===endWd;
         const grip=(isCe&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
         const retChip=sp.vi!=null?'<span class="jret" title="Return visit">↩</span>':'';
         const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
         const noteBit=(isCs&&sp.vi==null&&sp.p.notes)?` <span class="jnote-in">— ${esc(noteSnip(sp.p.notes))}</span>`:'';
         seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${noteBit}${isCe&&contR?' ›':''}</span>${grip}</div>`;
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
+      }else if(we){
+        // Weekend cell under a running job — leave it blank (greyed) to show the crew's off.
+        seg='';data='';
       }else{
         // Empty slot in this gang's row — tap it to start a job for THIS gang on THIS day.
         seg=`<button type="button" class="celladd" data-act="slotAdd" data-day="${days[i].day}" data-gang="${esc(gangKey||'')}" aria-label="Add a job for ${esc(label||'this gang')} on ${DOW[days[i].i]} ${fmtD(days[i].day)}">+</button>`;
       }
-      cells+=`<td class="jcell ${days[i].we?'we':''}${days[i].isT?' today':''}"${data}>${seg}</td>`;
+      cells+=`<td class="jcell ${we?'we':''}${days[i].isT?' today':''}"${data}>${seg}</td>`;
     }
     return `<tr class="jobrow lanerow">${cells}</tr>`;
   };
@@ -852,16 +859,22 @@ views.schedule=()=>{
   const sd=ui.schedDay;
   // When a day is tapped, new schedule items default to THAT day; otherwise today (or week start).
   const defDate=sd||((today>=wk&&today<=wkEnd)?today:wk);
+  // Jobs a diary meeting can be tied to — any live/ready/pricing project (not finished ones).
+  // Linking says "this meeting is about THIS existing job", so it won't spawn a new enquiry.
+  const evJobOpts=[['','Not about a job — just a diary note']].concat(list('projects').filter(p=>p.status!=='Complete').sort(byName).map(p=>[p.id,(p.name||'—')+(p.client?' · '+p.client:'')]));
+  const evJobName=pid=>{const p=pid&&S.projects[pid];return p?((p.name||'—')+(p.client?' · '+p.client:'')):'';};
   // Inline "edit the diary box" form — same fields as adding, pre-filled.
-  const eventEditLi=e=>`<li class="item editing"><form class="form" data-form="eventEdit">${fld('eventEdit','title','What',e.title||'',{attrs:'required',cls:'wide'})}${fld('eventEdit','client','Name / client',e.client||'')}${fld('eventEdit','phone','Phone',e.phone||'',{type:'tel'})}${fld('eventEdit','site','Address',e.site||'',{attrs:'data-addr autocomplete="off"',cls:'wide'})}${fld('eventEdit','from','Date',e.from||'',{type:'date',attrs:'required'})}${fld('eventEdit','to','Until (optional)',(e.to&&e.to>e.from)?e.to:'',{type:'date'})}${fld('eventEdit','time','Time (optional)',e.time||'',{type:'time'})}${sel('eventEdit','gang','Gang (optional)',e.gang||'',[['','No gang — diary item']].concat(GANGS.map(g=>[g.k,g.name])))}${fld('eventEdit','who','Who is going (optional)',e.who||'')}<div class="go"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
-  const evActs=e=>`<button type="button" class="btn sm ghost" data-act="edit" data-key="ev/${e.id}">Edit</button><button type="button" class="btn sm ghost" data-act="evToVisit" data-id="${e.id}" title="Moves this line into Enquiries as a booked site visit — adds meeting notes and a ‘Meeting done’ tick. Use it only when the meeting is to look at or price up a possible job.">Make it a site visit</button><button type="button" class="btn sm ghost" data-act="evRemind" data-id="${e.id}">Remind me</button>${del('events/'+e.id,'×')}`;
+  const eventEditLi=e=>`<li class="item editing"><form class="form" data-form="eventEdit">${fld('eventEdit','title','What',e.title||'',{attrs:'required',cls:'wide'})}${fld('eventEdit','client','Name / client',e.client||'')}${fld('eventEdit','phone','Phone',e.phone||'',{type:'tel'})}${fld('eventEdit','site','Address',e.site||'',{attrs:'data-addr autocomplete="off"',cls:'wide'})}${fld('eventEdit','from','Date',e.from||'',{type:'date',attrs:'required'})}${fld('eventEdit','to','Until (optional)',(e.to&&e.to>e.from)?e.to:'',{type:'date'})}${fld('eventEdit','time','Time (optional)',e.time||'',{type:'time'})}${sel('eventEdit','gang','Gang (optional)',e.gang||'',[['','No gang — diary item']].concat(GANGS.map(g=>[g.k,g.name])))}${sel('eventEdit','projectId','About a job (optional)',e.projectId||'',evJobOpts,{cls:'wide'})}${fld('eventEdit','who','Who is going (optional)',e.who||'')}<div class="go"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel">Cancel</button></div></form></li>`;
+  // Linked to an existing job → it's not a new enquiry, so offer "Open job" instead of the
+  // "Make it a site visit" conversion (which would wrongly create a duplicate in Enquiries).
+  const evActs=e=>{const linked=e.projectId&&S.projects[e.projectId];return `<button type="button" class="btn sm ghost" data-act="edit" data-key="ev/${e.id}">Edit</button>${linked?`<button type="button" class="btn sm ghost" data-act="evOpenJob" data-id="${esc(e.projectId)}" title="Open the job this meeting is about.">Open job</button>`:`<button type="button" class="btn sm ghost" data-act="evToVisit" data-id="${e.id}" title="For a visit to look at or price up a NEW possible job — moves it into Enquiries. If the job already exists, use Edit → ‘About a job’ to link it instead.">Make it a site visit</button>`}<button type="button" class="btn sm ghost" data-act="evRemind" data-id="${e.id}">Remind me</button>${del('events/'+e.id,'×')}`;};
   // Plain-English note so the "Make it a site visit" button isn't mistaken for "it's already a
   // meeting" — it explains these are just diary markers and what converting actually does.
-  const evHint=`<p class="dw-xhint" style="padding:10px 16px 0;margin:0">These are <strong>diary markers</strong> — meetings, deliveries, plant on hire, emergencies. They just sit on the schedule. <strong>“Make it a site visit”</strong> is only for a visit to look at or price up a possible job: it moves the line into <strong>Enquiries</strong> and gives it meeting notes and a “done” tick.</p>`;
-  const evList=evs.length?`<ul class="items">${evs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);const meta=[g?esc(g.name):'',e.time?esc(e.time):'',e.who?'with '+esc(e.who):''].filter(Boolean).join(' · ');const contact=[e.phone?`<a href="${esc(telHref(e.phone))}">${esc(e.phone)}</a>`:'',e.site?esc(e.site)+mapLink(e.site):''].filter(Boolean).join(' · ');return `<li class="item"><div>${pill('good',holSpan({from:e.from,to:evEnd(e)}))}</div><div class="item-main"><strong>${esc(e.title||'')}</strong>${e.client?' · '+esc(e.client):''}${meta?'<div class="sub">'+meta+'</div>':''}${contact?'<div class="sub">'+contact+'</div>':''}</div><div class="item-act">${evActs(e)}</div></li>`;}).join('')}</ul>`:'';
+  const evHint=`<p class="dw-xhint" style="padding:10px 16px 0;margin:0">These are <strong>diary markers</strong> — meetings, deliveries, plant on hire, emergencies. If a meeting is about <strong>a job you already have</strong>, link it with <strong>“About a job”</strong> and the button becomes <strong>“Open job”</strong>. <strong>“Make it a site visit”</strong> is only for a visit to look at or price up a <strong>new</strong> possible job — it moves the line into <strong>Enquiries</strong>.</p>`;
+  const evList=evs.length?`<ul class="items">${evs.map(e=>{if(ui.edit==='ev/'+e.id)return eventEditLi(e);const g=gangOf(e.gang);const jn=evJobName(e.projectId);const meta=[g?esc(g.name):'',e.time?esc(e.time):'',e.who?'with '+esc(e.who):''].filter(Boolean).join(' · ');const contact=[e.phone?`<a href="${esc(telHref(e.phone))}">${esc(e.phone)}</a>`:'',e.site?esc(e.site)+mapLink(e.site):''].filter(Boolean).join(' · ');return `<li class="item"><div>${pill('good',holSpan({from:e.from,to:evEnd(e)}))}</div><div class="item-main"><strong>${esc(e.title||'')}</strong>${e.client?' · '+esc(e.client):''}${jn?' <span class="joblink">'+esc(jn)+'</span>':''}${meta?'<div class="sub">'+meta+'</div>':''}${contact?'<div class="sub">'+contact+'</div>':''}</div><div class="item-act">${evActs(e)}</div></li>`;}).join('')}</ul>`:'';
   // The "add anything to the schedule" form, with the date pre-filled. Rendered ONCE:
   // inside the tapped-day panel (date = that day) when a day is open, otherwise below.
-  const evForm=d=>`<form class="panel-b form" data-form="event">${fld('event','title','What',"",{attrs:'required placeholder="Emergency — burst main, site meeting…"',cls:'wide'})}${fld('event','client','Name / client','',{attrs:'placeholder="Who you\'re meeting"'})}${fld('event','phone','Phone','',{type:'tel'})}${fld('event','site','Address','',{attrs:'data-addr autocomplete="off" placeholder="Site or meeting address"',cls:'wide'})}${fld('event','from','Date',d,{type:'date',attrs:'required'})}${fld('event','to','Until (optional)','',{type:'date'})}${fld('event','time','Time (optional)','',{type:'time'})}${sel('event','gang','Gang (optional)','',[['','No gang — diary item']].concat(GANGS.map(g=>[g.k,g.name])))}${fld('event','who','Who is going (optional)','')}<div class="go"><button class="btn">Add to schedule</button></div></form>`;
+  const evForm=d=>`<form class="panel-b form" data-form="event">${fld('event','title','What',"",{attrs:'required placeholder="Emergency — burst main, site meeting…"',cls:'wide'})}${fld('event','client','Name / client','',{attrs:'placeholder="Who you\'re meeting"'})}${fld('event','phone','Phone','',{type:'tel'})}${fld('event','site','Address','',{attrs:'data-addr autocomplete="off" placeholder="Site or meeting address"',cls:'wide'})}${fld('event','from','Date',d,{type:'date',attrs:'required'})}${fld('event','to','Until (optional)','',{type:'date'})}${fld('event','time','Time (optional)','',{type:'time'})}${sel('event','gang','Gang (optional)','',[['','No gang — diary item']].concat(GANGS.map(g=>[g.k,g.name])))}${sel('event','projectId','About a job (optional)','',evJobOpts,{cls:'wide'})}${fld('event','who','Who is going (optional)','')}<div class="go"><button class="btn">Add to schedule</button></div></form>`;
   const addEv=sd
     ?(evList?`<section class="panel"><div class="panel-h"><h3>Diary this week</h3><span class="sub">Everything typed onto the schedule. Use “Add to this day” in the day above to add more.</span></div>${evList}${evHint}</section>`:'')
     :`<section class="panel"><div class="panel-h"><h3>Add to the schedule</h3><span class="sub">Emergency jobs, meetings, deliveries, plant on hire — anything that isn't a full project. It colours itself by what you type in "What"; or pick a gang to colour it like a job.</span></div>${evForm(defDate)}${evList}${evList?evHint:''}</section>`;
@@ -869,9 +882,10 @@ views.schedule=()=>{
   let dayPanel='';
   if(sd){
     const dw=DOW[(parse(sd).getUTCDay()+6)%7];
+    const sdWe=((parse(sd).getUTCDay()+6)%7)>4;   // tapped day is Sat/Sun — jobs don't run then
     const li=(c,main,subs,act)=>`<li class="item"><div><span class="sdot" style="--c:var(${c})"></span></div><div class="item-main">${main}${subs.filter(Boolean).map(x=>'<div class="sub">'+x+'</div>').join('')}</div>${act?`<div class="item-act">${act}</div>`:''}</li>`;
     const contact=(ph,site)=>[ph?`<a href="${esc(telHref(ph))}">${esc(ph)}</a>`:'',site?esc(site)+mapLink(site):''].filter(Boolean).join(' · ');
-    const dJobs=list('projects').filter(p=>p.status!=='Complete').flatMap(jobSpans).filter(j=>j.s<=sd&&j.e>=sd).sort((a,b)=>byName(a.p,b.p));
+    const dJobs=sdWe?[]:list('projects').filter(p=>p.status!=='Complete').flatMap(jobSpans).filter(j=>j.s<=sd&&j.e>=sd).sort((a,b)=>byName(a.p,b.p));
     const dEvs=list('events').filter(e=>e.from&&e.from<=sd&&evEnd(e)>=sd).sort((a,b)=>String(a.time||'').localeCompare(String(b.time||''))||String(a.title||'').localeCompare(String(b.title||'')));
     const dVis=schedVisits.filter(q=>q.visitDate===sd).sort((a,b)=>String(a.visitTime||'').localeCompare(String(b.visitTime||'')));
     const dDue=list('quotes').filter(q=>q.due===sd&&needsPrice(q));
@@ -1565,6 +1579,8 @@ const actions={
   cdClearTime(d){if(!S.company_dates[d.id])return;write('company_dates',d.id,'update',{time:''});ui.edit=null;delete ui.drafts.cdEdit;toast('Time removed');},
   cancel(){ui.confirm=null;ui.edit=null;delete ui.drafts.cdEdit;delete ui.drafts.vnoteEdit;ui.moveDW=null;ui.dwEdit=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;delete ui.drafts.remEdit;delete ui.drafts.eventEdit;},
   edit(d){ui.edit=d.key;ui.confirm=null;delete ui.drafts.quoteEdit;delete ui.drafts.invoiceEdit;delete ui.drafts.visit;if(d.key.indexOf('visit/')===0)ui.focusNext='visit-visitDate';if(d.key.indexOf('rem/')===0){delete ui.drafts.remEdit;ui.focusNext='remEdit-text';}if(d.key.indexOf('ev/')===0){delete ui.drafts.eventEdit;ui.focusNext='eventEdit-title';}},
+  // Open the existing job a diary meeting is linked to.
+  evOpenJob(d){if(!S.projects[d.id]){toast('That job has been removed');return;}ui.tab='projects';ui.project=d.id;ui.projectFrom='schedule';window.scrollTo(0,0);},
   // Turn a diary item into a reminder for whichever director is signed in.
   evRemind(d){const e=S.events[d.id];if(!e)return;const me=/chris/i.test(DWME.name||'')?'chris':'dan';const text=[e.title||'Diary',e.client].filter(Boolean).join(' · ');const when=e.from?e.from+'T'+(e.time||'08:00'):'';write('reminders',uid(),'set',{owner:me,text,when,done:false,created:Date.now()});if(when)askNotify();toast('Added to your reminders'+(when?' — pings '+fmtD(e.from)+(e.time?' at '+e.time:''):''));},
   // Turn a diary item straight into a booked site visit: carries the date/time/client/
@@ -1821,12 +1837,12 @@ const forms={
   reminderChris(f){return addReminder('chris',f);},
   event(f){
     const t=(f.title||'').trim();if(!t||!f.from)return false;
-    write('events',uid(),'set',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim(),created:Date.now()});
+    write('events',uid(),'set',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim(),projectId:(f.projectId||'').trim(),created:Date.now()});
     ui.schedWeek=mondayOf(f.from);ui.focusNext='event-title';toast('Added to the schedule');return true;
   },
   eventEdit(f){
     if(!ui.edit)return true;const id=ui.edit.split('/')[1];const t=(f.title||'').trim();if(!t||!f.from)return false;
-    write('events',id,'update',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim()});
+    write('events',id,'update',{title:t,from:f.from,to:(f.to&&f.to>=f.from)?f.to:f.from,time:f.time||'',who:(f.who||'').trim(),gang:(f.gang||'').trim(),client:(f.client||'').trim(),phone:(f.phone||'').trim(),site:(f.site||'').trim(),projectId:(f.projectId||'').trim()});
     ui.edit=null;toast('Diary item updated');return true;
   },
   cdate(f){
