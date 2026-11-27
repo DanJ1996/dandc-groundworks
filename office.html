@@ -328,11 +328,14 @@ table.grid{border-collapse:collapse;width:100%}
 .jseg.l{border-radius:6px 0 0 6px;z-index:2;border-left:5px solid var(--c)}
 .jseg.r{border-radius:0 6px 6px 0;border-right:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
 .jseg.l.r{border-radius:6px}
-.jlabel{color:var(--ink);font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;flex:1;min-width:0}
+.jlabel{color:var(--ink);font-size:.78rem;font-weight:600;line-height:1.15;padding:0 6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:break-word;word-break:normal;flex:1;min-width:0}
+/* Job bars read like the Visits card: job name as the heading, who/note on a muted line under it. */
+.jlabel.jobl{display:flex;flex-direction:column;justify-content:center;gap:1px;font-size:.76rem;-webkit-line-clamp:none}
+.jl-name{font-weight:600;line-height:1.2;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:break-word;word-break:normal}
+.jl-sub{color:var(--muted);font-weight:500;font-size:.7rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jlead{font-weight:800;color:color-mix(in srgb,var(--c) 72%,var(--ink));margin-right:5px;white-space:nowrap}
 .jlead::after{content:"·";margin-left:5px;font-weight:600;opacity:.55}
 .jret{font-weight:700;margin-right:4px;opacity:.85}
-.jnote-in{font-weight:500;color:color-mix(in srgb,var(--ink) 60%,transparent)}
 .offcell{vertical-align:middle;padding:4px}
 .offchip{display:inline-block;margin:2px;padding:3px 8px;border-radius:999px;font-size:.74rem;font-weight:700;color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--muted) 28%,var(--line))}
 .joblink{display:inline-block;margin-left:4px;padding:1px 8px;border-radius:999px;font-size:.72rem;font-weight:700;color:var(--info);background:color-mix(in srgb,var(--info) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--info) 30%,var(--line))}
@@ -354,6 +357,8 @@ body.jdrag .jbin.hot{border-style:solid;border-color:#b23b2c;background:color-mi
 @media(min-width:900px){
   .sched.gantt .jseg{height:56px}
   .sched.gantt .jlabel{font-size:.92rem;-webkit-line-clamp:3}
+  .sched.gantt .jlabel.jobl{font-size:.86rem}
+  .sched.gantt .jl-sub{font-size:.74rem}
   .sched.gantt .dayhead{padding:11px 6px}
   .sched.gantt .dh-dow,.sched.gantt .dh-mon{font-size:.74rem}
   .sched.gantt .dh-day{font-size:1.6rem}
@@ -814,9 +819,11 @@ views.schedule=()=>{
       if(sp){const cs=col(sp.s<wk?wk:sp.s),ce=col(sp.e>wkEnd?wkEnd:sp.e),contL=sp.s<wk,contR=sp.e>wkEnd,endWd=Math.min(ce,4),isCs=i===cs,isCe=i===endWd;
         const grip=(isCe&&!contR)?'<span class="jgrip" data-jgrip aria-hidden="true"></span>':'';
         const retChip=sp.vi!=null?'<span class="jret" title="Return visit">↩</span>':'';
-        const leadChip=leadOf(sp.p.gang)?`<span class="jlead">${esc(leadOf(sp.p.gang))}</span>`:'';
-        const noteBit=(isCs&&sp.vi==null&&sp.p.notes)?` <span class="jnote-in">— ${esc(noteSnip(sp.p.notes))}</span>`:'';
-        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel">${isCs&&contL?'‹ ':''}${retChip}${leadChip}${esc(sp.p.name||'')}${noteBit}${isCe&&contR?' ›':''}</span>${grip}</div>`;
+        const lead=leadOf(sp.p.gang);
+        const noteBit=(isCs&&sp.vi==null&&sp.p.notes)?esc(noteSnip(sp.p.notes)):'';
+        const subTxt=[lead?esc(lead):'',noteBit].filter(Boolean).join(' — ');
+        const subLine=subTxt?`<span class="jl-sub">${subTxt}</span>`:'';
+        seg=`<div class="jseg${isCs?' l':''}${isCe?' r':''}${sp.vi!=null?' ret':''}" style="--c:${shadeFor(sp.p.id)}"><span class="jlabel jobl"><span class="jl-name">${isCs&&contL?'‹ ':''}${retChip}${esc(sp.p.name||'')}${isCe&&contR?' ›':''}</span>${subLine}</span>${grip}</div>`;
         data+=` data-jid="${esc(sp.p.id)}" data-jkind="job"${sp.vi!=null?` data-jvi="${sp.vi}"`:''}`;
       }else if(we){
         // Weekend cell under a running job — leave it blank (greyed) to show the crew's off.
@@ -3907,7 +3914,7 @@ function startSchedDrag(e){
   // Keep the lane's OTHER jobs so repainting the drag never wipes them off the line.
   const others=tds.map(c=>(!mine(c)&&c.querySelector('.jseg'))?c.innerHTML:null);
   const lc=tds.find(c=>mine(c)&&c.querySelector('.jlabel'));
-  const label=((lc&&lc.querySelector('.jlabel').textContent)||'').replace(/^‹\s*/,'').replace(/^↩\s*/,'').replace(/\s*›$/,'');
+  const label=((lc&&(lc.querySelector('.jl-name')||lc.querySelector('.jlabel')).textContent)||'').replace(/^‹\s*/,'').replace(/^↩\s*/,'').replace(/\s*›$/,'');
   const segEl=(tds.find(c=>mine(c)&&c.querySelector('.jseg'))||td).querySelector('.jseg');
   const color=(segEl&&segEl.style.getPropertyValue('--c'))||(kind==='event'?'var(--good)':'var(--accent)');
   const r=(kind==='event'?S.events[jid]:S.projects[jid])||{};
