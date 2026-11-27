@@ -321,7 +321,7 @@ table.grid{border-collapse:collapse;width:100%}
 .qgrp-h:first-child{border-top:0}
 .qgrp-h h4{margin:0;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
 .sdot{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);margin-top:4px}
-.sched.gantt tr.jobrow{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.sched.gantt tr.jobrow{cursor:grab;touch-action:pan-x pan-y;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .sched.gantt tr.jobrow.dragging{cursor:grabbing}
 .sched.gantt tr.jobrow.dragging .jseg{opacity:.85}
 .jseg{background:color-mix(in srgb,var(--c) 18%,var(--surface));height:42px;display:flex;align-items:center;overflow:hidden;margin:0 -1px;position:relative;z-index:1;border-radius:0;border-top:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-bottom:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
@@ -344,7 +344,7 @@ table.grid{border-collapse:collapse;width:100%}
 .peek dt{flex:0 0 76px;color:var(--muted);font-size:.82rem;margin:0}
 .peek dd{margin:0;font-size:.93rem}
 .sched.gantt tr.jobrow .jseg{cursor:grab}
-.jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:none}
+.jgrip{position:absolute;top:0;right:-1px;width:18px;height:100%;cursor:ew-resize;z-index:4;touch-action:pan-x pan-y}
 .jgrip::before{content:"";position:absolute;top:50%;right:5px;transform:translateY(-50%);width:2px;height:16px;background:color-mix(in srgb,var(--c) 70%,var(--ink));box-shadow:3px 0 0 color-mix(in srgb,var(--c) 70%,var(--ink))}
 .jbin{display:none}
 body.jdrag .jbin{display:flex;align-items:center;justify-content:center;gap:9px;margin:12px 0 0;padding:16px;border:2px dashed color-mix(in srgb,#b23b2c 55%,var(--line));border-radius:11px;color:#b23b2c;font-weight:700;background:color-mix(in srgb,#b23b2c 6%,transparent);transition:background .12s,border-color .12s,transform .12s}
@@ -360,7 +360,8 @@ body.jdrag .jbin.hot{border-style:solid;border-color:#b23b2c;background:color-mi
   .sched.gantt th.tcol{font-size:.88rem;font-weight:700}
   .sched.gantt .addjob{font-size:.82rem;padding:8px 2px}
 }
-.tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:none}
+.tev[data-vid],.vmark[data-qid]{cursor:grab;touch-action:pan-x pan-y;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.lifted .jseg,.tev.lifted,.vmark.lifted{transform:scale(1.04);box-shadow:0 6px 18px rgba(0,0,0,.22)!important;transition:transform .12s}
 .tev.mdrag,.vmark.mdrag{opacity:.55;cursor:grabbing}
 .sched.gantt td.mdrop{outline:2px dashed var(--info);outline-offset:-2px;background:color-mix(in srgb,var(--info) 12%,transparent)}
 .vmark{background:color-mix(in srgb,var(--c) 15%,var(--surface));color:var(--ink);border:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-left:4px solid var(--c);border-radius:6px;padding:5px 7px;margin:2px 3px;font-size:.75rem;line-height:1.2;overflow:hidden;overflow-wrap:anywhere}
@@ -928,7 +929,7 @@ views.schedule=()=>{
   const addRow=`<tr class="addrow"><th class="tcol">Add</th>${days.map((d,i)=>`<td class="${d.we?'we':''}${d.isT?' today':''}"><button type="button" class="addjob" data-act="slotAdd" data-day="${d.day}" aria-label="Add to ${DOW[d.i]} ${fmtD(d.day)} — put an existing job on this day or start a new one">+ Add</button></td>`).join('')}</tr>`;
   const viewSw=`<div class="seg" role="group" aria-label="Schedule layout"><button type="button" class="btn sm${ui.schedView==='days'?'':' ghost'}" data-act="schedView" data-v="days">Days</button><button type="button" class="btn sm${ui.schedView==='grid'?'':' ghost'}" data-act="schedView" data-v="grid">Grid</button></div>`;
   if(ui.schedView==='days')return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}</div><ul class="sdlist">${dayCards}</ul><div class="panel-b sub">Tap a day to see it in full, add to it or move things. To drag jobs across days, switch to Grid.</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
-  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Drag a job bar to move it to another day; drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job for a quick preview (open it or move it from there).</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
+  return head+`<section class="panel"><div class="panel-h"><h3>The week</h3>${viewSw}${legend}</div><div class="scroll-x" id="sx-sched"><table class="grid sched gantt"><thead><tr>${th}</tr></thead><tbody>${jobRows}${evRows}${cdRows}${holRows}${dueRow}${visitRow}${notesRow}${addRow}</tbody></table></div><div id="jbin" class="jbin" data-jbin aria-hidden="true"><span class="jbin-ic">🗑</span><span>Drop here to move the job to the Bin</span></div><div class="panel-b sub">Tap any day to see everything on it in full. Swipe to scroll the week. Drag a job bar to move it to another day (on a phone, press and hold it first); drag its right-hand grip to set how many days it runs; drop it on the Bin to remove it; tap a job for a quick preview (open it or move it from there).</div></section>`+dayPanel+addEv+(pend?`<section class="panel"><div class="panel-b">${pill('warn',pend+' holiday request'+(pend>1?'s':'')+' waiting')} ${goBtn('crew','Review in Holidays')}</div></section>`:'');
 };
 
 views.bin=()=>{
@@ -3887,7 +3888,7 @@ function paintJobDrag(){
     td.innerHTML=inSpan?`<div class="jseg${i===jobDrag.min?' l':''}${i===jobDrag.max?' r':''}" style="--c:${jobDrag.color}">${i===jobDrag.min?`<span class="jlabel">${esc(jobDrag.text)}</span>`:''}</div>`:(jobDrag.others[i]||'');
   });
 }
-view.addEventListener('pointerdown',e=>{
+function startSchedDrag(e){
   // Site-visit / quote-due markers: single-day, draggable to another day. Skip links/buttons inside.
   if(!e.target.closest('a,button')){
     const mk=e.target.closest('.tev[data-vid],.vmark[data-qid]');
@@ -3925,8 +3926,31 @@ view.addEventListener('pointerdown',e=>{
   row.classList.add('dragging');
   if(kind==='job')document.body.classList.add('jdrag');   // reveal the Bin drop-zone while dragging a job
   try{td.setPointerCapture(e.pointerId);}catch(_){}
+}
+/* Phones: a swipe on the schedule must SCROLL it, so on touch nothing moves until you press and
+   HOLD an item (~0.45s — it lifts and the phone buzzes), then drag. A quick tap still opens it.
+   Mouse/trackpad: unchanged — press and drag straight away. */
+let schedHold=null;
+const SCHED_DRAGGABLE='.tev[data-vid],.vmark[data-qid],tr.jobrow td.jcell[data-jday][data-jid]';
+view.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch'){startSchedDrag(e);return;}
+  if(e.target.closest('a,button')&&!e.target.closest('.tev[data-vid]'))return;
+  if(!e.target.closest(SCHED_DRAGGABLE))return;
+  const ev={target:e.target,pointerId:e.pointerId};
+  if(schedHold)clearTimeout(schedHold.t);
+  schedHold={ev,x:e.clientX,y:e.clientY,live:false,t:setTimeout(()=>{if(!schedHold)return;schedHold.live=true;startSchedDrag(ev);
+    try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}
+    const it=ev.target.closest('.tev,.vmark,tr.jobrow');if(it)it.classList.add('lifted');},450)};
 });
+const schedHoldEnd=tap=>{if(!schedHold)return false;const h=schedHold;schedHold=null;clearTimeout(h.t);
+  document.querySelectorAll('.lifted').forEach(x=>x.classList.remove('lifted'));
+  if(h.live)return false;                       // a real drag — the normal drop handling takes over
+  if(tap){startSchedDrag(h.ev);endMarkerDrag();endJobDrag();}  // quick tap = open, as before
+  return true;};
+// While an item is held/dragged, stop the page scrolling under the finger.
+document.addEventListener('touchmove',e=>{if(schedHold&&schedHold.live&&(jobDrag||mDrag))e.preventDefault();},{passive:false});
 view.addEventListener('pointermove',e=>{
+  if(schedHold&&!schedHold.live){if(Math.abs(e.clientX-schedHold.x)>8||Math.abs(e.clientY-schedHold.y)>8)schedHoldEnd(false);return;}
   if(mDrag){const el=document.elementFromPoint(e.clientX,e.clientY);const td=el&&el.closest&&el.closest('.sched.gantt td[data-sday]');if(td&&td!==mDrag.lastCell){if(mDrag.lastCell)mDrag.lastCell.classList.remove('mdrop');mDrag.lastCell=td;td.classList.add('mdrop');mDrag.toDay=td.dataset.sday;}return;}
   if(!jobDrag)return;
   const el=document.elementFromPoint(e.clientX,e.clientY);
@@ -3993,7 +4017,7 @@ function endJobDrag(){
   }
   schedule();
 }
-view.addEventListener('pointerup',e=>{endMarkerDrag();endJobDrag();});
+view.addEventListener('pointerup',e=>{if(schedHoldEnd(true))return;endMarkerDrag();endJobDrag();});
 /* Meeting-done pop-up: tap the dark backdrop or press Esc to close it */
 view.addEventListener('click',e=>{if(e.target.matches&&e.target.matches('.mdov')){ui.meetDone=null;ui.setStart=null;ui.cert=null;ui.jobPeek=null;schedule();}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(ui.meetDone||ui.setStart||ui.cert||ui.jobPeek)){ui.meetDone=null;ui.setStart=null;ui.cert=null;ui.jobPeek=null;schedule();}});
@@ -4004,7 +4028,7 @@ view.addEventListener('click',e=>{
   const td=e.target.closest('.sched.gantt td[data-sday]');if(!td)return;
   ui.schedDay=td.dataset.sday;ui.focusNext='sd-close';schedule();
 });
-view.addEventListener('pointercancel',e=>{endMarkerDrag();endJobDrag();});
+view.addEventListener('pointercancel',e=>{if(schedHoldEnd(false))return;endMarkerDrag();endJobDrag();});
 
 /* ---------- address autocomplete (type → pick the real address) ----------
    Suggestions come from OpenStreetMap's free Nominatim search (UK only, no key).
