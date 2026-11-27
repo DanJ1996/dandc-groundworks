@@ -1698,7 +1698,7 @@ const actions={
     const A=appCalc(p);
     const vc=(p.variations||[]).reduce((t,l)=>t+num(l.qty)*num(l.rate)*(l.claimed===''||l.claimed==null?100:num(l.claimed))/100,0);
     const n=(p.apps||[]).reduce((m,a)=>Math.max(m,num(a.n)),0)+1;
-    const app={id:uid(),n,date:todayISO(),pct,vars:(p.variations||[]).length?vc:(A.last?num(A.last.vars):0),ret:A.last?num(A.last.retPct):0,void:false,created:Date.now()};
+    const app={id:uid(),n,date:todayISO(),pct,amt:num(b.invoiced)>0?num(b.invoiced):0,vars:(p.variations||[]).length?vc:(A.last?num(A.last.vars):0),ret:A.last?num(A.last.retPct):0,void:false,created:Date.now()};
     write('projects',d.id,'update',{...(num(b.tender)>0?{tender:num(b.tender)}:{}),apps:(p.apps||[]).concat([app])});
     ui.boqScan=null;ui.appEdit=null;delete ui.drafts.appAdd;toast('Application '+n+' added from your BOQ');},
   appEditAsk(d){ui.appEdit=d.a;delete ui.drafts.appEdit;ui.focusNext='appEdit-date';},
