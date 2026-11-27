@@ -3213,23 +3213,84 @@ function certInner(d){
 }
 /* Top bar for the print/PDF pages we open (statement, certificate, day works): a way BACK to the
    app (they open full-screen on a phone with no browser buttons) + Save as PDF. Screen only. */
+/* ---------- real PDF files from the print pages (phones) ----------
+   iPhone ignores "print" in these pages when the Site Office runs from the home screen, so on a
+   phone the button builds an actual A4 PDF file (html2canvas + jsPDF) and hands it to the share
+   sheet — Save to Files, WhatsApp, email, AirDrop. On a computer it still prints. The PDF is built
+   as soon as the page opens, so the tap can go straight to the share sheet. This function's source
+   is injected into the opened page, so it must stand alone. */
+function pdfKit(fileName,sel){
+  var phone=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+  var btns=function(){return document.querySelectorAll('[data-savepdf]');};
+  var label=function(t){btns().forEach(function(b){b.textContent=t;});};
+  var job=null,file=null,waiting=false;
+  // The Site Office builds the file (rendering inside this pop-up page hangs on phones).
+  var build=function(){file=null;var o=null;try{o=window.opener;}catch(e){}
+    if(!o||!o.__makePdf){job=null;return Promise.reject(new Error('no app'));}
+    label('Preparing PDF\u2026');
+    var html=document.documentElement.outerHTML.replace(/<script[\s\S]*?<\/script>/gi,'');
+    return job=o.__makePdf(html,sel).then(function(blob){
+      file=new File([blob],fileName.replace(/[\u2013\u2014]/g,'-').replace(/[^\w .,()&'+-]+/g,'-').replace(/\s+/g,' ').trim()+'.pdf',{type:'application/pdf'});
+      label(waiting?'Tap to save PDF':'Save as PDF');return file;
+    }).catch(function(e){label('Save as PDF');file=null;job=null;if(waiting){waiting=false;alert('Couldn\u2019t make the PDF \u2014 check your signal and tap Save as PDF again.');}throw e;});};
+  var send=function(f){
+    if(navigator.canShare&&navigator.canShare({files:[f]}))return navigator.share({files:[f],title:f.name}).catch(function(){});
+    var u=URL.createObjectURL(f),a=document.createElement('a');a.href=u;a.download=f.name;document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);};
+  window.__savePdf=function(){
+    if(!phone){window.print();return;}
+    var o=null;try{o=window.opener;}catch(e){}if(!o||!o.__makePdf){window.print();return;}
+    if(file){waiting=false;send(file);return;}
+    waiting=true;(job||build()).catch(function(){});
+  };
+  window.__pdfDirty=function(){if(phone)build();};
+  if(phone)setTimeout(function(){build().catch(function(){});},300);
+}
+// Load html2canvas + jsPDF once in the Site Office itself and share them with the PDF pages.
+function preloadPdfLibs(){if(window.__pdfLibs)return window.__pdfLibs;
+  const ld=src=>new Promise((res,rej)=>{const x=document.createElement('script');x.src=src;x.onload=res;x.onerror=()=>rej(new Error('load'));setTimeout(()=>rej(new Error('timeout')),20000);document.head.appendChild(x);});
+  window.__pdfLibs=Promise.all([ld('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),ld('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')]).then(()=>({h:window.html2canvas,j:window.jspdf})).catch(e=>{window.__pdfLibs=null;throw e;});
+  window.__pdfLibs.catch(()=>{});return window.__pdfLibs;}
+/* Build an A4 PDF from a page's HTML: load it in a hidden frame here in the Site Office, picture each
+   `sel` block with html2canvas, and stack the pictures onto A4 pages with jsPDF. Returns a Blob. */
+window.__makePdf=function(html,sel){
+  return preloadPdfLibs().then(L=>new Promise((res,rej)=>{
+    const f=document.createElement('iframe');f.setAttribute('aria-hidden','true');f.tabIndex=-1;
+    f.style.cssText='position:fixed;left:-12000px;top:0;width:800px;height:1200px;border:0;visibility:hidden';
+    const done=(fn,v)=>{setTimeout(()=>f.remove(),0);fn(v);};
+    const tm=setTimeout(()=>done(rej,new Error('timeout')),45000);
+    f.onload=()=>{const d=f.contentDocument;const imgs=[...d.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r;}));
+      Promise.all(imgs).then(()=>{
+        const J=L.j.jsPDF,pdf=new J({unit:'mm',format:'a4'}),W=190,H=277;let first=true;
+        const els=[...d.querySelectorAll(sel)];if(!els.length)throw new Error('empty');
+        els.forEach(el=>{el.style.width='760px';el.style.maxWidth='760px';el.style.margin='0';});
+        return els.reduce((pr,el)=>pr.then(()=>L.h(el,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(cv=>{
+          const ph=Math.floor(cv.width*H/W);
+          for(let y=0;y<cv.height;y+=ph){const h=Math.min(ph,cv.height-y),part=document.createElement('canvas');part.width=cv.width;part.height=h;part.getContext('2d').drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+            if(!first)pdf.addPage();first=false;pdf.addImage(part.toDataURL('image/jpeg',0.9),'JPEG',10,10,W,h*W/cv.width);}
+        })),Promise.resolve()).then(()=>pdf.output('blob'));
+      }).then(bl=>{clearTimeout(tm);done(res,bl);},e=>{clearTimeout(tm);done(rej,e);});};
+    // the app's own copy of the logo (same site) so it can be drawn into the PDF
+    f.srcdoc=html.replace(/https:\/\/dandcgroundworks\.com\/assets\/logo\.png/g,'assets/logo.png').replace(/<head>/i,'<head><base href="'+location.href.split('#')[0]+'">');document.body.appendChild(f);
+  }));
+};
+const pdfKitScript=(name,sel)=>{preloadPdfLibs();return '<script>('+pdfKit.toString()+')('+JSON.stringify(String(name||'Document'))+','+JSON.stringify(sel)+');<\/script>';};
 function printBack(){var app=location.href.split('#')[0]+'#'+(ui&&ui.tab||'projects');
   return "if(window.opener&&!window.opener.closed){window.close();setTimeout(function(){location.href='"+app+"'},300);}else{location.href='"+app+"';}";}
 function printBar(){
   var back=printBack();
   return '<div class="noprint pbar" style="position:sticky;top:0;z-index:5;display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));background:#273E57">'+
     '<button type="button" onclick="'+back.replace(/"/g,'&quot;')+'" aria-label="Back to Site Office" style="background:transparent;color:#fff;border:0;padding:4px 10px;font:600 30px/1 Arial;cursor:pointer">←</button>'+
-    '<button type="button" onclick="window.print()" style="background:#fff;color:#273E57;border:0;border-radius:8px;padding:9px 14px;font:600 15px Arial;cursor:pointer">Save as PDF</button></div>';
+    '<button type="button" data-savepdf onclick="__savePdf()" style="background:#fff;color:#273E57;border:0;border-radius:8px;padding:9px 14px;font:600 15px Arial;cursor:pointer">Save as PDF</button></div>';
 }
 // Phone screens: shrink the A4 layout to fit instead of running off the side (print is untouched).
 var FIT_CSS='@media screen and (max-width:740px){body{-webkit-text-size-adjust:100%}table{font-size:11px!important;width:100%!important}th,td{padding:6px 4px!important}td{overflow-wrap:anywhere}th{overflow-wrap:normal!important;word-break:keep-all!important;hyphens:none!important;font-size:10px!important;letter-spacing:0!important}body>div>div{max-width:100%!important}}@media screen and (max-width:420px){table{font-size:10px!important}th{font-size:9px!important}th,td{padding:5px 3px!important}}';
 function certPrint(d){
   var w=window.open('','_blank');
   if(!w){toast('Allow pop-ups to save the PDF, or use Export Excel instead');return;}
-  var btn='<div class="noprint" style="text-align:center;padding:16px"><button onclick="window.print()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}'+FIT_CSS+'</style></head><body>'+printBar()+certInner(d)+btn+'</body></html>');
+  var btn='<div class="noprint" style="text-align:center;padding:16px"><button data-savepdf onclick="__savePdf()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}'+FIT_CSS+'</style></head><body>'+printBar()+'<div class="pdfdoc">'+certInner(d)+'</div>'+btn+pdfKitScript(d.fileBase,'.pdfdoc')+'</body></html>');
   w.document.close();w.focus();
-  setTimeout(function(){try{w.print();}catch(e){}},500);
+  if(!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))setTimeout(function(){try{w.print();}catch(e){}},500);
 }
 function certExcel(d){
   var S2=2,S3=3; // currency, bold+currency
@@ -3365,10 +3426,10 @@ function stmtInner(d){
 function stmtPrint(d){
   var w=window.open('','_blank');
   if(!w){toast('Allow pop-ups to save the PDF');return;}
-  var btn='<div class="noprint" style="text-align:center;padding:16px"><button onclick="window.print()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}'+FIT_CSS+'</style></head><body>'+printBar()+stmtInner(d)+btn+'</body></html>');
+  var btn='<div class="noprint" style="text-align:center;padding:16px"><button data-savepdf onclick="__savePdf()" style="background:#273E57;color:#fff;border:0;border-radius:8px;padding:10px 20px;font:600 15px Arial;cursor:pointer">Save as PDF / Print</button></div>';
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(d.fileBase)+'</title><style>@page{size:A4;margin:14mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9e3da}@media print{.noprint{display:none}body{background:#fff}}'+FIT_CSS+'</style></head><body>'+printBar()+'<div class="pdfdoc">'+stmtInner(d)+'</div>'+btn+pdfKitScript(d.fileBase,'.pdfdoc')+'</body></html>');
   w.document.close();w.focus();
-  setTimeout(function(){try{w.print();}catch(e){}},500);
+  if(!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))setTimeout(function(){try{w.print();}catch(e){}},500);
 }
 function certModal(){
   var c=ui.cert;if(!c)return '';
@@ -3626,12 +3687,12 @@ function dwOpenPdfWindow(recs,jobLabel,w,opts){
   try{w.document.open();}catch(e){}
   var title=(jobLabel?jobLabel+' \u2014 ':'')+'Day works'+(recs.length>1?' ('+recs.length+' days)':'');
   var body=recs.map(dwSheetDocHTML).join('');
-  var toggle="document.body.classList.toggle('nocost');var n=document.body.classList.contains('nocost');this.textContent=n?'Show costs':'Remove costs';var h=document.getElementById('mode');if(h)h.textContent=n?'Record only \u2014 no prices shown. Tap \u201cSave as PDF / Print\u201d to send.':'With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.';";
+  var toggle="document.body.classList.toggle('nocost');if(window.__pdfDirty)__pdfDirty();var n=document.body.classList.contains('nocost');this.textContent=n?'Show costs':'Remove costs';var h=document.getElementById('mode');if(h)h.textContent=n?'Record only \u2014 no prices shown. Tap \u201cSave as PDF / Print\u201d to send.':'With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.';";
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+'</title><style>'+DW_PDF_CSS+'</style></head><body'+(opts.noCost?' class="nocost"':'')+'>'+
-    '<div class="bar"><button type="button" class="tog" aria-label="Back to Site Office" style="font-size:22px;line-height:1;padding:4px 12px" onclick="'+esc(printBack())+'">\u2190</button><button type="button" class="save" onclick="window.print()">Save as PDF / Print</button>'+
+    '<div class="bar"><button type="button" class="tog" aria-label="Back to Site Office" style="font-size:22px;line-height:1;padding:4px 12px" onclick="'+esc(printBack())+'">\u2190</button><button type="button" class="save" data-savepdf onclick="__savePdf()">Save as PDF / Print</button>'+
     (opts.noCost?'</div>':'<button type="button" class="tog" onclick="'+esc(toggle)+'">Remove costs</button></div>')+
     (opts.noCost?'<div class="note" id="mode">Tap \u201cSave as PDF / Print\u201d to save or send this sheet.</div>':'<div class="note" id="mode">With costs \u2014 the priced claim. Tap \u201cSave as PDF / Print\u201d to send, or \u201cRemove costs\u201d for a record-only copy.</div>')+
-    body+'</body></html>');
+    body+pdfKitScript((jobLabel?jobLabel+' - ':'')+(recs.find(r=>r.mode==='variation'||(r.data&&r.data.mode==='variation'))&&recs.length===1?'Variation':'Day works')+(recs.length?' '+[...new Set([recs[0].work_date,recs[recs.length-1].work_date].filter(Boolean))].join(' to '):''),'.sheet')+'</body></html>');
   w.document.close();w.focus();
 }
 /* Load full sheet data for the given ids, order by work date, open the PDF window. */
